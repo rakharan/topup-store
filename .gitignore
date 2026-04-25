@@ -17,6 +17,8 @@ vendor/
 
 # Sessions / State
 whatsapp-bot/sessions/
+whatsapp-bot/.wwebjs_auth/
+whatsapp-bot/.wwebjs_cache/
 
 # Logs
 *.log

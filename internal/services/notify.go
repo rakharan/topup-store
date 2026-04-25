@@ -64,7 +64,11 @@ func (s *NotifyService) SendNotification(phone, message string) error {
 
 func (s *NotifyService) sendNotification(ctx context.Context, phone, message string) error {
 	if s.waToken != "" && s.waPhoneID != "" {
-		return s.sendViaCloudAPI(ctx, phone, message)
+		err := s.sendViaCloudAPI(ctx, phone, message)
+		if err == nil {
+			return nil
+		}
+		s.logger.Warn("cloud api failed, falling back to bot", "error", err)
 	}
 	return s.sendViaBot(ctx, phone, message)
 }
