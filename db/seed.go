@@ -50,15 +50,23 @@ func main() {
 		{Game: "pubg_mobile", Name: "325 UC", Description: "325 PUBG Mobile UC", PriceIDR: 75000, Diamonds: 325, SKU: "PUBG-325"},
 	}
 
-	query := `INSERT INTO products (game, name, description, price_idr, diamonds, sku)
-		VALUES ($1, $2, $3, $4, $5, $6)`
+	query := `INSERT INTO products (game, name, description, price_idr, diamonds, sku, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6, true)
+		ON CONFLICT (sku) DO UPDATE SET
+			game = EXCLUDED.game,
+			name = EXCLUDED.name,
+			description = EXCLUDED.description,
+			price_idr = EXCLUDED.price_idr,
+			diamonds = EXCLUDED.diamonds,
+			updated_at = NOW()`
 
 	for _, p := range products {
 		_, err := pool.Exec(ctx, query, p.Game, p.Name, p.Description, p.PriceIDR, p.Diamonds, p.SKU)
 		if err != nil {
-			log.Fatalf("failed to insert product %s: %v", p.SKU, err)
+			log.Printf("failed to insert product %s: %v", p.SKU, err)
+			continue
 		}
-		fmt.Printf("Inserted product: %s (%s)\n", p.Name, p.SKU)
+		fmt.Printf("Inserted/updated product: %s (%s)\n", p.Name, p.SKU)
 	}
 
 	fmt.Println("Seed completed successfully")

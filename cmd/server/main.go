@@ -79,6 +79,7 @@ func main() {
 	rateLimiter := middleware.NewRateLimiter(100, time.Minute)
 	r.Use(rateLimiter.Middleware)
 	r.Use(middleware.MaxBodyMiddleware(1 << 20)) // 1MB
+	r.Use(middleware.SecurityHeaders)
 
 	r.Get("/health", healthHandler(pool))
 	r.Get("/metrics", metricsMW.Handler())

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/topup-store/internal/constants"
@@ -63,6 +64,10 @@ func (s *NotifyService) SendNotification(phone, message string) error {
 }
 
 func (s *NotifyService) sendNotification(ctx context.Context, phone, message string) error {
+	cleaned := strings.TrimSpace(phone)
+	if cleaned == "" || (!strings.HasPrefix(cleaned, "+") && !strings.HasPrefix(cleaned, "62")) {
+		return fmt.Errorf("invalid phone number format: %s", phone)
+	}
 	if s.waToken != "" && s.waPhoneID != "" {
 		err := s.sendViaCloudAPI(ctx, phone, message)
 		if err == nil {

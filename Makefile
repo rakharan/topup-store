@@ -1,4 +1,4 @@
-.PHONY: run build dev test test-coverage lint fmt vet migrate migrate-docker docker-up docker-down clean
+.PHONY: run build dev test test-coverage lint fmt vet migrate migrate-docker seed docker-up docker-down docker-logs clean
 
 run:
 	go run ./cmd/server
@@ -34,6 +34,9 @@ migrate:
 
 migrate-docker:
 	docker compose exec postgres sh -c 'for f in /migrations/*.sql; do echo "Applying $$f..."; psql -U topup -d topup_store -f "$$f"; done'
+
+seed:
+	go run ./db/seed.go
 
 docker-up:
 	docker compose up -d --build
