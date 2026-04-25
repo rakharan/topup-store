@@ -67,7 +67,7 @@ func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
 	order, err := h.paymentSvc.GetOrder(r.Context(), payload.OrderID)
 	if err != nil {
 		h.logger.Error("midtrans webhook: order not found", slog.String("order_id", payload.OrderID), slog.String("error", err.Error()))
-		apperrors.WriteError(w, http.StatusNotFound, apperrors.ErrNotFound, middleware.GetRequestID(r.Context()))
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
@@ -86,7 +86,7 @@ func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.paymentSvc.UpdateOrderStatus(r.Context(), order.ID, newStatus); err != nil {
 		h.logger.Error("midtrans webhook: failed to update order", slog.String("order_id", order.ID), slog.String("error", err.Error()))
-		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
@@ -195,7 +195,7 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 			slog.String("ref_id", refID),
 			slog.String("error", err.Error()),
 		)
-		apperrors.WriteError(w, http.StatusNotFound, apperrors.ErrNotFound, middleware.GetRequestID(r.Context()))
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
@@ -211,7 +211,7 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 				slog.String("order_id", order.ID),
 				slog.String("error", err.Error()),
 			)
-			apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+			w.WriteHeader(http.StatusOK)
 			return
 		}
 
@@ -255,7 +255,7 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 				slog.String("order_id", order.ID),
 				slog.String("error", err.Error()),
 			)
-			apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+			w.WriteHeader(http.StatusOK)
 			return
 		}
 

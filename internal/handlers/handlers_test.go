@@ -570,8 +570,8 @@ func TestWebhookHandler_Digiflazz_OrderNotFound(t *testing.T) {
 
 	wh.Digiflazz(w, req)
 
-	if w.Code != http.StatusNotFound {
-		t.Errorf("expected status %d, got %d", http.StatusNotFound, w.Code)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
 	}
 }
 

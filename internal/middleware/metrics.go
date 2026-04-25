@@ -14,6 +14,8 @@ type Metrics struct {
 	requestDuration map[string][]time.Duration
 }
 
+const maxDurationEntries = 1000
+
 func NewMetrics() *Metrics {
 	return &Metrics{
 		requestsTotal:   make(map[string]int64),
@@ -31,7 +33,12 @@ func (m *Metrics) Middleware(next http.Handler) http.Handler {
 
 		m.mu.Lock()
 		m.requestsTotal[key]++
-		m.requestDuration[key] = append(m.requestDuration[key], time.Since(start))
+		durations := m.requestDuration[key]
+		durations = append(durations, time.Since(start))
+		if len(durations) > maxDurationEntries {
+			durations = durations[len(durations)-maxDurationEntries:]
+		}
+		m.requestDuration[key] = durations
 		m.mu.Unlock()
 	})
 }
@@ -133,7 +140,12 @@ func (pm *PrometheusMetrics) ObserveHistogram(name string, labels map[string]str
 	defer pm.mu.Unlock()
 
 	key := name + serializeLabels(labels)
-	pm.histograms[key] = append(pm.histograms[key], value)
+	values := pm.histograms[key]
+	values = append(values, value)
+	if len(values) > maxDurationEntries {
+		values = values[len(values)-maxDurationEntries:]
+	}
+	pm.histograms[key] = values
 }
 
 func (pm *PrometheusMetrics) Handler() http.HandlerFunc {
