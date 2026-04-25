@@ -45,17 +45,23 @@ func NewTopupService(orderRepo repositories.OrderRepository, productRepo reposit
 func (s *TopupService) ProcessOrder(orderID string) error {
 	ctx := context.Background()
 
-	order, err := s.orderRepo.GetByID(ctx, orderID)
+	updated, err := s.orderRepo.UpdateStatusIf(ctx, orderID, constants.StatusProcessing, constants.StatusPaid)
 	if err != nil {
-		return fmt.Errorf("fetch order %s: %w", orderID, err)
+		return fmt.Errorf("atomic status transition: %w", err)
+	}
+	if !updated {
+		return fmt.Errorf("order %s was already being processed or is not in paid status", orderID)
 	}
 
-	if order.Status != constants.StatusPaid {
-		return fmt.Errorf("order %s is not paid (status: %s)", orderID, order.Status)
+	order, err := s.orderRepo.GetByID(ctx, orderID)
+	if err != nil {
+		_ = s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusFailed)
+		return fmt.Errorf("fetch order %s: %w", orderID, err)
 	}
 
 	product, err := s.productRepo.GetByID(ctx, order.ProductID)
 	if err != nil {
+		_ = s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusFailed)
 		return fmt.Errorf("fetch product %s: %w", order.ProductID, err)
 	}
 
@@ -64,7 +70,7 @@ func (s *TopupService) ProcessOrder(orderID string) error {
 		return fmt.Errorf("digiflazz topup: %w", err)
 	}
 
-	return s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusProcessing)
+	return s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusSuccess)
 }
 
 func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *models.Order, product *models.Product) error {

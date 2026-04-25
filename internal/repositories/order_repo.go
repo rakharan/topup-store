@@ -80,6 +80,16 @@ func (r *PGOrderRepository) UpdateStatus(ctx context.Context, id, status string)
 	return err
 }
 
+func (r *PGOrderRepository) UpdateStatusIf(ctx context.Context, id, newStatus, expectedStatus string) (bool, error) {
+	result, err := r.pool.Exec(ctx,
+		`UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2 AND status = $3`,
+		newStatus, id, expectedStatus)
+	if err != nil {
+		return false, err
+	}
+	return result.RowsAffected() > 0, nil
+}
+
 func (r *PGOrderRepository) UpdateSerialNumber(ctx context.Context, id, sn string) error {
 	_, err := r.pool.Exec(ctx, `UPDATE orders SET serial_number = $1, updated_at = NOW() WHERE id = $2`, sn, id)
 	return err
@@ -127,6 +137,9 @@ func (r *PGOrderRepository) List(ctx context.Context, page, perPage int) ([]mode
 		}
 		orders = append(orders, o)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
 	return orders, total, nil
 }
 
@@ -165,6 +178,9 @@ func (r *PGOrderRepository) ListByStatus(ctx context.Context, status string, pag
 		}
 		orders = append(orders, o)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
 	return orders, total, nil
 }
 
@@ -188,6 +204,9 @@ func (r *PGOrderRepository) ListProcessing(ctx context.Context) ([]models.Order,
 			return nil, err
 		}
 		orders = append(orders, o)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return orders, nil
 }
@@ -213,6 +232,9 @@ func (r *PGOrderRepository) ExpireOldPending(ctx context.Context) ([]models.Orde
 			return nil, err
 		}
 		orders = append(orders, o)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return orders, nil
 }

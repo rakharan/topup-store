@@ -10,6 +10,7 @@ type PaymentServiceInterface interface {
 	CreateOrder(ctx context.Context, order *models.Order) error
 	GetOrder(ctx context.Context, orderID string) (*models.Order, error)
 	UpdateOrderStatus(ctx context.Context, orderID, status string) error
+	UpdateOrderStatusIf(ctx context.Context, orderID, newStatus, expectedStatus string) (bool, error)
 	UpdateOrderSerialNumber(ctx context.Context, orderID, sn string) error
 	ListOrders(ctx context.Context, page, perPage int) ([]models.Order, int, error)
 	CreateQRIS(ctx context.Context, order *models.Order) (string, string, error)

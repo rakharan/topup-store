@@ -7,18 +7,20 @@ import (
 )
 
 type mockPaymentService struct {
-	createOrderErr       error
-	getOrderResult       *models.Order
-	getOrderErr          error
-	updateOrderStatusErr error
-	listOrdersResult     []models.Order
-	listOrdersTotal      int
-	listOrdersErr        error
-	createQRISURL        string
-	createQRISBase64     string
-	createQRISErr        error
-	getByUIDPhoneResult  *models.Order
-	getByUIDPhoneErr     error
+	createOrderErr         error
+	getOrderResult         *models.Order
+	getOrderErr            error
+	updateOrderStatusErr   error
+	updateOrderStatusIfOk  bool
+	updateOrderStatusIfErr error
+	listOrdersResult       []models.Order
+	listOrdersTotal        int
+	listOrdersErr          error
+	createQRISURL          string
+	createQRISBase64       string
+	createQRISErr          error
+	getByUIDPhoneResult    *models.Order
+	getByUIDPhoneErr       error
 }
 
 func (m *mockPaymentService) CreateOrder(ctx context.Context, order *models.Order) error {
@@ -31,6 +33,10 @@ func (m *mockPaymentService) GetOrder(ctx context.Context, orderID string) (*mod
 
 func (m *mockPaymentService) UpdateOrderStatus(ctx context.Context, orderID, status string) error {
 	return m.updateOrderStatusErr
+}
+
+func (m *mockPaymentService) UpdateOrderStatusIf(ctx context.Context, orderID, newStatus, expectedStatus string) (bool, error) {
+	return m.updateOrderStatusIfOk, m.updateOrderStatusIfErr
 }
 
 func (m *mockPaymentService) ListOrders(ctx context.Context, page, perPage int) ([]models.Order, int, error) {

@@ -12,6 +12,7 @@ type OrderRepository interface {
 	GetByMidtransID(ctx context.Context, midtransID string) (*models.Order, error)
 	GetByUIDAndPhone(ctx context.Context, gameUID, phone string) (*models.Order, error)
 	UpdateStatus(ctx context.Context, id, status string) error
+	UpdateStatusIf(ctx context.Context, id, newStatus, expectedStatus string) (bool, error)
 	UpdateSerialNumber(ctx context.Context, id, sn string) error
 	UpdateWithQRIS(ctx context.Context, id, midtransOrderID, qrisURL string) error
 	List(ctx context.Context, page, perPage int) ([]models.Order, int, error)

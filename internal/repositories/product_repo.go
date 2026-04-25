@@ -57,6 +57,9 @@ func (r *PGProductRepository) ListByGame(ctx context.Context, game string) ([]mo
 		}
 		products = append(products, p)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return products, nil
 }
 
@@ -77,6 +80,9 @@ func (r *PGProductRepository) ListAll(ctx context.Context) ([]models.Product, er
 			return nil, err
 		}
 		products = append(products, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return products, nil
 }

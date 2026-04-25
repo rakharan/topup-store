@@ -74,7 +74,9 @@ func (h *PageHandler) Admin(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		password := r.FormValue("password")
-		if password == h.adminPass {
+		passHash := sha256.Sum256([]byte(password))
+		expectedHash := sha256.Sum256([]byte(h.adminPass))
+		if hmac.Equal(passHash[:], expectedHash[:]) {
 			timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 			mac := hmac.New(sha256.New, []byte(h.adminPass))
 			mac.Write([]byte(timestamp))

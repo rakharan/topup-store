@@ -66,6 +66,10 @@ func (s *PaymentService) UpdateOrderStatus(ctx context.Context, orderID, status 
 	return s.orderRepo.UpdateStatus(ctx, orderID, status)
 }
 
+func (s *PaymentService) UpdateOrderStatusIf(ctx context.Context, orderID, newStatus, expectedStatus string) (bool, error) {
+	return s.orderRepo.UpdateStatusIf(ctx, orderID, newStatus, expectedStatus)
+}
+
 func (s *PaymentService) UpdateOrderSerialNumber(ctx context.Context, orderID, sn string) error {
 	return s.orderRepo.UpdateSerialNumber(ctx, orderID, sn)
 }
