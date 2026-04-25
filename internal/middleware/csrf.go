@@ -19,7 +19,9 @@ func NewCSRFStore() *CSRFStore {
 
 func (s *CSRFStore) Generate() string {
 	b := make([]byte, 32)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		return ""
+	}
 	token := hex.EncodeToString(b)
 	s.tokens[token] = time.Now().Add(2 * time.Hour)
 	s.cleanup()

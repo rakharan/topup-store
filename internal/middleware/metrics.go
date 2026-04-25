@@ -26,7 +26,7 @@ func NewMetrics() *Metrics {
 func (m *Metrics) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+		rw := &ResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(rw, r)
 
 		key := fmt.Sprintf("%s %s %d", r.Method, r.URL.Path, rw.statusCode)
@@ -83,35 +83,6 @@ func (m *Metrics) GetStats() map[string]any {
 		}
 	}
 	return stats
-}
-
-type metricsRW struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-func (mw *metricsRW) WriteHeader(code int) {
-	mw.statusCode = code
-	mw.ResponseWriter.WriteHeader(code)
-}
-
-func (mw *metricsRW) Write(b []byte) (int, error) {
-	return mw.ResponseWriter.Write(b)
-}
-
-func (mw *metricsRW) Status() int {
-	return mw.statusCode
-}
-
-func (mw *metricsRW) Written() int64 {
-	return int64(0)
-}
-
-func NewMetricsResponseWriter(w http.ResponseWriter) *metricsRW {
-	return &metricsRW{
-		ResponseWriter: w,
-		statusCode:     http.StatusOK,
-	}
 }
 
 type PrometheusMetrics struct {
@@ -203,7 +174,7 @@ func NewMetricsMiddleware() *MetricsMiddleware {
 func (mm *MetricsMiddleware) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		mw := NewMetricsResponseWriter(w)
+		mw := &ResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(mw, r)
 		duration := time.Since(start).Seconds()
 
