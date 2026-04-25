@@ -112,19 +112,7 @@
         document.getElementById('mobileMenu').classList.toggle('hidden');
     });
 
-    gameSelect.addEventListener("change", async () => {
-        const game = gameSelect.value;
-        productSelect.innerHTML = '<option value="">Loading...</option>';
-        productSelect.disabled = true;
-        if (game === "mobile_legends") {
-            serverGroup.classList.remove("hidden");
-            document.getElementById("uidHint").textContent = "Masukkan UID Mobile Legends";
-        } else {
-            serverGroup.classList.add("hidden");
-            document.getElementById("gameServer").value = "";
-            document.getElementById("uidHint").textContent = "Masukkan UID game kamu";
-        }
-        if (!game) return;
+    async function loadProductsForGame(game) {
         try {
             const res = await fetch(`/api/products?game=${game}`);
             const json = await res.json();
@@ -138,11 +126,43 @@
                 productSelect.appendChild(opt);
             });
             productSelect.disabled = false;
+            return products;
         } catch (e) {
             productSelect.innerHTML = '<option value="">Gagal memuat</option>';
             showToast('Gagal memuat produk', 'error');
+            return [];
         }
+    }
+
+    gameSelect.addEventListener("change", async () => {
+        const game = gameSelect.value;
+        productSelect.innerHTML = '<option value="">Loading...</option>';
+        productSelect.disabled = true;
+        if (game === "mobile_legends") {
+            serverGroup.classList.remove("hidden");
+            document.getElementById("uidHint").textContent = "Masukkan UID Mobile Legends";
+        } else {
+            serverGroup.classList.add("hidden");
+            document.getElementById("gameServer").value = "";
+            document.getElementById("uidHint").textContent = "Masukkan UID game kamu";
+        }
+        if (!game) return;
+        await loadProductsForGame(game);
     });
+
+    const params = new URLSearchParams(window.location.search);
+    const preselectedGame = params.get("game");
+    const preselectedProduct = params.get("product");
+
+    if (preselectedGame) {
+        gameSelect.value = preselectedGame;
+        gameSelect.dispatchEvent(new Event("change"));
+        if (preselectedProduct) {
+            setTimeout(() => {
+                productSelect.value = preselectedProduct;
+            }, 500);
+        }
+    }
 
     let pollInterval = null;
 
