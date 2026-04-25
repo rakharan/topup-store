@@ -1,0 +1,8 @@
+.env
+.git
+.gitignore
+node_modules
+*.md
+AGENTS.md
+bin/
+whatsapp-bot/node_modules

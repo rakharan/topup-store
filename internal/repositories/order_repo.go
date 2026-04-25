@@ -1,0 +1,218 @@
+package repositories
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/topup-store/internal/models"
+)
+
+type PGOrderRepository struct {
+	pool *pgxpool.Pool
+}
+
+func NewOrderRepository(pool *pgxpool.Pool) *PGOrderRepository {
+	return &PGOrderRepository{pool: pool}
+}
+
+func (r *PGOrderRepository) Create(ctx context.Context, order *models.Order) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO orders (id, product_id, user_phone, game_uid, game_server, amount_idr, status, channel)
+		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)
+	`, order.ID, order.ProductID, order.UserPhone, order.GameUID, order.GameServer, order.AmountIDR, order.Channel)
+	return err
+}
+
+func (r *PGOrderRepository) GetByID(ctx context.Context, id string) (*models.Order, error) {
+	var order models.Order
+	err := r.pool.QueryRow(ctx, `
+		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		       midtrans_order_id, qris_url, qris_image_base64, channel, serial_number, created_at, updated_at
+		FROM orders WHERE id = $1
+	`, id).Scan(
+		&order.ID, &order.ProductID, &order.UserPhone, &order.GameUID, &order.GameServer,
+		&order.AmountIDR, &order.Status, &order.MidtransOrderID, &order.QRISURL,
+		&order.QRISImageBase64, &order.Channel, &order.SerialNumber, &order.CreatedAt, &order.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
+}
+
+func (r *PGOrderRepository) GetByMidtransID(ctx context.Context, midtransID string) (*models.Order, error) {
+	var order models.Order
+	err := r.pool.QueryRow(ctx, `
+		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		       midtrans_order_id, qris_url, qris_image_base64, channel, serial_number, created_at, updated_at
+		FROM orders WHERE midtrans_order_id = $1
+	`, midtransID).Scan(
+		&order.ID, &order.ProductID, &order.UserPhone, &order.GameUID, &order.GameServer,
+		&order.AmountIDR, &order.Status, &order.MidtransOrderID, &order.QRISURL,
+		&order.QRISImageBase64, &order.Channel, &order.SerialNumber, &order.CreatedAt, &order.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
+}
+
+func (r *PGOrderRepository) GetByUIDAndPhone(ctx context.Context, gameUID, phone string) (*models.Order, error) {
+	var order models.Order
+	err := r.pool.QueryRow(ctx, `
+		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		       midtrans_order_id, qris_url, qris_image_base64, channel, serial_number, created_at, updated_at
+		FROM orders WHERE game_uid = $1 AND user_phone = $2 ORDER BY created_at DESC LIMIT 1
+	`, gameUID, phone).Scan(
+		&order.ID, &order.ProductID, &order.UserPhone, &order.GameUID, &order.GameServer,
+		&order.AmountIDR, &order.Status, &order.MidtransOrderID, &order.QRISURL,
+		&order.QRISImageBase64, &order.Channel, &order.SerialNumber, &order.CreatedAt, &order.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
+}
+
+func (r *PGOrderRepository) UpdateStatus(ctx context.Context, id, status string) error {
+	_, err := r.pool.Exec(ctx, `UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`, status, id)
+	return err
+}
+
+func (r *PGOrderRepository) UpdateSerialNumber(ctx context.Context, id, sn string) error {
+	_, err := r.pool.Exec(ctx, `UPDATE orders SET serial_number = $1, updated_at = NOW() WHERE id = $2`, sn, id)
+	return err
+}
+
+func (r *PGOrderRepository) UpdateWithQRIS(ctx context.Context, id, midtransOrderID, qrisURL string) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE orders SET midtrans_order_id = $1, qris_url = $2, status = 'pending', updated_at = NOW() WHERE id = $3
+	`, midtransOrderID, qrisURL, id)
+	return err
+}
+
+func (r *PGOrderRepository) List(ctx context.Context, page, perPage int) ([]models.Order, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 20
+	}
+	offset := (page - 1) * perPage
+
+	var total int
+	err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM orders`).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		       midtrans_order_id, qris_url, qris_image_base64, channel, serial_number, created_at, updated_at
+		FROM orders ORDER BY created_at DESC LIMIT $1 OFFSET $2
+	`, perPage, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var orders []models.Order
+	for rows.Next() {
+		var o models.Order
+		if err := rows.Scan(&o.ID, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
+			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.QRISURL,
+			&o.QRISImageBase64, &o.Channel, &o.SerialNumber, &o.CreatedAt, &o.UpdatedAt); err != nil {
+			return nil, 0, err
+		}
+		orders = append(orders, o)
+	}
+	return orders, total, nil
+}
+
+func (r *PGOrderRepository) ListByStatus(ctx context.Context, status string, page, perPage int) ([]models.Order, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 20
+	}
+	offset := (page - 1) * perPage
+
+	var total int
+	err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM orders WHERE status = $1`, status).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		       midtrans_order_id, qris_url, qris_image_base64, channel, serial_number, created_at, updated_at
+		FROM orders WHERE status = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3
+	`, status, perPage, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var orders []models.Order
+	for rows.Next() {
+		var o models.Order
+		if err := rows.Scan(&o.ID, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
+			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.QRISURL,
+			&o.QRISImageBase64, &o.Channel, &o.SerialNumber, &o.CreatedAt, &o.UpdatedAt); err != nil {
+			return nil, 0, err
+		}
+		orders = append(orders, o)
+	}
+	return orders, total, nil
+}
+
+func (r *PGOrderRepository) ListProcessing(ctx context.Context) ([]models.Order, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		       midtrans_order_id, qris_url, qris_image_base64, channel, serial_number, created_at, updated_at
+		FROM orders WHERE status = 'processing' AND created_at > NOW() - INTERVAL '24 hours'
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []models.Order
+	for rows.Next() {
+		var o models.Order
+		if err := rows.Scan(&o.ID, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
+			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.QRISURL,
+			&o.QRISImageBase64, &o.Channel, &o.SerialNumber, &o.CreatedAt, &o.UpdatedAt); err != nil {
+			return nil, err
+		}
+		orders = append(orders, o)
+	}
+	return orders, nil
+}
+
+func (r *PGOrderRepository) ExpireOldPending(ctx context.Context) ([]models.Order, error) {
+	rows, err := r.pool.Query(ctx, `
+		UPDATE orders SET status = 'expired', updated_at = NOW()
+		WHERE status = 'pending' AND created_at < NOW() - INTERVAL '30 minutes'
+		RETURNING id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		          midtrans_order_id, qris_url, qris_image_base64, channel, serial_number, created_at, updated_at
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("expire old pending: %w", err)
+	}
+	defer rows.Close()
+
+	var orders []models.Order
+	for rows.Next() {
+		var o models.Order
+		if err := rows.Scan(&o.ID, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
+			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.QRISURL,
+			&o.QRISImageBase64, &o.Channel, &o.SerialNumber, &o.CreatedAt, &o.UpdatedAt); err != nil {
+			return nil, err
+		}
+		orders = append(orders, o)
+	}
+	return orders, nil
+}

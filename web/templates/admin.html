@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - TopUp Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { primary: '#F97316', dark: '#1C1C1E' },
+                    animation: { 'fade-in': 'fadeIn 0.5s ease-out' },
+                    keyframes: { fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } } }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-dark text-white min-h-screen">
+    <nav class="bg-dark/95 backdrop-blur border-b border-white/10 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="/" class="text-xl font-bold text-primary">TopUp Store</a>
+            <div class="hidden md:flex gap-6">
+                <a href="/" class="hover:text-primary transition">Home</a>
+                <a href="/order" class="hover:text-primary transition">Order</a>
+                <a href="/status" class="hover:text-primary transition">Cek Order</a>
+                <a href="/admin" class="text-primary font-medium">Admin</a>
+            </div>
+        </div>
+    </nav>
+
+    {{if .Authenticated}}
+    <section class="max-w-6xl mx-auto px-4 py-8">
+        <div class="flex items-center justify-between mb-8">
+            <h1 class="text-2xl font-bold">Admin Dashboard</h1>
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-white/40">Auto-refresh 30s</span>
+                <button id="refreshBtn" class="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-sm transition">Refresh</button>
+            </div>
+        </div>
+
+        <div class="flex gap-4 mb-6 border-b border-white/10">
+            <button id="tabOrders" onclick="switchTab('orders')" class="tab-btn px-4 py-2 text-primary border-b-2 border-primary font-medium">Orders</button>
+            <button id="tabProducts" onclick="switchTab('products')" class="tab-btn px-4 py-2 text-white/50 hover:text-white transition">Products</button>
+        </div>
+
+        <div id="ordersTab">
+            <div id="stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
+
+            <div class="flex flex-col sm:flex-row gap-3 mb-6">
+                <input type="text" id="searchInput" placeholder="Cari order ID, phone, UID..." class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-white/30 focus:border-primary focus:outline-none">
+                <select id="statusFilter" class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none">
+                    <option value="">Semua Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="paid">Paid</option>
+                    <option value="processing">Processing</option>
+                    <option value="success">Success</option>
+                    <option value="failed">Failed</option>
+                    <option value="expired">Expired</option>
+                </select>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-white/10 text-left text-white/50">
+                            <th class="pb-3 pr-4">Order ID</th>
+                            <th class="pb-3 pr-4">Game</th>
+                            <th class="pb-3 pr-4">UID</th>
+                            <th class="pb-3 pr-4">Phone</th>
+                            <th class="pb-3 pr-4">Amount</th>
+                            <th class="pb-3 pr-4">Status</th>
+                            <th class="pb-3 pr-4">Serial No.</th>
+                            <th class="pb-3 pr-4">Created</th>
+                            <th class="pb-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody">
+                        {{range .Orders}}
+                        <tr class="border-b border-white/5 hover:bg-white/5 order-row" data-status="{{.Status}}" data-search="{{.ID}} {{.UserPhone}} {{.GameUID}}">
+                            <td class="py-3 pr-4 font-mono text-xs">{{.ID}}</td>
+                            <td class="py-3 pr-4">{{.ProductID}}</td>
+                            <td class="py-3 pr-4">{{.GameUID}}{{if .GameServer}} ({{.GameServer}}){{end}}</td>
+                            <td class="py-3 pr-4">{{.UserPhone}}</td>
+                            <td class="py-3 pr-4">Rp {{.AmountIDR}}</td>
+                            <td class="py-3 pr-4">
+                                {{if eq .Status "success"}}<span class="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">Berhasil</span>
+                                {{else if eq .Status "failed"}}<span class="px-2 py-1 rounded-full text-xs bg-red-500/20 text-red-400">Gagal</span>
+                                {{else if eq .Status "paid"}}<span class="px-2 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400">Lunas</span>
+                                {{else if eq .Status "processing"}}<span class="px-2 py-1 rounded-full text-xs bg-purple-500/20 text-purple-400">Proses</span>
+                                {{else if eq .Status "expired"}}<span class="px-2 py-1 rounded-full text-xs bg-gray-500/20 text-gray-400">Expired</span>
+                                {{else}}<span class="px-2 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-400">Pending</span>{{end}}
+                            </td>
+                            <td class="py-3 pr-4 font-mono text-xs">{{if .SerialNumber}}{{.SerialNumber}}{{else}}-{{end}}</td>
+                            <td class="py-3 text-white/40">{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
+                            <td class="py-3">
+                                {{if eq .Status "pending"}}
+                                <button onclick="processOrder('{{.ID}}')" class="text-primary hover:text-orange-400 text-sm">Process</button>
+                                {{else if eq .Status "processing"}}
+                                <button onclick="retryOrder('{{.ID}}')" class="text-blue-400 hover:text-blue-300 text-sm">Retry</button>
+                                {{else if eq .Status "paid"}}
+                                <button onclick="retryOrder('{{.ID}}')" class="text-blue-400 hover:text-blue-300 text-sm">Retry</button>
+                                {{end}}
+                            </td>
+                        </tr>
+                        {{else}}
+                        <tr><td colspan="9" class="py-8 text-center text-white/40">Belum ada order.</td></tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="productsTab" class="hidden">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold">Product Management</h2>
+                <button onclick="showAddProductForm()" class="bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm transition">+ Add Product</button>
+            </div>
+
+            <div id="productForm" class="hidden bg-white/5 border border-white/10 rounded-xl p-6 mb-6">
+                <h3 id="productFormTitle" class="text-lg font-semibold mb-4">Add New Product</h3>
+                <form id="productFormEl" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="editProductId">
+                    <div>
+                        <label class="block text-sm text-white/70 mb-1">Game</label>
+                        <select id="prodGame" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                            <option value="free_fire">Free Fire</option>
+                            <option value="mobile_legends">Mobile Legends</option>
+                            <option value="pubg_mobile">PUBG Mobile</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-white/70 mb-1">Name</label>
+                        <input type="text" id="prodName" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-white/70 mb-1">SKU</label>
+                        <input type="text" id="prodSku" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-white/70 mb-1">Price (IDR)</label>
+                        <input type="number" id="prodPrice" required min="1" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-white/70 mb-1">Diamonds</label>
+                        <input type="number" id="prodDiamonds" required min="0" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-white/70 mb-1">Description</label>
+                        <input type="text" id="prodDesc" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                    </div>
+                    <div class="flex items-center gap-2 md:col-span-2">
+                        <input type="checkbox" id="prodActive" checked class="w-4 h-4">
+                        <label for="prodActive" class="text-sm text-white/70">Active</label>
+                    </div>
+                    <div class="flex gap-3 md:col-span-2">
+                        <button type="submit" class="bg-primary hover:bg-orange-600 text-white px-6 py-2 rounded-lg transition">Save</button>
+                        <button type="button" onclick="hideProductForm()" class="bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-lg transition">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-white/10 text-left text-white/50">
+                            <th class="pb-3 pr-4">ID</th>
+                            <th class="pb-3 pr-4">Game</th>
+                            <th class="pb-3 pr-4">Name</th>
+                            <th class="pb-3 pr-4">SKU</th>
+                            <th class="pb-3 pr-4">Price</th>
+                            <th class="pb-3 pr-4">Diamonds</th>
+                            <th class="pb-3 pr-4">Status</th>
+                            <th class="pb-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productsTableBody">
+                        <tr><td colspan="8" class="py-8 text-center text-white/40">Loading products...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+    {{else}}
+    <section class="max-w-sm mx-auto px-4 py-24">
+        <h1 class="text-3xl font-bold mb-8 text-center">Admin Login</h1>
+        <form method="POST" action="/admin" class="space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-white/70 mb-1">Password Admin</label>
+                <input type="password" name="password" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none">
+            </div>
+            <button type="submit" class="w-full bg-primary hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition">Masuk</button>
+            {{if .LoginFailed}}
+            <p class="text-red-400 text-sm text-center">Password salah.</p>
+            {{end}}
+        </form>
+    </section>
+    {{end}}
+
+    <footer class="border-t border-white/10 mt-16 py-8 text-center text-white/40 text-sm">
+        <p>&copy; 2026 TopUp Store. All rights reserved.</p>
+    </footer>
+
+    <div id="toast" class="fixed bottom-4 right-4 hidden z-50"></div>
+
+    <script>
+    let csrfToken = '';
+
+    async function fetchWithCSRF(url, options = {}) {
+        const headers = { 'Content-Type': 'application/json' };
+        if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+        const res = await fetch(url, { ...options, headers: { ...headers, ...options.headers } });
+        const newToken = res.headers.get('X-CSRF-Token');
+        if (newToken) csrfToken = newToken;
+        return res;
+    }
+
+    async function initCSRF() {
+        try {
+            const res = await fetch('/admin/products');
+            const token = res.headers.get('X-CSRF-Token');
+            if (token) csrfToken = token;
+        } catch (e) {}
+    }
+    initCSRF();
+
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
+        toast.className = `fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg text-white text-sm ${colors[type] || colors.info}`;
+        toast.textContent = message;
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    async function processOrder(orderId) {
+        if (!confirm('Proses order ini?')) return;
+        try {
+            const res = await fetchWithCSRF('/admin/process-order', {
+                method: 'POST',
+                body: JSON.stringify({ order_id: orderId }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast('Order berhasil diproses!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(data.error?.message || 'Gagal memproses order', 'error');
+            }
+        } catch (e) {
+            showToast('Terjadi kesalahan', 'error');
+        }
+    }
+
+    async function retryOrder(orderId) {
+        if (!confirm('Retry order ini?')) return;
+        try {
+            const res = await fetchWithCSRF('/admin/retry-order', {
+                method: 'POST',
+                body: JSON.stringify({ order_id: orderId }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast('Order berhasil di-retry!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(data.error?.message || 'Gagal retry order', 'error');
+            }
+        } catch (e) {
+            showToast('Terjadi kesalahan', 'error');
+        }
+    }
+
+    document.getElementById('searchInput')?.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        document.querySelectorAll('.order-row').forEach(row => {
+            const search = row.dataset.search.toLowerCase();
+            row.style.display = search.includes(query) ? '' : 'none';
+        });
+    });
+
+    document.getElementById('statusFilter')?.addEventListener('change', (e) => {
+        const status = e.target.value;
+        document.querySelectorAll('.order-row').forEach(row => {
+            row.style.display = !status || row.dataset.status === status ? '' : 'none';
+        });
+    });
+
+    function updateStats() {
+        const rows = document.querySelectorAll('.order-row');
+        const stats = { total: rows.length, pending: 0, success: 0, revenue: 0 };
+        rows.forEach(row => {
+            const status = row.dataset.status;
+            if (status === 'pending') stats.pending++;
+            if (status === 'success') stats.success++;
+            const amountText = row.querySelector('td:nth-child(5)')?.textContent?.replace('Rp ', '').replace(/,/g, '') || '0';
+            stats.revenue += parseInt(amountText) || 0;
+        });
+
+        const statsEl = document.getElementById('stats');
+        if (statsEl) {
+            statsEl.innerHTML = `
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10"><div class="text-2xl font-bold">${stats.total}</div><div class="text-sm text-white/50">Total Orders</div></div>
+                <div class="bg-yellow-500/10 rounded-xl p-4 border border-yellow-500/20"><div class="text-2xl font-bold text-yellow-400">${stats.pending}</div><div class="text-sm text-white/50">Pending</div></div>
+                <div class="bg-green-500/10 rounded-xl p-4 border border-green-500/20"><div class="text-2xl font-bold text-green-400">${stats.success}</div><div class="text-sm text-white/50">Success</div></div>
+                <div class="bg-primary/10 rounded-xl p-4 border border-primary/20"><div class="text-2xl font-bold text-primary">Rp ${stats.revenue.toLocaleString('id-ID')}</div><div class="text-sm text-white/50">Revenue</div></div>
+            `;
+        }
+    }
+
+    document.getElementById('refreshBtn')?.addEventListener('click', () => location.reload());
+    updateStats();
+    setInterval(updateStats, 30000);
+
+    function switchTab(tab) {
+        document.getElementById('ordersTab').classList.toggle('hidden', tab !== 'orders');
+        document.getElementById('productsTab').classList.toggle('hidden', tab !== 'products');
+        document.getElementById('tabOrders').classList.toggle('text-primary', tab === 'orders');
+        document.getElementById('tabOrders').classList.toggle('border-primary', tab === 'orders');
+        document.getElementById('tabOrders').classList.toggle('text-white/50', tab !== 'orders');
+        document.getElementById('tabOrders').classList.toggle('border-transparent', tab !== 'orders');
+        document.getElementById('tabProducts').classList.toggle('text-primary', tab === 'products');
+        document.getElementById('tabProducts').classList.toggle('border-primary', tab === 'products');
+        document.getElementById('tabProducts').classList.toggle('text-white/50', tab !== 'products');
+        document.getElementById('tabProducts').classList.toggle('border-transparent', tab !== 'products');
+        if (tab === 'products') loadProducts();
+    }
+
+    let products = [];
+
+    async function loadProducts() {
+        try {
+            const res = await fetchWithCSRF('/admin/products');
+            const json = await res.json();
+            if (res.ok) {
+                products = json.data || [];
+                renderProducts();
+            }
+        } catch (e) {
+            showToast('Failed to load products', 'error');
+        }
+    }
+
+    function renderProducts() {
+        const tbody = document.getElementById('productsTableBody');
+        if (!products.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-white/40">No products found.</td></tr>';
+            return;
+        }
+        const gameLabels = { free_fire: 'FF', mobile_legends: 'ML', pubg_mobile: 'PUBG' };
+        tbody.innerHTML = products.map(p => `
+            <tr class="border-b border-white/5 hover:bg-white/5" data-id="${p.id}">
+                <td class="py-3 pr-4 font-mono text-xs">${p.id.substring(0, 8)}...</td>
+                <td class="py-3 pr-4">${gameLabels[p.game] || p.game}</td>
+                <td class="py-3 pr-4">${p.name}</td>
+                <td class="py-3 pr-4 font-mono text-xs">${p.sku}</td>
+                <td class="py-3 pr-4">Rp ${p.price_idr.toLocaleString('id-ID')}</td>
+                <td class="py-3 pr-4">${p.diamonds}</td>
+                <td class="py-3 pr-4">${p.is_active ? '<span class="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">Active</span>' : '<span class="px-2 py-1 rounded-full text-xs bg-gray-500/20 text-gray-400">Inactive</span>'}</td>
+                <td class="py-3">
+                    <button onclick="editProduct('${p.id}')" class="text-blue-400 hover:text-blue-300 text-sm mr-2">Edit</button>
+                    <button onclick="deleteProduct('${p.id}')" class="text-red-400 hover:text-red-300 text-sm">Delete</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function showAddProductForm() {
+        document.getElementById('productForm').classList.remove('hidden');
+        document.getElementById('productFormTitle').textContent = 'Add New Product';
+        document.getElementById('editProductId').value = '';
+        document.getElementById('prodGame').value = 'free_fire';
+        document.getElementById('prodName').value = '';
+        document.getElementById('prodSku').value = '';
+        document.getElementById('prodPrice').value = '';
+        document.getElementById('prodDiamonds').value = '';
+        document.getElementById('prodDesc').value = '';
+        document.getElementById('prodActive').checked = true;
+    }
+
+    function hideProductForm() {
+        document.getElementById('productForm').classList.add('hidden');
+    }
+
+    function editProduct(id) {
+        const p = products.find(x => x.id === id);
+        if (!p) return;
+        document.getElementById('productForm').classList.remove('hidden');
+        document.getElementById('productFormTitle').textContent = 'Edit Product';
+        document.getElementById('editProductId').value = p.id;
+        document.getElementById('prodGame').value = p.game;
+        document.getElementById('prodName').value = p.name;
+        document.getElementById('prodSku').value = p.sku;
+        document.getElementById('prodPrice').value = p.price_idr;
+        document.getElementById('prodDiamonds').value = p.diamonds;
+        document.getElementById('prodDesc').value = p.description || '';
+        document.getElementById('prodActive').checked = p.is_active;
+    }
+
+    async function deleteProduct(id) {
+        if (!confirm('Delete this product?')) return;
+        try {
+            const res = await fetchWithCSRF(`/admin/products/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                showToast('Product deleted', 'success');
+                loadProducts();
+            } else {
+                const data = await res.json();
+                showToast(data.error?.message || 'Failed to delete', 'error');
+            }
+        } catch (e) {
+            showToast('Failed to delete product', 'error');
+        }
+    }
+
+    document.getElementById('productFormEl')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('editProductId').value;
+        const body = {
+            game: document.getElementById('prodGame').value,
+            name: document.getElementById('prodName').value,
+            sku: document.getElementById('prodSku').value,
+            price_idr: parseInt(document.getElementById('prodPrice').value),
+            diamonds: parseInt(document.getElementById('prodDiamonds').value),
+            description: document.getElementById('prodDesc').value,
+            is_active: document.getElementById('prodActive').checked,
+        };
+
+        try {
+            const url = id ? `/admin/products/${id}` : '/admin/products';
+            const method = id ? 'PUT' : 'POST';
+            const res = await fetchWithCSRF(url, { method, body: JSON.stringify(body) });
+            const data = await res.json();
+            if (res.ok) {
+                showToast(id ? 'Product updated!' : 'Product created!', 'success');
+                hideProductForm();
+                loadProducts();
+            } else {
+                showToast(data.error?.message || 'Failed to save', 'error');
+            }
+        } catch (e) {
+            showToast('Failed to save product', 'error');
+        }
+    });
+    </script>
+</body>
+</html>

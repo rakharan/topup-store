@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: topup
+      POSTGRES_PASSWORD: topup
+      POSTGRES_DB: topup_store
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations:/migrations
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U topup -d topup_store"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - topup-network
+
+  migrate:
+    image: postgres:16-alpine
+    command: sh -c 'for f in /migrations/*.sql; do echo "Applying $$f..."; psql "$$DATABASE_URL" -f "$$f"; done'
+    volumes:
+      - ./migrations:/migrations
+    environment:
+      DATABASE_URL: postgres://topup:topup@postgres:5432/topup_store?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - topup-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://topup:topup@postgres:5432/topup_store?sslmode=disable
+      WA_BOT_BASE_URL: http://whatsapp-bot:3001
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - topup-network
+
+  whatsapp-bot:
+    build:
+      context: ./whatsapp-bot
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    env_file: .env
+    environment:
+      GO_BACKEND_URL: http://app:8080
+      BOT_PORT: 3001
+    depends_on:
+      - app
+    networks:
+      - topup-network
+
+volumes:
+  pgdata:
+
+networks:
+  topup-network:
+    driver: bridge

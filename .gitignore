@@ -1,0 +1,36 @@
+# Binaries
+bin/
+*.exe
+*.test
+coverage.out
+coverage.html
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+whatsapp-bot/node_modules/
+vendor/
+
+# Sessions / State
+whatsapp-bot/sessions/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build output
+dist/
+build/

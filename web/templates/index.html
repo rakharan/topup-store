@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TopUp Store - Top Up Game Murah & Cepat</title>
+    <meta name="description" content="Top up game favoritmu dengan harga terjangkau. Free Fire, Mobile Legends, PUBG Mobile. Proses instan via QRIS.">
+    <meta property="og:title" content="TopUp Store - Top Up Game Murah & Cepat">
+    <meta property="og:description" content="Top up game favoritmu dengan harga terjangkau. Proses instan via QRIS.">
+    <meta property="og:type" content="website">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#F97316',
+                        dark: '#1C1C1E',
+                        darker: '#111113',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .game-card { transition: all 0.3s ease; }
+        .game-card:hover { transform: translateY(-4px); }
+        .skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    </style>
+</head>
+<body class="bg-dark text-white min-h-screen">
+    <nav class="bg-dark/95 backdrop-blur border-b border-white/10 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="/" class="text-xl font-bold text-primary flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                TopUp Store
+            </a>
+            <div class="hidden md:flex gap-6">
+                <a href="/" class="text-primary font-medium">Home</a>
+                <a href="/order" class="hover:text-primary transition">Order</a>
+                <a href="/status" class="hover:text-primary transition">Cek Order</a>
+                <a href="/admin" class="hover:text-primary transition">Admin</a>
+            </div>
+            <button id="mobileMenuBtn" class="md:hidden p-2 hover:bg-white/10 rounded-lg">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+        </div>
+        <div id="mobileMenu" class="hidden md:hidden border-t border-white/10 px-4 py-3 space-y-3">
+            <a href="/" class="block text-primary font-medium">Home</a>
+            <a href="/order" class="block hover:text-primary transition">Order</a>
+            <a href="/status" class="block hover:text-primary transition">Cek Order</a>
+            <a href="/admin" class="block hover:text-primary transition">Admin</a>
+        </div>
+    </nav>
+
+    <section class="max-w-6xl mx-auto px-4 pt-16 pb-8 text-center">
+        <h1 class="text-4xl md:text-5xl font-bold mb-4">Top Up Game Favoritmu, <span class="text-primary">Cepat &amp; Aman</span></h1>
+        <p class="text-white/60 text-lg max-w-2xl mx-auto mb-8">Proses instan, harga terjangkau, dan pembayaran mudah via QRIS.</p>
+        <a href="/order" class="inline-block bg-primary hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-lg transition text-lg">Order Sekarang</a>
+    </section>
+
+    <section class="max-w-6xl mx-auto px-4 pb-8">
+        <div class="flex gap-2 justify-center mb-8 flex-wrap" id="gameTabs">
+            <button data-game="free_fire" class="game-tab px-5 py-2 rounded-full bg-primary text-white font-medium transition flex items-center gap-2">
+                <span class="text-lg">🔥</span> Free Fire
+            </button>
+            <button data-game="mobile_legends" class="game-tab px-5 py-2 rounded-full bg-white/10 hover:bg-white/20 font-medium transition flex items-center gap-2">
+                <span class="text-lg">⚔️</span> Mobile Legends
+            </button>
+            <button data-game="pubg_mobile" class="game-tab px-5 py-2 rounded-full bg-white/10 hover:bg-white/20 font-medium transition flex items-center gap-2">
+                <span class="text-lg">🎯</span> PUBG Mobile
+            </button>
+        </div>
+        <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+    </section>
+
+    <section class="max-w-6xl mx-auto px-4 py-12">
+        <h2 class="text-2xl font-bold text-center mb-8">Cara Order</h2>
+        <div class="grid md:grid-cols-3 gap-6">
+            <div class="bg-white/5 rounded-xl p-6 border border-white/10 text-center">
+                <div class="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4 text-primary text-xl font-bold">1</div>
+                <h3 class="font-semibold mb-2">Pilih Game & Paket</h3>
+                <p class="text-white/60 text-sm">Pilih game favoritmu dan paket top up yang diinginkan.</p>
+            </div>
+            <div class="bg-white/5 rounded-xl p-6 border border-white/10 text-center">
+                <div class="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4 text-primary text-xl font-bold">2</div>
+                <h3 class="font-semibold mb-2">Bayar via QRIS</h3>
+                <p class="text-white/60 text-sm">Scan kode QRIS dan lakukan pembayaran dengan mudah.</p>
+            </div>
+            <div class="bg-white/5 rounded-xl p-6 border border-white/10 text-center">
+                <div class="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4 text-primary text-xl font-bold">3</div>
+                <h3 class="font-semibold mb-2">Top Up Otomatis</h3>
+                <p class="text-white/60 text-sm">Setelah pembayaran berhasil, top up akan diproses otomatis.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="border-t border-white/10 mt-16 py-8 text-center text-white/40 text-sm">
+        <p>&copy; 2026 TopUp Store. All rights reserved.</p>
+    </footer>
+
+    <div id="toast" class="fixed bottom-4 right-4 hidden z-50"></div>
+
+    <script>
+    const whatsappNumber = "{{.WhatsappNumber}}";
+    const gameLabels = { free_fire: "FF", mobile_legends: "ML", pubg_mobile: "PUBG" };
+    let activeGame = "free_fire";
+
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
+        toast.className = `fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg text-white text-sm ${colors[type] || colors.info}`;
+        toast.textContent = message;
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+        document.getElementById('mobileMenu').classList.toggle('hidden');
+    });
+
+    async function loadProducts(game) {
+        const grid = document.getElementById("productGrid");
+        grid.innerHTML = Array(5).fill('<div class="skeleton rounded-xl h-32"></div>').join('');
+        try {
+            const res = await fetch(`/api/products?game=${game}`);
+            if (!res.ok) throw new Error('Failed to load');
+            const json = await res.json();
+            const products = json.data || json;
+            grid.innerHTML = "";
+            if (!products.length) {
+                grid.innerHTML = '<p class="col-span-full text-center text-white/40 py-12">Belum ada produk untuk game ini.</p>';
+                return;
+            }
+            products.forEach((p, i) => {
+                const label = gameLabels[game] || game;
+                const card = document.createElement("div");
+                card.className = "game-card bg-white/5 rounded-xl p-4 border border-white/10 hover:border-primary/50 transition flex flex-col animate-fade-in";
+                card.style.animationDelay = `${i * 50}ms`;
+                card.innerHTML = `
+                    <div class="text-2xl font-bold text-primary mb-1">${p.diamonds}</div>
+                    <div class="text-sm text-white/60 mb-3">${p.name}</div>
+                    <div class="text-lg font-semibold mb-4">Rp ${p.price_idr.toLocaleString("id-ID")}</div>
+                    <a href="/order" class="mt-auto block text-center bg-primary hover:bg-orange-600 text-white font-medium py-2 rounded-lg transition">
+                        Order Sekarang
+                    </a>
+                `;
+                grid.appendChild(card);
+            });
+        } catch (e) {
+            grid.innerHTML = '<p class="col-span-full text-center text-red-400 py-12">Gagal memuat produk.</p>';
+            showToast('Gagal memuat produk', 'error');
+        }
+    }
+
+    document.querySelectorAll(".game-tab").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".game-tab").forEach(b => {
+                b.classList.remove("bg-primary", "text-white");
+                b.classList.add("bg-white/10");
+            });
+            btn.classList.add("bg-primary", "text-white");
+            btn.classList.remove("bg-white/10");
+            activeGame = btn.dataset.game;
+            loadProducts(activeGame);
+        });
+    });
+
+    loadProducts(activeGame);
+    </script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order - TopUp Store</title>
+    <meta name="description" content="Buat order top up game dengan mudah dan cepat.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { primary: '#F97316', dark: '#1C1C1E' },
+                    animation: { 'fade-in': 'fadeIn 0.5s ease-out' },
+                    keyframes: { fadeIn: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-dark text-white min-h-screen">
+    <nav class="bg-dark/95 backdrop-blur border-b border-white/10 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="/" class="text-xl font-bold text-primary flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                TopUp Store
+            </a>
+            <div class="hidden md:flex gap-6">
+                <a href="/" class="hover:text-primary transition">Home</a>
+                <a href="/order" class="text-primary font-medium">Order</a>
+                <a href="/status" class="hover:text-primary transition">Cek Order</a>
+                <a href="/admin" class="hover:text-primary transition">Admin</a>
+            </div>
+            <button id="mobileMenuBtn" class="md:hidden p-2 hover:bg-white/10 rounded-lg">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+        </div>
+        <div id="mobileMenu" class="hidden md:hidden border-t border-white/10 px-4 py-3 space-y-3">
+            <a href="/" class="block hover:text-primary transition">Home</a>
+            <a href="/order" class="block text-primary font-medium">Order</a>
+            <a href="/status" class="block hover:text-primary transition">Cek Order</a>
+            <a href="/admin" class="block hover:text-primary transition">Admin</a>
+        </div>
+    </nav>
+
+    <section class="max-w-lg mx-auto px-4 py-12">
+        <h1 class="text-3xl font-bold mb-8 text-center">Buat Order</h1>
+        <form id="orderForm" class="space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-white/70 mb-1">Game</label>
+                <select id="game" name="game" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50">
+                    <option value="">Pilih game</option>
+                    <option value="free_fire">Free Fire</option>
+                    <option value="mobile_legends">Mobile Legends</option>
+                    <option value="pubg_mobile">PUBG Mobile</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-white/70 mb-1">Paket</label>
+                <select id="product" name="product" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50" disabled>
+                    <option value="">Pilih game terlebih dahulu</option>
+                </select>
+            </div>
+            <div id="uidGroup">
+                <label class="block text-sm font-medium text-white/70 mb-1">Game UID</label>
+                <input type="text" id="gameUid" name="game_uid" placeholder="Masukkan UID" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50">
+                <p class="text-xs text-white/40 mt-1" id="uidHint">Masukkan UID game kamu</p>
+            </div>
+            <div id="serverGroup" class="hidden">
+                <label class="block text-sm font-medium text-white/70 mb-1">Server ID</label>
+                <input type="text" id="gameServer" name="game_server" placeholder="Masukkan Server ID" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50">
+                <p class="text-xs text-white/40 mt-1">Server ID bisa ditemukan di profil game</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-white/70 mb-1">Nomor WhatsApp</label>
+                <input type="text" id="phone" name="phone" placeholder="628xxxxxxxxxx" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50">
+                <p class="text-xs text-white/40 mt-1">Untuk konfirmasi order via WhatsApp</p>
+            </div>
+            <button type="submit" id="submitBtn" class="w-full bg-primary hover:bg-orange-600 disabled:bg-white/20 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2">
+                <span id="submitText">Buat Order</span>
+                <svg id="submitSpinner" class="hidden animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            </button>
+        </form>
+        <div id="result" class="hidden mt-8 bg-white/5 border border-white/10 rounded-xl p-6"></div>
+    </section>
+
+    <footer class="border-t border-white/10 mt-16 py-8 text-center text-white/40 text-sm">
+        <p>&copy; 2026 TopUp Store. All rights reserved.</p>
+    </footer>
+
+    <div id="toast" class="fixed bottom-4 right-4 hidden z-50"></div>
+
+    <script>
+    const gameSelect = document.getElementById("game");
+    const productSelect = document.getElementById("product");
+    const serverGroup = document.getElementById("serverGroup");
+    const submitBtn = document.getElementById("submitBtn");
+    const submitText = document.getElementById("submitText");
+    const submitSpinner = document.getElementById("submitSpinner");
+
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
+        toast.className = `fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg text-white text-sm ${colors[type] || colors.info}`;
+        toast.textContent = message;
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+        document.getElementById('mobileMenu').classList.toggle('hidden');
+    });
+
+    gameSelect.addEventListener("change", async () => {
+        const game = gameSelect.value;
+        productSelect.innerHTML = '<option value="">Loading...</option>';
+        productSelect.disabled = true;
+        if (game === "mobile_legends") {
+            serverGroup.classList.remove("hidden");
+            document.getElementById("uidHint").textContent = "Masukkan UID Mobile Legends";
+        } else {
+            serverGroup.classList.add("hidden");
+            document.getElementById("gameServer").value = "";
+            document.getElementById("uidHint").textContent = "Masukkan UID game kamu";
+        }
+        if (!game) return;
+        try {
+            const res = await fetch(`/api/products?game=${game}`);
+            const json = await res.json();
+            const products = json.data || json;
+            productSelect.innerHTML = '<option value="">Pilih paket</option>';
+            products.forEach(p => {
+                const opt = document.createElement("option");
+                opt.value = p.id;
+                opt.textContent = `${p.name} (${p.diamonds} Diamonds) - Rp ${p.price_idr.toLocaleString("id-ID")}`;
+                opt.dataset.amount = p.price_idr;
+                productSelect.appendChild(opt);
+            });
+            productSelect.disabled = false;
+        } catch (e) {
+            productSelect.innerHTML = '<option value="">Gagal memuat</option>';
+            showToast('Gagal memuat produk', 'error');
+        }
+    });
+
+    let pollInterval = null;
+
+    document.getElementById("orderForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const result = document.getElementById("result");
+        result.classList.add("hidden");
+        if (pollInterval) clearInterval(pollInterval);
+
+        const game = gameSelect.value;
+        const gameUid = document.getElementById("gameUid").value.trim();
+        const gameServer = document.getElementById("gameServer").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+
+        if (!game || !gameUid || !phone || !productSelect.value) {
+            result.classList.remove("hidden");
+            result.innerHTML = '<p class="text-red-400">Semua field wajib diisi.</p>';
+            return;
+        }
+        if (game === "mobile_legends" && !gameServer) {
+            result.classList.remove("hidden");
+            result.innerHTML = '<p class="text-red-400">Server ID wajib diisi untuk Mobile Legends.</p>';
+            return;
+        }
+        if (game === "mobile_legends") {
+            if (!/^\d+$/.test(gameUid) || !/^\d+$/.test(gameServer)) {
+                result.classList.remove("hidden");
+                result.innerHTML = '<p class="text-red-400">UID dan Server ID harus berupa angka.</p>';
+                return;
+            }
+        } else if (!/^\d+$/.test(gameUid)) {
+            result.classList.remove("hidden");
+            result.innerHTML = '<p class="text-red-400">Game UID harus berupa angka.</p>';
+            return;
+        }
+        if (!/^\d{8,20}$/.test(phone)) {
+            result.classList.remove("hidden");
+            result.innerHTML = '<p class="text-red-400">Nomor WhatsApp harus berupa angka (8-20 digit).</p>';
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitText.textContent = 'Memproses...';
+        submitSpinner.classList.remove('hidden');
+
+        const body = { game, product_id: productSelect.value, game_uid: gameUid, game_server: gameServer, phone };
+        try {
+            const res = await fetch("/api/orders", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+            const data = await res.json();
+            const orderData = data.data || data;
+
+            if (orderData.order_id) {
+                result.classList.remove("hidden");
+                const payLink = orderData.qris_url || '#';
+                result.innerHTML = `
+                    <div class="text-center animate-fade-in">
+                        <div class="text-green-400 text-4xl mb-3">✅</div>
+                        <p class="text-lg font-semibold mb-2">Order berhasil dibuat!</p>
+                        <div class="flex items-center justify-center gap-2 mb-4">
+                            <span class="text-white/60 text-sm">ID Order:</span>
+                            <code class="bg-white/10 px-3 py-1 rounded font-mono text-sm">${orderData.order_id}</code>
+                            <button onclick="navigator.clipboard.writeText('${orderData.order_id}'); showToast('ID Order disalin!', 'success')" class="text-white/40 hover:text-primary">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            </button>
+                        </div>
+                        <p class="text-2xl font-bold text-primary my-4">Rp ${parseInt(orderData.amount_idr).toLocaleString("id-ID")}</p>
+                        ${payLink && payLink !== '#' ? `
+                            <p class="text-white/60 mb-4">Klik tombol di bawah untuk melakukan pembayaran:</p>
+                            <a href="${payLink}" target="_blank" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-3 rounded-lg transition text-lg">Bayar Sekarang</a>
+                        ` : '<p class="text-yellow-400 mb-4">Menunggu pembayaran...</p>'}
+                        <div id="countdown" class="mt-4 text-sm text-white/40"></div>
+                        <a href="/status?id=${orderData.order_id}" class="inline-block text-white/60 hover:text-primary text-sm mt-4">Cek Status Order →</a>
+                    </div>
+                `;
+                showToast('Order berhasil dibuat!', 'success');
+
+                let expiryTime = 30 * 60;
+                const countdownEl = document.getElementById('countdown');
+                pollInterval = setInterval(async () => {
+                    expiryTime--;
+                    if (countdownEl) {
+                        const m = Math.floor(expiryTime / 60);
+                        const s = expiryTime % 60;
+                        countdownEl.textContent = `Berlaku ${m}:${s.toString().padStart(2, '0')} lagi`;
+                    }
+                    if (expiryTime <= 0) { clearInterval(pollInterval); return; }
+
+                    try {
+                        const statusRes = await fetch(`/api/orders/${orderData.order_id}`);
+                        if (statusRes.ok) {
+                            const statusData = await statusRes.json();
+                            const order = statusData.data || statusData;
+                            if (order.status === 'paid' || order.status === 'processing' || order.status === 'success') {
+                                clearInterval(pollInterval);
+                                showToast('Pembayaran terdeteksi! Order sedang diproses.', 'success');
+                                setTimeout(() => window.location.href = `/status?id=${orderData.order_id}`, 1500);
+                            }
+                        }
+                    } catch (e) {}
+                }, 5000);
+            } else {
+                result.classList.remove("hidden");
+                result.innerHTML = `<p class="text-red-400">Gagal membuat order: ${data.error?.message || data.error || "Unknown error"}</p>`;
+                showToast('Gagal membuat order', 'error');
+            }
+        } catch (e) {
+            result.classList.remove("hidden");
+            result.innerHTML = '<p class="text-red-400">Terjadi kesalahan. Coba lagi.</p>';
+            showToast('Terjadi kesalahan', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitText.textContent = 'Buat Order';
+            submitSpinner.classList.add('hidden');
+        }
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cek Order - TopUp Store</title>
+    <meta name="description" content="Cek status order top up game kamu.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { primary: '#F97316', dark: '#1C1C1E' },
+                    animation: { 'fade-in': 'fadeIn 0.5s ease-out' },
+                    keyframes: { fadeIn: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-dark text-white min-h-screen">
+    <nav class="bg-dark/95 backdrop-blur border-b border-white/10 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="/" class="text-xl font-bold text-primary flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                TopUp Store
+            </a>
+            <div class="hidden md:flex gap-6">
+                <a href="/" class="hover:text-primary transition">Home</a>
+                <a href="/order" class="hover:text-primary transition">Order</a>
+                <a href="/status" class="text-primary font-medium">Cek Order</a>
+                <a href="/admin" class="hover:text-primary transition">Admin</a>
+            </div>
+            <button id="mobileMenuBtn" class="md:hidden p-2 hover:bg-white/10 rounded-lg">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+        </div>
+        <div id="mobileMenu" class="hidden md:hidden border-t border-white/10 px-4 py-3 space-y-3">
+            <a href="/" class="block hover:text-primary transition">Home</a>
+            <a href="/order" class="block hover:text-primary transition">Order</a>
+            <a href="/status" class="block text-primary font-medium">Cek Order</a>
+            <a href="/admin" class="block hover:text-primary transition">Admin</a>
+        </div>
+    </nav>
+
+    <section class="max-w-lg mx-auto px-4 py-12">
+        <h1 class="text-3xl font-bold mb-8 text-center">Cek Status Order</h1>
+        <form id="statusForm" class="flex gap-3 mb-8">
+            <input type="text" id="orderId" name="id" placeholder="Masukkan ID Order" required class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50">
+            <button type="submit" class="bg-primary hover:bg-orange-600 text-white font-semibold px-6 py-3 rounded-lg transition">Cek</button>
+        </form>
+        <div id="result" class="hidden bg-white/5 border border-white/10 rounded-xl p-6"></div>
+        <div id="autoRefresh" class="hidden mt-4 text-center text-sm text-white/40">
+            <span>Auto-refresh setiap 10 detik</span>
+            <button id="stopRefresh" class="text-primary ml-2 hover:underline">Stop</button>
+        </div>
+    </section>
+
+    <footer class="border-t border-white/10 mt-16 py-8 text-center text-white/40 text-sm">
+        <p>&copy; 2026 TopUp Store. All rights reserved.</p>
+    </footer>
+
+    <div id="toast" class="fixed bottom-4 right-4 hidden z-50"></div>
+
+    <script>
+    const statusColors = {
+        pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+        paid: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+        processing: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+        success: "bg-green-500/20 text-green-400 border-green-500/30",
+        failed: "bg-red-500/20 text-red-400 border-red-500/30",
+        expired: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+    };
+    const statusLabels = {
+        pending: "Menunggu Pembayaran",
+        paid: "Lunas - Sedang Diproses",
+        processing: "Sedang Diproses",
+        success: "Berhasil",
+        failed: "Gagal",
+        expired: "Kadaluarsa",
+    };
+    const statusSteps = ['pending', 'paid', 'processing', 'success'];
+
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
+        toast.className = `fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg text-white text-sm ${colors[type] || colors.info}`;
+        toast.textContent = message;
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+        document.getElementById('mobileMenu').classList.toggle('hidden');
+    });
+
+    let refreshInterval = null;
+
+    function renderTimeline(status) {
+        const currentIdx = statusSteps.indexOf(status);
+        return statusSteps.map((step, i) => {
+            const done = i <= currentIdx;
+            const active = i === currentIdx;
+            const color = done ? (step === 'success' ? 'bg-green-500' : 'bg-primary') : 'bg-white/10';
+            const label = statusLabels[step];
+            return `
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-full ${color} flex items-center justify-center text-xs font-bold ${done ? 'text-white' : 'text-white/30'}">
+                        ${done ? '✓' : (i + 1)}
+                    </div>
+                    <span class="text-sm ${active ? 'text-white font-medium' : 'text-white/40'}">${label}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function fetchOrder(orderId) {
+        const result = document.getElementById("result");
+        const autoRefresh = document.getElementById("autoRefresh");
+        if (refreshInterval) clearInterval(refreshInterval);
+
+        try {
+            const res = await fetch(`/api/orders/${orderId}`);
+            if (!res.ok) {
+                result.classList.remove("hidden");
+                result.innerHTML = '<p class="text-red-400">Order tidak ditemukan.</p>';
+                autoRefresh.classList.add("hidden");
+                return;
+            }
+            const json = await res.json();
+            const order = json.data || json;
+            const badgeClass = statusColors[order.status] || "bg-white/10 text-white";
+            const label = statusLabels[order.status] || order.status;
+
+            result.classList.remove("hidden");
+            result.innerHTML = `
+                <div class="animate-fade-in">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="font-mono text-sm text-white/60">${order.id}</span>
+                        <span class="px-3 py-1 rounded-full text-sm font-medium border ${badgeClass}">${label}</span>
+                    </div>
+                    <div class="space-y-3 mb-6">
+                        ${renderTimeline(order.status)}
+                    </div>
+                    <div class="space-y-2 text-sm border-t border-white/10 pt-4">
+                        <div class="flex justify-between"><span class="text-white/50">Game UID</span><span>${order.game_uid}${order.game_server ? ' (' + order.game_server + ')' : ''}</span></div>
+                        <div class="flex justify-between"><span class="text-white/50">Total</span><span>Rp ${parseInt(order.amount_idr).toLocaleString("id-ID")}</span></div>
+                        <div class="flex justify-between"><span class="text-white/50">Dibuat</span><span>${new Date(order.created_at).toLocaleString("id-ID")}</span></div>
+                        ${order.serial_number ? `<div class="flex justify-between"><span class="text-white/50">Serial Number</span><span class="font-mono">${order.serial_number}</span></div>` : ''}
+                    </div>
+                    ${order.status === 'pending' && order.qris_url ? `
+                        <div class="mt-4 pt-4 border-t border-white/10 text-center">
+                            <a href="${order.qris_url}" target="_blank" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg transition">Bayar Sekarang</a>
+                        </div>
+                    ` : ''}
+                    ${order.status === 'failed' || order.status === 'expired' ? `
+                        <div class="mt-4 pt-4 border-t border-white/10 text-center">
+                            <a href="/order" class="inline-block bg-primary hover:bg-orange-600 text-white font-semibold px-6 py-2 rounded-lg transition">Order Ulang</a>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            if (['pending', 'paid', 'processing'].includes(order.status)) {
+                autoRefresh.classList.remove("hidden");
+                refreshInterval = setInterval(() => fetchOrder(orderId), 10000);
+            } else {
+                autoRefresh.classList.add("hidden");
+            }
+        } catch (e) {
+            result.classList.remove("hidden");
+            result.innerHTML = '<p class="text-red-400">Terjadi kesalahan. Coba lagi.</p>';
+            autoRefresh.classList.add("hidden");
+        }
+    }
+
+    document.getElementById("statusForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const orderId = document.getElementById("orderId").value.trim();
+        document.getElementById("result").classList.add("hidden");
+        await fetchOrder(orderId);
+    });
+
+    document.getElementById("stopRefresh").addEventListener("click", () => {
+        if (refreshInterval) clearInterval(refreshInterval);
+        document.getElementById("autoRefresh").classList.add("hidden");
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("id")) {
+        document.getElementById("orderId").value = params.get("id");
+        document.getElementById("statusForm").dispatchEvent(new Event("submit"));
+    }
+    </script>
+</body>
+</html>
