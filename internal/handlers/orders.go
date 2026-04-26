@@ -96,6 +96,8 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	qrisURL, qrisBase64, err := h.paymentSvc.CreateQRIS(r.Context(), order)
 	if err != nil {
 		h.logger.Error("create qris", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
 	}
 
 	orderCopy := *order
