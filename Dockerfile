@@ -3,7 +3,7 @@ FROM node:20-alpine AS css-builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 COPY tailwind.config.js web/static/css/input.css ./web/static/css/input.css
 RUN npx tailwindcss -i ./web/static/css/input.css -o ./web/static/css/tailwind.css --minify
