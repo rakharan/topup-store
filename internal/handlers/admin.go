@@ -66,6 +66,11 @@ func (h *AdminHandler) ProcessOrder(w http.ResponseWriter, r *http.Request) {
 
 	orderCopy := *order
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				h.logger.Error("admin process order panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", r))
+			}
+		}()
 		if err := h.topupSvc.ProcessOrder(orderCopy.ID); err != nil {
 			h.logger.Error("admin process order: topup failed", slog.String("order_id", orderCopy.ID), slog.String("error", err.Error()))
 			return
@@ -106,6 +111,11 @@ func (h *AdminHandler) RetryOrder(w http.ResponseWriter, r *http.Request) {
 
 	orderCopy := *order
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				h.logger.Error("admin retry order panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", r))
+			}
+		}()
 		if err := h.topupSvc.ProcessOrder(orderCopy.ID); err != nil {
 			h.logger.Error("admin retry order: topup failed", slog.String("order_id", orderCopy.ID), slog.String("error", err.Error()))
 			return

@@ -102,6 +102,11 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	orderCopy := *order
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				h.logger.Error("order notification panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", r))
+			}
+		}()
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := h.notifySvc.SendOrderConfirmation(ctx, &orderCopy, orderCopy.UserPhone); err != nil {

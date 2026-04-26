@@ -133,8 +133,22 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithCancel(context.Background())
 	defer shutdownCancel()
 
-	go startOrderExpiryTickerWithNotify(shutdownCtx, orderRepo, notifySvc, logger)
-	go startDigiflazzPoller(shutdownCtx, orderRepo, topupSvc, notifySvc, logger)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error("order expiry ticker panicked", slog.Any("panic", r))
+			}
+		}()
+		startOrderExpiryTickerWithNotify(shutdownCtx, orderRepo, notifySvc, logger)
+	}()
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error("digiflazz poller panicked", slog.Any("panic", r))
+			}
+		}()
+		startDigiflazzPoller(shutdownCtx, orderRepo, topupSvc, notifySvc, logger)
+	}()
 	logger.Info("Background tickers started (expiry + digiflazz poller)")
 
 	srv := &http.Server{
@@ -143,6 +157,11 @@ func main() {
 	}
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error("server panicked", slog.Any("panic", r))
+			}
+		}()
 		logger.Info("Server starting", slog.String("port", cfg.Port))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Error("Server failed", slog.String("error", err.Error()))
