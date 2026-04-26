@@ -180,6 +180,11 @@
     {{template "toast"}}
 
     <script>
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
     let csrfToken = '';
 
     async function fetchWithCSRF(url, options = {}) {
@@ -334,17 +339,16 @@
         }
         const gameLabels = { free_fire: 'FF', mobile_legends: 'ML', pubg_mobile: 'PUBG' };
         tbody.innerHTML = products.map(p => `
-            <tr class="border-b border-white/5 hover:bg-white/5" data-id="${p.id}">
-                <td class="py-3 pr-4 font-mono text-xs">${p.id.substring(0, 8)}...</td>
-                <td class="py-3 pr-4">${gameLabels[p.game] || p.game}</td>
-                <td class="py-3 pr-4">${p.name}</td>
-                <td class="py-3 pr-4 font-mono text-xs">${p.sku}</td>
+            <tr class="border-b border-white/5 hover:bg-white/5" data-id="${escapeHtml(p.id)}">
+                <td class="py-3 pr-4 font-mono text-xs">${escapeHtml(p.id.substring(0, 8))}...</td>
+                <td class="py-3 pr-4">${escapeHtml(gameLabels[p.game] || p.game)}</td>
+                <td class="py-3 pr-4">${escapeHtml(p.name)}</td>
+                <td class="py-3 pr-4 font-mono text-xs">${escapeHtml(p.sku)}</td>
                 <td class="py-3 pr-4">Rp ${p.price_idr.toLocaleString('id-ID')}</td>
-                <td class="py-3 pr-4">${p.diamonds}</td>
                 <td class="py-3 pr-4">${p.is_active ? '<span class="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">Active</span>' : '<span class="px-2 py-1 rounded-full text-xs bg-gray-500/20 text-gray-400">Inactive</span>'}</td>
                 <td class="py-3">
-                    <button onclick="editProduct('${p.id}')" class="text-blue-400 hover:text-blue-300 text-sm mr-2 focus-ring">Edit</button>
-                    <button onclick="deleteProduct('${p.id}')" class="text-red-400 hover:text-red-300 text-sm focus-ring">Delete</button>
+                    <button onclick="editProduct('${escapeHtml(p.id)}')" class="text-blue-400 hover:text-blue-300 text-sm mr-2 focus-ring">Edit</button>
+                    <button onclick="deleteProduct('${escapeHtml(p.id)}')" class="text-red-400 hover:text-red-300 text-sm focus-ring">Delete</button>
                 </td>
             </tr>
         `).join('');
