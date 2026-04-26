@@ -5,7 +5,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-COPY tailwind.config.js web/static/css/input.css ./web/static/css/input.css
+COPY tailwind.config.js ./tailwind.config.js
+COPY web/templates ./web/templates
+COPY web/static/css/input.css ./web/static/css/input.css
 RUN npx tailwindcss -i ./web/static/css/input.css -o ./web/static/css/tailwind.css --minify
 
 FROM golang:1.22-alpine AS builder

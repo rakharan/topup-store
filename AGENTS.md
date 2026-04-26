@@ -53,3 +53,8 @@
 
 ## Error Handling
 - If you encounter "peer closed connection without sending complete message body (incomplete chunked read)" or "Type validation failed" errors, DO NOT STOP. Retry the operation until it completes successfully.
+
+## Rules
+- Edit one file at a time
+- Keep explanations short, code only
+- No need to summarize what you did, just do it
