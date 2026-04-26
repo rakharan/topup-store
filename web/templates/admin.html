@@ -163,6 +163,7 @@
     <section class="max-w-sm mx-auto px-4 py-24">
         <h1 class="text-3xl font-bold mb-8 text-center">Admin Login</h1>
         <form method="POST" action="/admin" class="space-y-5">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <div>
                 <label class="block text-sm font-medium text-white/70 mb-1" for="password">Password Admin</label>
                 <input type="password" id="password" name="password" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">

@@ -64,6 +64,7 @@ func main() {
 	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, cfg.MidtransServerKey, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzWebhookSecret, logger)
 	admin := handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, cfg.AdminPassword, logger)
 	csrfStore := middleware.NewCSRFStore()
+	csrfMW := middleware.CSRFMiddleware(csrfStore)
 
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Recoverer)
@@ -88,7 +89,7 @@ func main() {
 	r.Get("/order", pages.OrderForm)
 	r.Get("/status", pages.Status)
 	r.Get("/admin", pages.Admin)
-	r.Post("/admin", pages.Admin)
+	r.With(csrfMW).Post("/admin", pages.Admin)
 
 	r.Route("/api", func(r chi.Router) {
 		var allowedOrigins []string
@@ -113,7 +114,6 @@ func main() {
 	r.Post("/webhook/digiflazz", webhook.Digiflazz)
 
 	adminRateLimiter := middleware.NewRateLimiter(30, time.Minute)
-	csrfMW := middleware.CSRFMiddleware(csrfStore)
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post("/admin/process-order", admin.ProcessOrder)
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post("/admin/retry-order", admin.RetryOrder)
 

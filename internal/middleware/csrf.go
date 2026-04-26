@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
@@ -9,6 +10,17 @@ import (
 
 	"github.com/topup-store/internal/apperrors"
 )
+
+type contextKey struct{}
+
+var csrfTokenKey = contextKey{}
+
+func GetCSRFToken(ctx context.Context) string {
+	if v, ok := ctx.Value(csrfTokenKey).(string); ok {
+		return v
+	}
+	return ""
+}
 
 type CSRFStore struct {
 	mu     sync.Mutex
@@ -58,6 +70,7 @@ func CSRFMiddleware(store *CSRFStore) func(http.Handler) http.Handler {
 			if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
 				token := store.Generate()
 				w.Header().Set("X-CSRF-Token", token)
+				r = r.WithContext(context.WithValue(r.Context(), csrfTokenKey, token))
 				next.ServeHTTP(w, r)
 				return
 			}

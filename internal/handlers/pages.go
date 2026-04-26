@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/topup-store/internal/middleware"
 	"github.com/topup-store/internal/services"
 )
 
@@ -113,7 +114,9 @@ func (h *PageHandler) Status(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PageHandler) Admin(w http.ResponseWriter, r *http.Request) {
-	data := map[string]any{}
+	data := map[string]any{
+		"CSRFToken": middleware.GetCSRFToken(r.Context()),
+	}
 
 	if r.Method == http.MethodPost {
 		password := r.FormValue("password")
