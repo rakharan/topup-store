@@ -12,5 +12,10 @@ WHERE ctid NOT IN (
     GROUP BY sku
 );
 
--- Step 3: Add unique constraint to prevent future duplicates
-ALTER TABLE products ADD CONSTRAINT products_sku_unique UNIQUE (sku);
+-- Step 3: Add unique constraint if not already present
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'products_sku_unique') THEN
+        ALTER TABLE products ADD CONSTRAINT products_sku_unique UNIQUE (sku);
+    END IF;
+END $$;

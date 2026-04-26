@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS products (
     description TEXT,
     price_idr INT NOT NULL,
     diamonds INT NOT NULL,
-    sku TEXT NOT NULL,
+    sku TEXT NOT NULL UNIQUE,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
