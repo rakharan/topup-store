@@ -1,35 +1,11 @@
-<!DOCTYPE html>
+{{define "admin.html"}}<!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - TopUp Store</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: { primary: '#F97316', dark: '#1C1C1E' },
-                    animation: { 'fade-in': 'fadeIn 0.5s ease-out' },
-                    keyframes: { fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } } }
-                }
-            }
-        }
-    </script>
+    {{template "head"}}
 </head>
 <body class="bg-dark text-white min-h-screen">
-    <nav class="bg-dark/95 backdrop-blur border-b border-white/10 sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <a href="/" class="text-xl font-bold text-primary">TopUp Store</a>
-            <div class="hidden md:flex gap-6">
-                <a href="/" class="hover:text-primary transition">Home</a>
-                <a href="/order" class="hover:text-primary transition">Order</a>
-                <a href="/status" class="hover:text-primary transition">Cek Order</a>
-                <a href="/admin" class="text-primary font-medium">Admin</a>
-            </div>
-        </div>
-    </nav>
+    {{template "nav" (dict "ActivePage" "admin")}}
 
     {{if .Authenticated}}
     <section class="max-w-6xl mx-auto px-4 py-8">
@@ -37,21 +13,21 @@
             <h1 class="text-2xl font-bold">Admin Dashboard</h1>
             <div class="flex items-center gap-3">
                 <span class="text-sm text-white/40">Auto-refresh 30s</span>
-                <button id="refreshBtn" class="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-sm transition">Refresh</button>
+                <button id="refreshBtn" class="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-sm transition focus-ring">Refresh</button>
             </div>
         </div>
 
         <div class="flex gap-4 mb-6 border-b border-white/10">
-            <button id="tabOrders" onclick="switchTab('orders')" class="tab-btn px-4 py-2 text-primary border-b-2 border-primary font-medium">Orders</button>
-            <button id="tabProducts" onclick="switchTab('products')" class="tab-btn px-4 py-2 text-white/50 hover:text-white transition">Products</button>
+            <button id="tabOrders" onclick="switchTab('orders')" class="tab-btn px-4 py-2 text-primary border-b-2 border-primary font-medium focus-ring">Orders</button>
+            <button id="tabProducts" onclick="switchTab('products')" class="tab-btn px-4 py-2 text-white/50 hover:text-white transition focus-ring">Products</button>
         </div>
 
         <div id="ordersTab">
             <div id="stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
 
             <div class="flex flex-col sm:flex-row gap-3 mb-6">
-                <input type="text" id="searchInput" placeholder="Cari order ID, phone, UID..." class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-white/30 focus:border-primary focus:outline-none">
-                <select id="statusFilter" class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none">
+                <input type="text" id="searchInput" placeholder="Cari order ID, phone, UID..." class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-white/30 focus:border-primary focus:outline-none focus-ring">
+                <select id="statusFilter" class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     <option value="">Semua Status</option>
                     <option value="pending">Pending</option>
                     <option value="paid">Paid</option>
@@ -97,11 +73,11 @@
                             <td class="py-3 text-white/40">{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
                             <td class="py-3">
                                 {{if eq .Status "pending"}}
-                                <button onclick="processOrder('{{.ID}}')" class="text-primary hover:text-orange-400 text-sm">Process</button>
+                                <button onclick="processOrder('{{.ID}}')" class="text-primary hover:text-orange-400 text-sm focus-ring">Process</button>
                                 {{else if eq .Status "processing"}}
-                                <button onclick="retryOrder('{{.ID}}')" class="text-blue-400 hover:text-blue-300 text-sm">Retry</button>
+                                <button onclick="retryOrder('{{.ID}}')" class="text-blue-400 hover:text-blue-300 text-sm focus-ring">Retry</button>
                                 {{else if eq .Status "paid"}}
-                                <button onclick="retryOrder('{{.ID}}')" class="text-blue-400 hover:text-blue-300 text-sm">Retry</button>
+                                <button onclick="retryOrder('{{.ID}}')" class="text-blue-400 hover:text-blue-300 text-sm focus-ring">Retry</button>
                                 {{end}}
                             </td>
                         </tr>
@@ -116,7 +92,7 @@
         <div id="productsTab" class="hidden">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xl font-bold">Product Management</h2>
-                <button onclick="showAddProductForm()" class="bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm transition">+ Add Product</button>
+                <button onclick="showAddProductForm()" class="bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">+ Add Product</button>
             </div>
 
             <div id="productForm" class="hidden bg-white/5 border border-white/10 rounded-xl p-6 mb-6">
@@ -124,40 +100,40 @@
                 <form id="productFormEl" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input type="hidden" id="editProductId">
                     <div>
-                        <label class="block text-sm text-white/70 mb-1">Game</label>
-                        <select id="prodGame" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                        <label class="block text-sm text-white/70 mb-1" for="prodGame">Game</label>
+                        <select id="prodGame" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                             <option value="free_fire">Free Fire</option>
                             <option value="mobile_legends">Mobile Legends</option>
                             <option value="pubg_mobile">PUBG Mobile</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm text-white/70 mb-1">Name</label>
-                        <input type="text" id="prodName" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                        <label class="block text-sm text-white/70 mb-1" for="prodName">Name</label>
+                        <input type="text" id="prodName" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     </div>
                     <div>
-                        <label class="block text-sm text-white/70 mb-1">SKU</label>
-                        <input type="text" id="prodSku" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                        <label class="block text-sm text-white/70 mb-1" for="prodSku">SKU</label>
+                        <input type="text" id="prodSku" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     </div>
                     <div>
-                        <label class="block text-sm text-white/70 mb-1">Price (IDR)</label>
-                        <input type="number" id="prodPrice" required min="1" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                        <label class="block text-sm text-white/70 mb-1" for="prodPrice">Price (IDR)</label>
+                        <input type="number" id="prodPrice" required min="1" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     </div>
                     <div>
-                        <label class="block text-sm text-white/70 mb-1">Diamonds</label>
-                        <input type="number" id="prodDiamonds" required min="0" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                        <label class="block text-sm text-white/70 mb-1" for="prodDiamonds">Diamonds</label>
+                        <input type="number" id="prodDiamonds" required min="0" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     </div>
                     <div>
-                        <label class="block text-sm text-white/70 mb-1">Description</label>
-                        <input type="text" id="prodDesc" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                        <label class="block text-sm text-white/70 mb-1" for="prodDesc">Description</label>
+                        <input type="text" id="prodDesc" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     </div>
                     <div class="flex items-center gap-2 md:col-span-2">
                         <input type="checkbox" id="prodActive" checked class="w-4 h-4">
                         <label for="prodActive" class="text-sm text-white/70">Active</label>
                     </div>
                     <div class="flex gap-3 md:col-span-2">
-                        <button type="submit" class="bg-primary hover:bg-orange-600 text-white px-6 py-2 rounded-lg transition">Save</button>
-                        <button type="button" onclick="hideProductForm()" class="bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-lg transition">Cancel</button>
+                        <button type="submit" class="bg-primary hover:bg-orange-600 text-white px-6 py-2 rounded-lg transition focus-ring">Save</button>
+                        <button type="button" onclick="hideProductForm()" class="bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-lg transition focus-ring">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -188,10 +164,10 @@
         <h1 class="text-3xl font-bold mb-8 text-center">Admin Login</h1>
         <form method="POST" action="/admin" class="space-y-5">
             <div>
-                <label class="block text-sm font-medium text-white/70 mb-1">Password Admin</label>
-                <input type="password" name="password" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none">
+                <label class="block text-sm font-medium text-white/70 mb-1" for="password">Password Admin</label>
+                <input type="password" id="password" name="password" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
             </div>
-            <button type="submit" class="w-full bg-primary hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition">Masuk</button>
+            <button type="submit" class="w-full bg-primary hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition focus-ring">Masuk</button>
             {{if .LoginFailed}}
             <p class="text-red-400 text-sm text-center">Password salah.</p>
             {{end}}
@@ -199,11 +175,8 @@
     </section>
     {{end}}
 
-    <footer class="border-t border-white/10 mt-16 py-8 text-center text-white/40 text-sm">
-        <p>&copy; 2026 TopUp Store. All rights reserved.</p>
-    </footer>
-
-    <div id="toast" class="fixed bottom-4 right-4 hidden z-50"></div>
+    {{template "footer"}}
+    {{template "toast"}}
 
     <script>
     let csrfToken = '';
@@ -225,6 +198,15 @@
         } catch (e) {}
     }
     initCSRF();
+
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
+        const menu = document.getElementById('mobileMenu');
+        const btn = document.getElementById('mobileMenuBtn');
+        if (menu && btn) {
+            menu.classList.toggle('hidden');
+            btn.setAttribute('aria-expanded', !menu.classList.contains('hidden'));
+        }
+    });
 
     function showToast(message, type = 'info') {
         const toast = document.getElementById('toast');
@@ -360,8 +342,8 @@
                 <td class="py-3 pr-4">${p.diamonds}</td>
                 <td class="py-3 pr-4">${p.is_active ? '<span class="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">Active</span>' : '<span class="px-2 py-1 rounded-full text-xs bg-gray-500/20 text-gray-400">Inactive</span>'}</td>
                 <td class="py-3">
-                    <button onclick="editProduct('${p.id}')" class="text-blue-400 hover:text-blue-300 text-sm mr-2">Edit</button>
-                    <button onclick="deleteProduct('${p.id}')" class="text-red-400 hover:text-red-300 text-sm">Delete</button>
+                    <button onclick="editProduct('${p.id}')" class="text-blue-400 hover:text-blue-300 text-sm mr-2 focus-ring">Edit</button>
+                    <button onclick="deleteProduct('${p.id}')" class="text-red-400 hover:text-red-300 text-sm focus-ring">Delete</button>
                 </td>
             </tr>
         `).join('');
@@ -446,4 +428,4 @@
     });
     </script>
 </body>
-</html>
+</html>{{end}}

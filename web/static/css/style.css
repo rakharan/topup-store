@@ -1,94 +1,31 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+/* Custom styles for TopUp Store - Complementing Tailwind CSS */
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
 }
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #f5f5f5;
-    color: #333;
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
 }
 
-header {
-    background: #1a1a2e;
-    padding: 1rem 2rem;
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
 }
 
-header nav a {
-    color: #fff;
-    text-decoration: none;
-    font-size: 1.5rem;
-    font-weight: bold;
-}
-
-.container {
-    max-width: 800px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-}
-
-h1 {
-    margin-bottom: 1.5rem;
-}
-
-.games {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-.game-card {
-    display: block;
-    padding: 2rem;
-    background: #1a1a2e;
-    color: #fff;
-    text-align: center;
-    text-decoration: none;
-    border-radius: 8px;
-    font-size: 1.2rem;
-    transition: transform 0.2s;
-}
-
-.game-card:hover {
-    transform: translateY(-4px);
-}
-
-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    max-width: 400px;
-}
-
-label {
-    font-weight: 600;
-}
-
-input, select {
-    padding: 0.75rem;
-    border: 1px solid #ccc;
+::-webkit-scrollbar-thumb {
+    background: rgba(249, 115, 22, 0.5);
     border-radius: 4px;
-    font-size: 1rem;
 }
 
-button {
-    padding: 0.75rem 1.5rem;
-    background: #1a1a2e;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    cursor: pointer;
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(249, 115, 22, 0.7);
 }
 
-button:hover {
-    background: #16213e;
-}
-
-footer {
-    text-align: center;
-    padding: 2rem;
-    margin-top: 2rem;
-    color: #666;
+/* Focus visible styles for better accessibility */
+.focus-ring:focus-visible {
+    outline: 2px solid #F97316;
+    outline-offset: 2px;
 }

@@ -50,3 +50,6 @@
 - DATABASE_URL
 - WHATSAPP_NUMBER
 - ADMIN_PASSWORD
+
+## Error Handling
+- If you encounter "peer closed connection without sending complete message body (incomplete chunked read)" or "Type validation failed" errors, DO NOT STOP. Retry the operation until it completes successfully.

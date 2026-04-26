@@ -1,55 +1,19 @@
-<!DOCTYPE html>
+{{define "order.html"}}<!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order - TopUp Store</title>
     <meta name="description" content="Buat order top up game dengan mudah dan cepat.">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: { primary: '#F97316', dark: '#1C1C1E' },
-                    animation: { 'fade-in': 'fadeIn 0.5s ease-out' },
-                    keyframes: { fadeIn: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } }
-                }
-            }
-        }
-    </script>
+    {{template "head"}}
 </head>
 <body class="bg-dark text-white min-h-screen">
-    <nav class="bg-dark/95 backdrop-blur border-b border-white/10 sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <a href="/" class="text-xl font-bold text-primary flex items-center gap-2">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                TopUp Store
-            </a>
-            <div class="hidden md:flex gap-6">
-                <a href="/" class="hover:text-primary transition">Home</a>
-                <a href="/order" class="text-primary font-medium">Order</a>
-                <a href="/status" class="hover:text-primary transition">Cek Order</a>
-                <a href="/admin" class="hover:text-primary transition">Admin</a>
-            </div>
-            <button id="mobileMenuBtn" class="md:hidden p-2 hover:bg-white/10 rounded-lg">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-            </button>
-        </div>
-        <div id="mobileMenu" class="hidden md:hidden border-t border-white/10 px-4 py-3 space-y-3">
-            <a href="/" class="block hover:text-primary transition">Home</a>
-            <a href="/order" class="block text-primary font-medium">Order</a>
-            <a href="/status" class="block hover:text-primary transition">Cek Order</a>
-            <a href="/admin" class="block hover:text-primary transition">Admin</a>
-        </div>
-    </nav>
+    {{template "nav" (dict "ActivePage" "order")}}
 
     <section class="max-w-lg mx-auto px-4 py-12">
         <h1 class="text-3xl font-bold mb-8 text-center">Buat Order</h1>
         <form id="orderForm" class="space-y-5">
             <div>
-                <label class="block text-sm font-medium text-white/70 mb-1">Game</label>
-                <select id="game" name="game" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50">
+                <label class="block text-sm font-medium text-white/70 mb-1" for="game">Game</label>
+                <select id="game" name="game" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
                     <option value="">Pilih game</option>
                     <option value="free_fire">Free Fire</option>
                     <option value="mobile_legends">Mobile Legends</option>
@@ -57,39 +21,57 @@
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-medium text-white/70 mb-1">Paket</label>
-                <select id="product" name="product" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50" disabled>
+                <label class="block text-sm font-medium text-white/70 mb-1" for="product">Paket</label>
+                <select id="product" name="product" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring" disabled>
                     <option value="">Pilih game terlebih dahulu</option>
                 </select>
             </div>
             <div id="uidGroup">
-                <label class="block text-sm font-medium text-white/70 mb-1">Game UID</label>
-                <input type="text" id="gameUid" name="game_uid" placeholder="Masukkan UID" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50">
+                <label class="block text-sm font-medium text-white/70 mb-1" for="gameUid">Game UID</label>
+                <input type="text" id="gameUid" name="game_uid" placeholder="Masukkan UID" inputmode="numeric" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
                 <p class="text-xs text-white/40 mt-1" id="uidHint">Masukkan UID game kamu</p>
             </div>
             <div id="serverGroup" class="hidden">
-                <label class="block text-sm font-medium text-white/70 mb-1">Server ID</label>
-                <input type="text" id="gameServer" name="game_server" placeholder="Masukkan Server ID" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50">
+                <label class="block text-sm font-medium text-white/70 mb-1" for="gameServer">Server ID</label>
+                <input type="text" id="gameServer" name="game_server" placeholder="Masukkan Server ID" inputmode="numeric" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
                 <p class="text-xs text-white/40 mt-1">Server ID bisa ditemukan di profil game</p>
             </div>
             <div>
-                <label class="block text-sm font-medium text-white/70 mb-1">Nomor WhatsApp</label>
-                <input type="text" id="phone" name="phone" placeholder="628xxxxxxxxxx" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50">
+                <label class="block text-sm font-medium text-white/70 mb-1" for="phone">Nomor WhatsApp</label>
+                <input type="text" id="phone" name="phone" placeholder="628xxxxxxxxxx" inputmode="tel" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
                 <p class="text-xs text-white/40 mt-1">Untuk konfirmasi order via WhatsApp</p>
             </div>
-            <button type="submit" id="submitBtn" class="w-full bg-primary hover:bg-orange-600 disabled:bg-white/20 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2">
+            <button type="submit" id="submitBtn" class="w-full bg-primary hover:bg-orange-600 disabled:bg-white/20 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 focus-ring">
                 <span id="submitText">Buat Order</span>
-                <svg id="submitSpinner" class="hidden animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                <svg id="submitSpinner" class="hidden animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
             </button>
         </form>
+
+        <div id="confirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop">
+            <div class="bg-dark rounded-xl p-6 max-w-sm mx-4 border border-white/10 animate-fade-in">
+                <h3 class="text-xl font-bold mb-4">Konfirmasi Order</h3>
+                <div class="space-y-2 text-sm mb-6">
+                    <div class="flex justify-between"><span class="text-white/50">Game</span><span id="confirmGame"></span></div>
+                    <div class="flex justify-between"><span class="text-white/50">Paket</span><span id="confirmProduct"></span></div>
+                    <div class="flex justify-between"><span class="text-white/50">UID</span><span id="confirmUid"></span></div>
+                    <div class="flex justify-between"><span class="text-white/50">Total</span><span id="confirmPrice" class="text-primary font-bold"></span></div>
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeConfirmModal()" class="flex-1 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition focus-ring">Edit</button>
+                    <button type="button" onclick="confirmOrder()" class="flex-1 bg-primary hover:bg-orange-600 px-4 py-2 rounded-lg transition focus-ring">Konfirmasi</button>
+                </div>
+            </div>
+        </div>
+
         <div id="result" class="hidden mt-8 bg-white/5 border border-white/10 rounded-xl p-6"></div>
     </section>
 
-    <footer class="border-t border-white/10 mt-16 py-8 text-center text-white/40 text-sm">
-        <p>&copy; 2026 TopUp Store. All rights reserved.</p>
-    </footer>
+    {{template "footer"}}
+    {{template "toast"}}
 
-    <div id="toast" class="fixed bottom-4 right-4 hidden z-50"></div>
+    <a href="https://wa.me/{{.WhatsappNumber}}" target="_blank" class="fixed bottom-4 left-4 bg-green-600 hover:bg-green-700 text-white p-3 rounded-full shadow-lg transition focus-ring z-40" aria-label="Chat on WhatsApp">
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+    </a>
 
     <script>
     const gameSelect = document.getElementById("game");
@@ -98,18 +80,15 @@
     const submitBtn = document.getElementById("submitBtn");
     const submitText = document.getElementById("submitText");
     const submitSpinner = document.getElementById("submitSpinner");
-
-    function showToast(message, type = 'info') {
-        const toast = document.getElementById('toast');
-        const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
-        toast.className = `fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg text-white text-sm ${colors[type] || colors.info}`;
-        toast.textContent = message;
-        toast.classList.remove('hidden');
-        setTimeout(() => toast.classList.add('hidden'), 3000);
-    }
+    const confirmModal = document.getElementById("confirmModal");
+    let selectedProduct = null;
+    let pollInterval = null;
 
     document.getElementById('mobileMenuBtn').addEventListener('click', () => {
-        document.getElementById('mobileMenu').classList.toggle('hidden');
+        const menu = document.getElementById('mobileMenu');
+        const btn = document.getElementById('mobileMenuBtn');
+        menu.classList.toggle('hidden');
+        btn.setAttribute('aria-expanded', !menu.classList.contains('hidden'));
     });
 
     async function loadProductsForGame(game) {
@@ -123,6 +102,8 @@
                 opt.value = p.id;
                 opt.textContent = `${p.name} (${p.diamonds} Diamonds) - Rp ${p.price_idr.toLocaleString("id-ID")}`;
                 opt.dataset.amount = p.price_idr;
+                opt.dataset.name = p.name;
+                opt.dataset.diamonds = p.diamonds;
                 productSelect.appendChild(opt);
             });
             productSelect.disabled = false;
@@ -140,11 +121,11 @@
         productSelect.disabled = true;
         if (game === "mobile_legends") {
             serverGroup.classList.remove("hidden");
-            document.getElementById("uidHint").textContent = "Masukkan UID Mobile Legends";
+            document.getElementById("uidHint").textContent = "Masukkan UID Mobile Legends (contoh: 12345678)";
         } else {
             serverGroup.classList.add("hidden");
             document.getElementById("gameServer").value = "";
-            document.getElementById("uidHint").textContent = "Masukkan UID game kamu";
+            document.getElementById("uidHint").textContent = "Masukkan UID game kamu (angka saja)";
         }
         if (!game) return;
         await loadProductsForGame(game);
@@ -164,10 +145,39 @@
         }
     }
 
-    let pollInterval = null;
+    productSelect.addEventListener('change', () => {
+        const opt = productSelect.options[productSelect.selectedIndex];
+        if (opt && opt.value) {
+            selectedProduct = {
+                name: opt.dataset.name,
+                diamonds: opt.dataset.diamonds,
+                price: opt.dataset.amount
+            };
+        } else {
+            selectedProduct = null;
+        }
+    });
 
-    document.getElementById("orderForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
+    function showConfirmModal() {
+        const game = gameSelect.options[gameSelect.selectedIndex]?.text;
+        const uid = document.getElementById("gameUid").value.trim();
+        document.getElementById("confirmGame").textContent = game;
+        document.getElementById("confirmProduct").textContent = selectedProduct?.name || '';
+        document.getElementById("confirmUid").textContent = uid + (serverGroup.classList.contains('hidden') ? '' : ' (' + document.getElementById("gameServer").value.trim() + ')');
+        document.getElementById("confirmPrice").textContent = 'Rp ' + (selectedProduct?.price ? parseInt(selectedProduct.price).toLocaleString("id-ID") : '0');
+        confirmModal.classList.remove('hidden');
+    }
+
+    function closeConfirmModal() {
+        confirmModal.classList.add('hidden');
+    }
+
+    async function confirmOrder() {
+        closeConfirmModal();
+        submitOrder();
+    }
+
+    async function submitOrder() {
         const result = document.getElementById("result");
         result.classList.add("hidden");
         if (pollInterval) clearInterval(pollInterval);
@@ -223,22 +233,22 @@
                 const payLink = orderData.qris_url || '#';
                 result.innerHTML = `
                     <div class="text-center animate-fade-in">
-                        <div class="text-green-400 text-4xl mb-3">✅</div>
+                        <div class="text-green-400 text-4xl mb-3" aria-hidden="true">✅</div>
                         <p class="text-lg font-semibold mb-2">Order berhasil dibuat!</p>
                         <div class="flex items-center justify-center gap-2 mb-4">
                             <span class="text-white/60 text-sm">ID Order:</span>
                             <code class="bg-white/10 px-3 py-1 rounded font-mono text-sm">${orderData.order_id}</code>
-                            <button onclick="navigator.clipboard.writeText('${orderData.order_id}'); showToast('ID Order disalin!', 'success')" class="text-white/40 hover:text-primary">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            <button onclick="navigator.clipboard.writeText('${orderData.order_id}'); showToast('ID Order disalin!', 'success')" class="text-white/40 hover:text-primary focus-ring" aria-label="Copy Order ID">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                             </button>
                         </div>
                         <p class="text-2xl font-bold text-primary my-4">Rp ${parseInt(orderData.amount_idr).toLocaleString("id-ID")}</p>
                         ${payLink && payLink !== '#' ? `
                             <p class="text-white/60 mb-4">Klik tombol di bawah untuk melakukan pembayaran:</p>
-                            <a href="${payLink}" target="_blank" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-3 rounded-lg transition text-lg">Bayar Sekarang</a>
+                            <a href="${payLink}" target="_blank" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-3 rounded-lg transition text-lg focus-ring">Bayar Sekarang</a>
                         ` : '<p class="text-yellow-400 mb-4">Menunggu pembayaran...</p>'}
                         <div id="countdown" class="mt-4 text-sm text-white/40"></div>
-                        <a href="/status?id=${orderData.order_id}" class="inline-block text-white/60 hover:text-primary text-sm mt-4">Cek Status Order →</a>
+                        <a href="/status?id=${orderData.order_id}" class="inline-block text-white/60 hover:text-primary text-sm mt-4 focus-ring">Cek Status Order →</a>
                     </div>
                 `;
                 showToast('Order berhasil dibuat!', 'success');
@@ -281,7 +291,12 @@
             submitText.textContent = 'Buat Order';
             submitSpinner.classList.add('hidden');
         }
+    }
+
+    document.getElementById("orderForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        showConfirmModal();
     });
     </script>
 </body>
-</html>
+</html>{{end}}

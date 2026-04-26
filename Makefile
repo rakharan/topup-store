@@ -1,4 +1,4 @@
-.PHONY: run build dev test test-coverage lint fmt vet migrate migrate-docker seed docker-up docker-down docker-logs clean
+.PHONY: run build dev test test-coverage lint fmt vet migrate migrate-docker seed docker-up docker-down docker-logs css css-watch clean
 
 run:
 	go run ./cmd/server
@@ -6,7 +6,7 @@ run:
 dev:
 	air
 
-build:
+build: css
 	go build -ldflags="-s -w" -o bin/server ./cmd/server
 
 test:
@@ -47,5 +47,11 @@ docker-down:
 docker-logs:
 	docker compose logs -f app
 
+css:
+	npx tailwindcss -i ./web/static/css/input.css -o ./web/static/css/tailwind.css --minify
+
+css-watch:
+	npx tailwindcss -i ./web/static/css/input.css -o ./web/static/css/tailwind.css --watch
+
 clean:
-	rm -rf bin/ coverage.out coverage.html
+	rm -rf bin/ coverage.out coverage.html web/static/css/tailwind.css

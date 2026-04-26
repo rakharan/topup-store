@@ -11,9 +11,23 @@ import (
 	"strings"
 	"time"
 
-	"github.com/topup-store/internal/constants"
 	"github.com/topup-store/internal/services"
 )
+
+func dict(values ...interface{}) map[string]interface{} {
+	if len(values)%2 != 0 {
+		return nil
+	}
+	dict := make(map[string]interface{}, len(values)/2)
+	for i := 0; i < len(values); i += 2 {
+		key, ok := values[i].(string)
+		if !ok {
+			return nil
+		}
+		dict[key] = values[i+1]
+	}
+	return dict
+}
 
 type PageHandler struct {
 	topupSvc   services.TopupServiceInterface
@@ -26,7 +40,10 @@ type PageHandler struct {
 }
 
 func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass string, logger *slog.Logger) *PageHandler {
-	templates := template.Must(template.ParseGlob("web/templates/*.html"))
+	funcMap := template.FuncMap{
+		"dict": dict,
+	}
+	templates := template.Must(template.New("").Funcs(funcMap).ParseGlob("web/templates/*.html"))
 	return &PageHandler{
 		topupSvc:   topupSvc,
 		paymentSvc: paymentSvc,
@@ -41,8 +58,6 @@ func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services
 func (h *PageHandler) Home(w http.ResponseWriter, r *http.Request) {
 	if err := h.templates.ExecuteTemplate(w, "index.html", map[string]any{
 		"WhatsappNumber": h.waNumber,
-		"GameLabels":     constants.GameLabels,
-		"StatusLabels":   constants.StatusLabels,
 	}); err != nil {
 		h.logger.Error("template error (index.html)", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -51,7 +66,7 @@ func (h *PageHandler) Home(w http.ResponseWriter, r *http.Request) {
 
 func (h *PageHandler) OrderForm(w http.ResponseWriter, r *http.Request) {
 	if err := h.templates.ExecuteTemplate(w, "order.html", map[string]any{
-		"GameLabels": constants.GameLabels,
+		"WhatsappNumber": h.waNumber,
 	}); err != nil {
 		h.logger.Error("template error (order.html)", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -59,18 +74,14 @@ func (h *PageHandler) OrderForm(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PageHandler) Status(w http.ResponseWriter, r *http.Request) {
-	if err := h.templates.ExecuteTemplate(w, "status.html", map[string]any{
-		"StatusLabels": constants.StatusLabels,
-	}); err != nil {
+	if err := h.templates.ExecuteTemplate(w, "status.html", nil); err != nil {
 		h.logger.Error("template error (status.html)", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
 
 func (h *PageHandler) Admin(w http.ResponseWriter, r *http.Request) {
-	data := map[string]any{
-		"StatusLabels": constants.StatusLabels,
-	}
+	data := map[string]any{}
 
 	if r.Method == http.MethodPost {
 		password := r.FormValue("password")

@@ -1,0 +1,17 @@
+{
+  "name": "topup-store",
+  "version": "1.0.0",
+  "description": "Fullstack game top-up platform with QRIS payments, Digiflazz H2H integration, and WhatsApp ordering.",
+  "main": "tailwind.config.js",
+  "scripts": {
+    "css:build": "tailwindcss -i ./web/static/css/input.css -o ./web/static/css/tailwind.css --minify",
+    "css:watch": "tailwindcss -i ./web/static/css/input.css -o ./web/static/css/tailwind.css --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}
