@@ -58,7 +58,7 @@ func main() {
 	topupSvc := services.NewTopupService(orderRepo, productRepo, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzAPIURL, logger)
 	notifySvc := services.NewNotifyService(cfg.WhatsappNumber, cfg.WhatsappToken, cfg.WhatsappPhoneID, cfg.WaBotBaseURL, cfg.WaBotToken, logger)
 
-	pages := handlers.NewPageHandler(topupSvc, paymentSvc, notifySvc, cfg.WhatsappNumber, cfg.AdminPassword, logger)
+	pages := handlers.NewPageHandler(topupSvc, paymentSvc, notifySvc, cfg.WhatsappNumber, cfg.AdminPassword, cfg.MidtransIsProd, logger)
 	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, logger)
 	products := handlers.NewProductHandler(topupSvc, logger)
 	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, cfg.MidtransServerKey, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzWebhookSecret, logger)

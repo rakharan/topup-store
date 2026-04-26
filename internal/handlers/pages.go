@@ -62,29 +62,31 @@ func parseTemplates() (*template.Template, error) {
 }
 
 type PageHandler struct {
-	topupSvc   services.TopupServiceInterface
-	paymentSvc services.PaymentServiceInterface
-	notifySvc  services.NotifyServiceInterface
-	templates  *template.Template
-	waNumber   string
-	adminPass  string
-	logger     *slog.Logger
+	topupSvc     services.TopupServiceInterface
+	paymentSvc   services.PaymentServiceInterface
+	notifySvc    services.NotifyServiceInterface
+	templates    *template.Template
+	waNumber     string
+	adminPass    string
+	cookieSecure bool
+	logger       *slog.Logger
 }
 
-func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass string, logger *slog.Logger) *PageHandler {
+func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass string, cookieSecure bool, logger *slog.Logger) *PageHandler {
 	templates, err := parseTemplates()
 	if err != nil {
 		logger.Error("Failed to parse templates", slog.String("error", err.Error()))
 		panic(err)
 	}
 	return &PageHandler{
-		topupSvc:   topupSvc,
-		paymentSvc: paymentSvc,
-		notifySvc:  notifySvc,
-		templates:  templates,
-		waNumber:   waNumber,
-		adminPass:  adminPass,
-		logger:     logger,
+		topupSvc:     topupSvc,
+		paymentSvc:   paymentSvc,
+		notifySvc:    notifySvc,
+		templates:    templates,
+		waNumber:     waNumber,
+		adminPass:    adminPass,
+		cookieSecure: cookieSecure,
+		logger:       logger,
 	}
 }
 
@@ -134,7 +136,7 @@ func (h *PageHandler) Admin(w http.ResponseWriter, r *http.Request) {
 				Value:    timestamp + ":" + token,
 				Path:     "/admin",
 				HttpOnly: true,
-				Secure:   true,
+				Secure:   h.cookieSecure,
 				SameSite: http.SameSiteStrictMode,
 				MaxAge:   3600,
 			})
