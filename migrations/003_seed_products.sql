@@ -6,4 +6,5 @@ INSERT INTO products (game, name, description, price_idr, diamonds, sku) VALUES
 ('free_fire', '355 Diamonds', '355 Free Fire Diamonds', 44800, 355, 'ff_355'),
 ('mobile_legends', '5 Diamonds', '5 Mobile Legends Diamonds', 1680, 5, 'ml_5'),
 ('mobile_legends', '10 Diamonds', '10 Mobile Legends Diamonds', 2855, 10, 'ml_10'),
-('mobile_legends', '12 Diamonds', '12 Mobile Legends Diamonds', 3303, 12, 'ml_12');
+('mobile_legends', '12 Diamonds', '12 Mobile Legends Diamonds', 3303, 12, 'ml_12')
+ON CONFLICT (sku) DO NOTHING;
