@@ -99,8 +99,8 @@ func (h *AdminHandler) RetryOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if order.Status != constants.StatusPaid && order.Status != constants.StatusProcessing {
-		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("status", "order must be in paid or processing status, current: "+order.Status), middleware.GetRequestID(r.Context()))
+	if order.Status != constants.StatusPaid {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("status", "order must be in paid status, current: "+order.Status), middleware.GetRequestID(r.Context()))
 		return
 	}
 
