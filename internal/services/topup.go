@@ -55,18 +55,24 @@ func (s *TopupService) ProcessOrder(orderID string) error {
 
 	order, err := s.orderRepo.GetByID(ctx, orderID)
 	if err != nil {
-		_ = s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusFailed)
+		if err2 := s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusFailed); err2 != nil {
+			s.logger.Error("failed to mark order as failed", slog.String("order_id", orderID), slog.String("error", err2.Error()))
+		}
 		return fmt.Errorf("fetch order %s: %w", orderID, err)
 	}
 
 	product, err := s.productRepo.GetByID(ctx, order.ProductID)
 	if err != nil {
-		_ = s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusFailed)
+		if err2 := s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusFailed); err2 != nil {
+			s.logger.Error("failed to mark order as failed", slog.String("order_id", orderID), slog.String("error", err2.Error()))
+		}
 		return fmt.Errorf("fetch product %s: %w", order.ProductID, err)
 	}
 
 	if err := s.processTopupViaDigiflazz(ctx, order, product); err != nil {
-		_ = s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusFailed)
+		if err2 := s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusFailed); err2 != nil {
+			s.logger.Error("failed to mark order as failed", slog.String("order_id", orderID), slog.String("error", err2.Error()))
+		}
 		return fmt.Errorf("digiflazz topup: %w", err)
 	}
 
