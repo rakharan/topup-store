@@ -1,3 +1,13 @@
+FROM node:20-alpine AS css-builder
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --only=production
+
+COPY tailwind.config.js web/static/css/input.css ./web/static/css/input.css
+RUN npx tailwindcss -i ./web/static/css/input.css -o ./web/static/css/tailwind.css --minify
+
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
@@ -6,6 +16,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+COPY --from=css-builder /app/web/static/css/tailwind.css ./web/static/css/tailwind.css
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o server ./cmd/server
 
 FROM alpine:3.19
