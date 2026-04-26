@@ -112,6 +112,11 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 		}
 		defer resp.Body.Close()
 
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			respBody, _ := io.ReadAll(resp.Body)
+			return fmt.Errorf("digiflazz returned status %d: %s", resp.StatusCode, string(respBody))
+		}
+
 		respBody, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return fmt.Errorf("read response: %w", err)
@@ -194,6 +199,11 @@ func (s *TopupService) CheckTransactionStatus(orderID string) (status string, sn
 		return "", "", fmt.Errorf("send request: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return "", "", fmt.Errorf("digiflazz returned status %d: %s", resp.StatusCode, string(respBody))
+	}
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
