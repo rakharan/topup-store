@@ -86,7 +86,7 @@ func main() {
 	r.Get("/metrics", metricsMW.Handler())
 
 	r.Get("/", pages.Home)
-	r.Get("/order", pages.OrderForm)
+	r.With(csrfMW).Get("/order", pages.OrderForm)
 	r.Get("/status", pages.Status)
 	r.Get("/admin", pages.Admin)
 	r.With(csrfMW).Post("/admin", pages.Admin)
@@ -103,7 +103,7 @@ func main() {
 		}
 		r.Use(middleware.CORS(allowedOrigins))
 		orderRateLimiter := middleware.NewRateLimiter(5, time.Minute)
-		r.With(orderRateLimiter.Middleware).Post("/orders", orders.CreateOrder)
+		r.With(orderRateLimiter.Middleware, csrfMW).Post("/orders", orders.CreateOrder)
 		r.Get("/orders/{id}", orders.GetOrder)
 		r.Post("/orders/lookup", orders.LookupOrder)
 		r.Get("/products", products.ListProducts)

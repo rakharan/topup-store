@@ -100,6 +100,7 @@ func (h *PageHandler) Home(w http.ResponseWriter, r *http.Request) {
 func (h *PageHandler) OrderForm(w http.ResponseWriter, r *http.Request) {
 	if err := h.templates.ExecuteTemplate(w, "order.html", map[string]any{
 		"WhatsappNumber": h.waNumber,
+		"CSRFToken":      middleware.GetCSRFToken(r.Context()),
 	}); err != nil {
 		h.logger.Error("template error (order.html)", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

@@ -74,6 +74,7 @@
     </a>
 
     <script>
+    const csrfToken = "{{.CSRFToken}}";
     const gameSelect = document.getElementById("game");
     const productSelect = document.getElementById("product");
     const serverGroup = document.getElementById("serverGroup");
@@ -222,7 +223,7 @@
         try {
             const res = await fetch("/api/orders", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
                 body: JSON.stringify(body),
             });
             const data = await res.json();
