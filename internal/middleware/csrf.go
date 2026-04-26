@@ -4,12 +4,14 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/topup-store/internal/apperrors"
 )
 
 type CSRFStore struct {
+	mu     sync.Mutex
 	tokens map[string]time.Time
 }
 
@@ -23,12 +25,16 @@ func (s *CSRFStore) Generate() string {
 		return ""
 	}
 	token := hex.EncodeToString(b)
+	s.mu.Lock()
 	s.tokens[token] = time.Now().Add(2 * time.Hour)
 	s.cleanup()
+	s.mu.Unlock()
 	return token
 }
 
 func (s *CSRFStore) Validate(token string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	exp, ok := s.tokens[token]
 	if !ok || time.Now().After(exp) {
 		return false
