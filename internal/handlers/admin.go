@@ -162,7 +162,12 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, _ := h.productRepo.ExistsBySKU(r.Context(), req.SKU, "")
+	exists, err := h.productRepo.ExistsBySKU(r.Context(), req.SKU, "")
+	if err != nil {
+		h.logger.Error("check SKU existence", slog.String("sku", req.SKU), slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
 	if exists {
 		apperrors.WriteError(w, http.StatusConflict, apperrors.FieldError("sku", "SKU already exists"), middleware.GetRequestID(r.Context()))
 		return
@@ -219,8 +224,13 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, _ := h.productRepo.ExistsBySKU(r.Context(), req.SKU, id)
-	if exists {
+	exists2, err := h.productRepo.ExistsBySKU(r.Context(), req.SKU, id)
+	if err != nil {
+		h.logger.Error("check SKU existence", slog.String("sku", req.SKU), slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	if exists2 {
 		apperrors.WriteError(w, http.StatusConflict, apperrors.FieldError("sku", "SKU already exists"), middleware.GetRequestID(r.Context()))
 		return
 	}
