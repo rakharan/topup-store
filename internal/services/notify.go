@@ -20,16 +20,18 @@ type NotifyService struct {
 	waToken       string
 	waPhoneID     string
 	waBotBaseURL  string
+	waBotToken    string
 	httpClient    *http.Client
 	logger        *slog.Logger
 }
 
-func NewNotifyService(whatsappNum, waToken, waPhoneID, waBotBaseURL string, logger *slog.Logger) *NotifyService {
+func NewNotifyService(whatsappNum, waToken, waPhoneID, waBotBaseURL, waBotToken string, logger *slog.Logger) *NotifyService {
 	return &NotifyService{
 		whatsappNum:  whatsappNum,
 		waToken:      waToken,
 		waPhoneID:    waPhoneID,
 		waBotBaseURL: waBotBaseURL,
+		waBotToken:   waBotToken,
 		httpClient:   &http.Client{Timeout: 10 * time.Second},
 		logger:       logger,
 	}
@@ -136,6 +138,9 @@ func (s *NotifyService) sendViaBot(ctx context.Context, phone, message string) e
 			return fmt.Errorf("create request: %w", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
+		if s.waBotToken != "" {
+			req.Header.Set("X-Bot-Token", s.waBotToken)
+		}
 
 		resp, err := s.httpClient.Do(req)
 		if err != nil {

@@ -7,6 +7,7 @@ const BOT_PORT = process.env.BOT_PORT || 3001;
 const WA_TOKEN = process.env.WHATSAPP_TOKEN;
 const WA_PHONE_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 const WA_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || "topup-store-verify";
+const BOT_NOTIFY_TOKEN = process.env.BOT_NOTIFY_TOKEN;
 
 const WA_API = `https://graph.facebook.com/v18.0/${WA_PHONE_ID}/messages`;
 
@@ -239,6 +240,12 @@ app.get("/health", (_req, res) => {
 });
 
 app.post("/notify", async (req, res) => {
+  if (BOT_NOTIFY_TOKEN) {
+    const token = req.headers["x-bot-token"];
+    if (!token || token !== BOT_NOTIFY_TOKEN) {
+      return res.status(401).json({ error: "unauthorized" });
+    }
+  }
   const { phone, message } = req.body;
   if (!phone || !message) {
     return res.status(400).json({ error: "phone and message are required" });

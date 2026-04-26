@@ -25,6 +25,7 @@ type Config struct {
 	WhatsappPhoneID        string
 	AdminPassword          string
 	WaBotBaseURL           string
+	WaBotToken             string
 	RequestTimeout         string
 	AllowedOrigins         string
 }
@@ -50,6 +51,7 @@ func Load() (*Config, error) {
 		WhatsappPhoneID:        getEnv("WHATSAPP_PHONE_NUMBER_ID", ""),
 		AdminPassword:          getEnv("ADMIN_PASSWORD", ""),
 		WaBotBaseURL:           getEnv("WA_BOT_BASE_URL", "http://localhost:3001"),
+		WaBotToken:             getEnv("WA_BOT_TOKEN", ""),
 		RequestTimeout:         getEnv("REQUEST_TIMEOUT", "30s"),
 		AllowedOrigins:         getEnv("ALLOWED_ORIGINS", ""),
 	}
