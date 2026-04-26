@@ -5,8 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"html/template"
+	"io/fs"
 	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +32,34 @@ func dict(values ...interface{}) map[string]interface{} {
 	return dict
 }
 
+func parseTemplates() (*template.Template, error) {
+	var templates *template.Template
+	funcMap := template.FuncMap{"dict": dict}
+
+	err := filepath.WalkDir("web/templates", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".html") {
+			return nil
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		name := d.Name()
+		if templates == nil {
+			templates = template.New("").Funcs(funcMap)
+		}
+		_, err = templates.New(name).Parse(string(content))
+		return err
+	})
+
+	return templates, err
+}
+
 type PageHandler struct {
 	topupSvc   services.TopupServiceInterface
 	paymentSvc services.PaymentServiceInterface
@@ -40,10 +71,11 @@ type PageHandler struct {
 }
 
 func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass string, logger *slog.Logger) *PageHandler {
-	funcMap := template.FuncMap{
-		"dict": dict,
+	templates, err := parseTemplates()
+	if err != nil {
+		logger.Error("Failed to parse templates", slog.String("error", err.Error()))
+		panic(err)
 	}
-	templates := template.Must(template.New("").Funcs(funcMap).ParseGlob("web/templates/*.html"))
 	return &PageHandler{
 		topupSvc:   topupSvc,
 		paymentSvc: paymentSvc,
