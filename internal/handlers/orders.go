@@ -132,6 +132,15 @@ func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
 	apperrors.WriteSuccess(w, http.StatusOK, order, middleware.GetRequestID(r.Context()))
 }
 
+func (h *OrderHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
+	orders, _, err := h.paymentSvc.ListOrders(r.Context(), 1, 50)
+	if err != nil {
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	apperrors.WriteSuccess(w, http.StatusOK, orders, middleware.GetRequestID(r.Context()))
+}
+
 func (h *OrderHandler) LookupOrder(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		GameUID string `json:"game_uid"`

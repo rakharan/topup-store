@@ -2,11 +2,11 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: topup
-      POSTGRES_PASSWORD: topup
+      POSTGRES_USER: ${POSTGRES_USER:-topup}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-topup}
       POSTGRES_DB: topup_store
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./migrations:/migrations

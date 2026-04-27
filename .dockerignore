@@ -1,8 +1,10 @@
-.env
 .git
 .gitignore
 node_modules
+.env
 *.md
+TODO.md
 AGENTS.md
-bin/
-whatsapp-bot/node_modules
+whatsapp-bot/
+docker-compose.yml
+Makefile

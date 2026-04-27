@@ -259,6 +259,21 @@ app.post("/notify", async (req, res) => {
   }
 });
 
-app.listen(BOT_PORT, () => {
+const server = app.listen(BOT_PORT, () => {
   console.log(`WhatsApp bot API listening on port ${BOT_PORT}`);
 });
+
+function gracefulShutdown(signal) {
+  console.log(`${signal} received. Shutting down gracefully...`);
+  server.close(() => {
+    console.log("HTTP server closed.");
+    process.exit(0);
+  });
+  setTimeout(() => {
+    console.error("Forced shutdown after timeout.");
+    process.exit(1);
+  }, 5000);
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));

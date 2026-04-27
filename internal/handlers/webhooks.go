@@ -150,7 +150,6 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 	r.Body = io.NopCloser(bytes.NewReader(rawBody))
 
 	h.logger.Info("digiflazz webhook: received",
-		slog.String("raw_body", string(rawBody)),
 		slog.String("x_hub_signature", r.Header.Get("X-Hub-Signature")),
 		slog.String("user_agent", r.Header.Get("User-Agent")),
 		slog.String("x_digiflazz_event", r.Header.Get("X-Digiflazz-Event")),
@@ -175,6 +174,8 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 			apperrors.WriteError(w, http.StatusUnauthorized, apperrors.FieldError("signature", "invalid signature"), middleware.GetRequestID(r.Context()))
 			return
 		}
+	} else {
+		h.logger.Warn("digiflazz webhook: signature verification disabled (no secret configured)")
 	}
 
 	data, ok := generic["data"].(map[string]any)

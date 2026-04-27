@@ -31,8 +31,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	logLevel := slog.LevelInfo
+	if lvl := os.Getenv("LOG_LEVEL"); lvl != "" {
+		switch strings.ToLower(lvl) {
+		case "debug":
+			logLevel = slog.LevelDebug
+		case "warn":
+			logLevel = slog.LevelWarn
+		case "error":
+			logLevel = slog.LevelError
+		}
+	}
+
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
+		Level: logLevel,
 	}))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -104,6 +116,7 @@ func main() {
 		r.Use(middleware.CORS(allowedOrigins))
 		orderRateLimiter := middleware.NewRateLimiter(5, time.Minute)
 		r.With(orderRateLimiter.Middleware, csrfMW).Post("/orders", orders.CreateOrder)
+		r.Get("/orders", orders.ListOrders)
 		r.Get("/orders/{id}", orders.GetOrder)
 		r.Post("/orders/lookup", orders.LookupOrder)
 		r.Get("/products", products.ListProducts)
