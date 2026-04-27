@@ -10,6 +10,7 @@ type Product struct {
 	PriceIDR     int        `json:"price_idr"`
 	CostPriceIDR int        `json:"cost_price_idr"`
 	Diamonds     int        `json:"diamonds"`
+	ProductType  string     `json:"product_type"`
 	SKU          string     `json:"sku"`
 	IsActive     bool       `json:"is_active"`
 	CreatedAt    time.Time  `json:"created_at"`

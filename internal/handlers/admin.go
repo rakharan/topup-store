@@ -146,6 +146,7 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		PriceIDR     int    `json:"price_idr"`
 		CostPriceIDR int    `json:"cost_price_idr"`
 		Diamonds     int    `json:"diamonds"`
+		ProductType  string `json:"product_type"`
 		SKU          string `json:"sku"`
 		IsActive     bool   `json:"is_active"`
 	}
@@ -160,6 +161,14 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Name == "" || req.SKU == "" || req.PriceIDR <= 0 {
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("input", "name, sku, and price_idr are required"), middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	if req.ProductType == "" {
+		req.ProductType = "diamond"
+	}
+	if req.ProductType != "diamond" && req.ProductType != "subscription" && req.ProductType != "other" {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product_type", "must be diamond, subscription, or other"), middleware.GetRequestID(r.Context()))
 		return
 	}
 
@@ -182,6 +191,7 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		PriceIDR:     req.PriceIDR,
 		CostPriceIDR: req.CostPriceIDR,
 		Diamonds:     req.Diamonds,
+		ProductType:  req.ProductType,
 		SKU:          req.SKU,
 		IsActive:     req.IsActive,
 	}
@@ -210,6 +220,7 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		PriceIDR     int    `json:"price_idr"`
 		CostPriceIDR int    `json:"cost_price_idr"`
 		Diamonds     int    `json:"diamonds"`
+		ProductType  string `json:"product_type"`
 		SKU          string `json:"sku"`
 		IsActive     bool   `json:"is_active"`
 	}
@@ -224,6 +235,14 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Name == "" || req.SKU == "" || req.PriceIDR <= 0 {
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("input", "name, sku, and price_idr are required"), middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	if req.ProductType == "" {
+		req.ProductType = "diamond"
+	}
+	if req.ProductType != "diamond" && req.ProductType != "subscription" && req.ProductType != "other" {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product_type", "must be diamond, subscription, or other"), middleware.GetRequestID(r.Context()))
 		return
 	}
 
@@ -246,6 +265,7 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		PriceIDR:     req.PriceIDR,
 		CostPriceIDR: req.CostPriceIDR,
 		Diamonds:     req.Diamonds,
+		ProductType:  req.ProductType,
 		SKU:          req.SKU,
 		IsActive:     req.IsActive,
 	}

@@ -386,15 +386,16 @@ func (s *TopupService) FailOrder(ctx context.Context, orderID string) error {
 }
 
 type SyncResult struct {
-	SKU          string `json:"sku"`
-	Name         string `json:"name"`
-	Cost         int    `json:"cost"`
-	Price        int    `json:"price"`
-	Margin       int    `json:"margin"`
-	Tier         string `json:"tier"`
-	Created      bool   `json:"created"`
-	Game         string `json:"game,omitempty"`
-	Diamonds     int    `json:"diamonds,omitempty"`
+	SKU         string `json:"sku"`
+	Name        string `json:"name"`
+	Cost        int    `json:"cost"`
+	Price       int    `json:"price"`
+	Margin      int    `json:"margin"`
+	Tier        string `json:"tier"`
+	Created     bool   `json:"created"`
+	Game        string `json:"game,omitempty"`
+	ProductType string `json:"product_type,omitempty"`
+	Diamonds    int    `json:"diamonds,omitempty"`
 }
 
 func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType string, marginValue int) ([]SyncResult, int, int, int, error) {
@@ -437,8 +438,9 @@ func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType 
 			}
 
 			diamonds := extractDiamondsFromName(p.Name)
+			productType := detectProductType(p.Name)
 
-			if err := s.productRepo.CreateFromDigiflazz(ctx, p.SKU, p.Name, game, sellingPrice, costPrice, diamonds, p.Description); err != nil {
+			if err := s.productRepo.CreateFromDigiflazz(ctx, p.SKU, p.Name, game, productType, sellingPrice, costPrice, diamonds, p.Description); err != nil {
 				s.logger.Warn("sync: failed to create product", slog.String("sku", p.SKU), slog.String("error", err.Error()))
 				skipped++
 				continue
@@ -446,15 +448,16 @@ func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType 
 
 			created++
 			results = append(results, SyncResult{
-				SKU:      p.SKU,
-				Name:     p.Name,
-				Cost:     costPrice,
-				Price:    sellingPrice,
-				Margin:   sellingPrice - costPrice,
-				Tier:     tier,
-				Created:  true,
-				Game:     game,
-				Diamonds: diamonds,
+				SKU:         p.SKU,
+				Name:        p.Name,
+				Cost:        costPrice,
+				Price:       sellingPrice,
+				Margin:      sellingPrice - costPrice,
+				Tier:        tier,
+				Created:     true,
+				Game:        game,
+				ProductType: productType,
+				Diamonds:    diamonds,
 			})
 			continue
 		}
@@ -540,4 +543,16 @@ func extractDiamondsFromName(name string) int {
 		}
 	}
 	return 0
+}
+
+var subscriptionKeywords = []string{"weekly", "monthly", "membership", "season pass", "diamond pass", "twilight pass"}
+
+func detectProductType(name string) string {
+	nameLower := strings.ToLower(name)
+	for _, keyword := range subscriptionKeywords {
+		if strings.Contains(nameLower, keyword) {
+			return "subscription"
+		}
+	}
+	return "diamond"
 }
