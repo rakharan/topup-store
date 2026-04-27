@@ -124,6 +124,14 @@
                         <input type="number" id="prodDiamonds" required min="0" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     </div>
                     <div>
+                        <label class="block text-sm text-white/70 mb-1" for="prodType">Type</label>
+                        <select id="prodType" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                            <option value="diamond">Diamond</option>
+                            <option value="subscription">Subscription</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div>
                         <label class="block text-sm text-white/70 mb-1" for="prodDesc">Description</label>
                         <input type="text" id="prodDesc" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     </div>
@@ -148,12 +156,13 @@
                             <th class="pb-3 pr-4">SKU</th>
                             <th class="pb-3 pr-4">Price</th>
                             <th class="pb-3 pr-4">Diamonds</th>
+                            <th class="pb-3 pr-4">Type</th>
                             <th class="pb-3 pr-4">Status</th>
                             <th class="pb-3">Action</th>
                         </tr>
                     </thead>
                     <tbody id="productsTableBody">
-                        <tr><td colspan="8" class="py-8 text-center text-white/40">Loading products...</td></tr>
+                        <tr><td colspan="9" class="py-8 text-center text-white/40">Loading products...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -325,10 +334,12 @@
     function renderProducts() {
         const tbody = document.getElementById('productsTableBody');
         if (!products.length) {
-            tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-white/40">No products found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-white/40">No products found.</td></tr>';
             return;
         }
         const gameLabels = { free_fire: 'FF', mobile_legends: 'ML', pubg_mobile: 'PUBG' };
+        const typeLabels = { diamond: 'Diamond', subscription: 'Subscription', other: 'Other' };
+        const typeColors = { diamond: 'bg-green-500/20 text-green-400', subscription: 'bg-blue-500/20 text-blue-400', other: 'bg-gray-500/20 text-gray-400' };
         tbody.innerHTML = products.map(p => `
             <tr class="border-b border-white/5 hover:bg-white/5" data-id="${escapeHtml(p.id)}">
                 <td class="py-3 pr-4 font-mono text-xs">${escapeHtml(p.id.substring(0, 8))}...</td>
@@ -336,6 +347,8 @@
                 <td class="py-3 pr-4">${escapeHtml(p.name)}</td>
                 <td class="py-3 pr-4 font-mono text-xs">${escapeHtml(p.sku)}</td>
                 <td class="py-3 pr-4">Rp ${p.price_idr.toLocaleString('id-ID')}</td>
+                <td class="py-3 pr-4">${p.diamonds || '-'}</td>
+                <td class="py-3 pr-4"><span class="px-2 py-1 rounded-full text-xs ${typeColors[p.product_type] || typeColors.other}">${escapeHtml(typeLabels[p.product_type] || 'Other')}</span></td>
                 <td class="py-3 pr-4">${p.is_active ? '<span class="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">Active</span>' : '<span class="px-2 py-1 rounded-full text-xs bg-gray-500/20 text-gray-400">Inactive</span>'}</td>
                 <td class="py-3">
                     <button onclick="editProduct('${escapeHtml(p.id)}')" class="text-blue-400 hover:text-blue-300 text-sm mr-2 focus-ring">Edit</button>
@@ -354,6 +367,7 @@
         document.getElementById('prodSku').value = '';
         document.getElementById('prodPrice').value = '';
         document.getElementById('prodDiamonds').value = '';
+        document.getElementById('prodType').value = 'diamond';
         document.getElementById('prodDesc').value = '';
         document.getElementById('prodActive').checked = true;
     }
@@ -373,6 +387,7 @@
         document.getElementById('prodSku').value = p.sku;
         document.getElementById('prodPrice').value = p.price_idr;
         document.getElementById('prodDiamonds').value = p.diamonds;
+        document.getElementById('prodType').value = p.product_type || 'diamond';
         document.getElementById('prodDesc').value = p.description || '';
         document.getElementById('prodActive').checked = p.is_active;
     }
@@ -402,6 +417,7 @@
             sku: document.getElementById('prodSku').value,
             price_idr: parseInt(document.getElementById('prodPrice').value),
             diamonds: parseInt(document.getElementById('prodDiamonds').value),
+            product_type: document.getElementById('prodType').value,
             description: document.getElementById('prodDesc').value,
             is_active: document.getElementById('prodActive').checked,
         };
