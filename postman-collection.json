@@ -6,6 +6,7 @@
 	"variable": [
 		{"key": "BASE_URL", "value": "http://localhost:8080", "type": "string"},
 		{"key": "DIGIFLAZZ_URL", "value": "https://api.digiflazz.com/v1/transaction", "type": "string"},
+		{"key": "DIGIFLAZZ_PRICE_LIST_URL", "value": "https://api.digiflazz.com/v1/price-list", "type": "string"},
 		{"key": "DIGIFLAZZ_USERNAME", "value": "your_username", "type": "string"},
 		{"key": "DIGIFLAZZ_API_KEY", "value": "your_api_key", "type": "string"},
 		{"key": "DIGIFLAZZ_WEBHOOK_ID", "value": "your_webhook_id", "type": "string"},
@@ -155,6 +156,29 @@
 							]
 						}
 					}]
+				},
+				{
+					"name": "Fetch Price List",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{DIGIFLAZZ_USERNAME}}\",\n  \"sign\": \"{{SIGN}}\"\n}"
+						},
+						"url": {"raw": "{{DIGIFLAZZ_PRICE_LIST_URL}}", "host": ["{{DIGIFLAZZ_PRICE_LIST_URL}}"]}
+					},
+					"event": [{
+						"listen": "prerequest",
+						"script": {
+							"type": "text/javascript",
+							"exec": [
+								"const raw = pm.variables.get('DIGIFLAZZ_USERNAME') + pm.variables.get('DIGIFLAZZ_API_KEY');",
+								"pm.variables.set('SIGN', CryptoJS.MD5(raw).toString());"
+							]
+						}
+					}],
+					"response": []
 				}
 			]
 		},
@@ -451,6 +475,36 @@
 							"raw": "{\n  \"game\": \"free_fire\",\n  \"name\": \"20 Diamonds\",\n  \"sku\": \"ff_20\",\n  \"price_idr\": 3000,\n  \"diamonds\": 20,\n  \"description\": \"20 Free Fire Diamonds\",\n  \"is_active\": true\n}"
 						},
 						"url": {"raw": "{{BASE_URL}}/admin/products", "host": ["{{BASE_URL}}"], "path": ["admin", "products"]}
+					}
+				},
+				{
+					"name": "Sync Prices (Manual)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-CSRF-Token", "value": "{{CSRF_TOKEN}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"prices\": [\n    {\"buyer_sku_code\": \"ff_12\", \"price\": 1807},\n    {\"buyer_sku_code\": \"ff_50\", \"price\": 6205},\n    {\"buyer_sku_code\": \"ff_70\", \"price\": 8930},\n    {\"buyer_sku_code\": \"ff_140\", \"price\": 18190},\n    {\"buyer_sku_code\": \"ff_355\", \"price\": 44800},\n    {\"buyer_sku_code\": \"ml_5\", \"price\": 1680},\n    {\"buyer_sku_code\": \"ml_10\", \"price\": 2855},\n    {\"buyer_sku_code\": \"ml_12\", \"price\": 3303}\n  ],\n  \"margin_type\": \"tiered\",\n  \"margin_value\": 0\n}"
+						},
+						"url": {"raw": "{{BASE_URL}}/admin/products/sync-prices", "host": ["{{BASE_URL}}"], "path": ["admin", "products", "sync-prices"]}
+					}
+				},
+				{
+					"name": "Sync All from Digiflazz",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-CSRF-Token", "value": "{{CSRF_TOKEN}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"margin_type\": \"tiered\",\n  \"margin_value\": 0\n}"
+						},
+						"url": {"raw": "{{BASE_URL}}/admin/products/sync-all", "host": ["{{BASE_URL}}"], "path": ["admin", "products", "sync-all"]}
 					}
 				}
 			]

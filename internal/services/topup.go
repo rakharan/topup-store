@@ -10,6 +10,9 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/topup-store/internal/constants"
@@ -277,6 +280,94 @@ func (s *TopupService) ListAllProducts(ctx context.Context) ([]models.Product, e
 	return s.productRepo.ListAll(ctx)
 }
 
+type DigiflazzPrice struct {
+	SKU         string
+	Name        string
+	Price       int
+	Category    string
+	Brand       string
+	Description string
+}
+
+func (s *TopupService) FetchDigiflazzPrices(ctx context.Context) ([]DigiflazzPrice, error) {
+	sign := s.generateSign("")
+
+	payload := map[string]string{
+		"username": s.digiflazzUser,
+		"sign":     sign,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal payload: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.digiflazzURL+"/../price-list", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("digiflazz returned status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
+	var rawResult struct {
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(respBody, &rawResult); err != nil {
+		return nil, fmt.Errorf("parse response: %w, body: %s", err, string(respBody))
+	}
+
+	var errMsg struct {
+		RC      string `json:"rc"`
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(rawResult.Data, &errMsg); err == nil && errMsg.RC != "" && errMsg.RC != "00" {
+		return nil, fmt.Errorf("digiflazz error: %s", errMsg.Message)
+	}
+
+	var products []struct {
+		SKU         string `json:"buyer_sku_code"`
+		Name        string `json:"product_name"`
+		Price       int    `json:"price"`
+		Category    string `json:"category"`
+		Brand       string `json:"brand"`
+		Description string `json:"desc"`
+	}
+	if err := json.Unmarshal(rawResult.Data, &products); err != nil {
+		return nil, fmt.Errorf("parse products: %w, body: %s", err, string(respBody))
+	}
+
+	var prices []DigiflazzPrice
+	for _, p := range products {
+		if p.SKU != "" && p.Price > 0 {
+			prices = append(prices, DigiflazzPrice{
+				SKU:         p.SKU,
+				Name:        p.Name,
+				Price:       p.Price,
+				Category:    p.Category,
+				Brand:       p.Brand,
+				Description: p.Description,
+			})
+		}
+	}
+
+	return prices, nil
+}
+
 func (s *TopupService) CompleteOrder(ctx context.Context, orderID, sn string) error {
 	_, err := s.orderRepo.GetByID(ctx, orderID)
 	if err != nil {
@@ -292,4 +383,161 @@ func (s *TopupService) CompleteOrder(ctx context.Context, orderID, sn string) er
 
 func (s *TopupService) FailOrder(ctx context.Context, orderID string) error {
 	return s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusFailed)
+}
+
+type SyncResult struct {
+	SKU          string `json:"sku"`
+	Name         string `json:"name"`
+	Cost         int    `json:"cost"`
+	Price        int    `json:"price"`
+	Margin       int    `json:"margin"`
+	Tier         string `json:"tier"`
+	Created      bool   `json:"created"`
+	Game         string `json:"game,omitempty"`
+	Diamonds     int    `json:"diamonds,omitempty"`
+}
+
+func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType string, marginValue int) ([]SyncResult, int, int, int, error) {
+	if marginType == "" {
+		marginType = "tiered"
+	}
+
+	prices, err := s.FetchDigiflazzPrices(ctx)
+	if err != nil {
+		return nil, 0, 0, 0, fmt.Errorf("fetch digiflazz prices: %w", err)
+	}
+
+	var results []SyncResult
+	updated := 0
+	created := 0
+	skipped := 0
+
+	for _, p := range prices {
+		if p.Price <= 0 || p.SKU == "" {
+			skipped++
+			continue
+		}
+
+		costPrice := p.Price
+		sellingPrice, tier := calcTieredPrice(costPrice, marginType, marginValue)
+
+		exists, err := s.productRepo.ExistsBySKU(ctx, p.SKU, "")
+		if err != nil {
+			s.logger.Warn("sync: check SKU existence failed", slog.String("sku", p.SKU), slog.String("error", err.Error()))
+			skipped++
+			continue
+		}
+
+		if !exists {
+			game := inferGameFromSKU(p.SKU)
+			if game == "" {
+				s.logger.Debug("sync: skipping unknown SKU prefix", slog.String("sku", p.SKU))
+				skipped++
+				continue
+			}
+
+			diamonds := extractDiamondsFromName(p.Name)
+
+			if err := s.productRepo.CreateFromDigiflazz(ctx, p.SKU, p.Name, game, sellingPrice, costPrice, diamonds, p.Description); err != nil {
+				s.logger.Warn("sync: failed to create product", slog.String("sku", p.SKU), slog.String("error", err.Error()))
+				skipped++
+				continue
+			}
+
+			created++
+			results = append(results, SyncResult{
+				SKU:      p.SKU,
+				Name:     p.Name,
+				Cost:     costPrice,
+				Price:    sellingPrice,
+				Margin:   sellingPrice - costPrice,
+				Tier:     tier,
+				Created:  true,
+				Game:     game,
+				Diamonds: diamonds,
+			})
+			continue
+		}
+
+		if err := s.productRepo.SyncPrice(ctx, p.SKU, costPrice, sellingPrice); err != nil {
+			s.logger.Warn("sync: failed to update price", slog.String("sku", p.SKU), slog.String("error", err.Error()))
+			skipped++
+			continue
+		}
+
+		updated++
+		results = append(results, SyncResult{
+			SKU:    p.SKU,
+			Name:   p.Name,
+			Cost:   costPrice,
+			Price:  sellingPrice,
+			Margin: sellingPrice - costPrice,
+			Tier:   tier,
+		})
+	}
+
+	return results, updated, created, skipped, nil
+}
+
+func calcTieredPrice(costPrice int, marginType string, marginValue int) (sellingPrice int, tier string) {
+	if marginType == "fixed" {
+		sellingPrice = costPrice + marginValue
+		tier = "fixed"
+	} else if marginType == "percent" {
+		sellingPrice = int(float64(costPrice) * (1 + float64(marginValue)/100))
+		tier = "flat_percent"
+	} else {
+		switch {
+		case costPrice < 5000:
+			sellingPrice = int(float64(costPrice) * 1.15)
+			minPrice := costPrice + 200
+			if sellingPrice < minPrice {
+				sellingPrice = minPrice
+			}
+			tier = "low (<5k, 15% min 200)"
+		case costPrice <= 50000:
+			sellingPrice = int(float64(costPrice) * 1.10)
+			tier = "mid (5k-50k, 10%)"
+		default:
+			sellingPrice = int(float64(costPrice) * 1.05)
+			maxPrice := costPrice + 5000
+			if sellingPrice > maxPrice {
+				sellingPrice = maxPrice
+			}
+			tier = "high (>50k, 5% max 5k)"
+		}
+	}
+
+	sellingPrice = (sellingPrice + 50) / 100 * 100
+	return
+}
+
+var skuPrefixGame = map[string]string{
+	"ff_":   constants.GameFreeFire,
+	"ml_":   constants.GameMobileLegends,
+	"pubg_": constants.GamePUBGMobile,
+}
+
+func inferGameFromSKU(sku string) string {
+	skuLower := strings.ToLower(sku)
+	for prefix, game := range skuPrefixGame {
+		if strings.HasPrefix(skuLower, prefix) {
+			return game
+		}
+	}
+	return ""
+}
+
+var diamondsRegex = regexp.MustCompile(`(\d+)\s*(dm|diamonds?|d$)`)
+
+func extractDiamondsFromName(name string) int {
+	nameLower := strings.ToLower(name)
+	matches := diamondsRegex.FindStringSubmatch(nameLower)
+	if len(matches) >= 2 {
+		n, err := strconv.Atoi(matches[1])
+		if err == nil {
+			return n
+		}
+	}
+	return 0
 }

@@ -118,3 +118,21 @@ func (r *PGProductRepository) ExistsBySKU(ctx context.Context, sku string, exclu
 	}
 	return exists, err
 }
+
+func (r *PGProductRepository) UpdateCostPrice(ctx context.Context, sku string, costPrice int) error {
+	_, err := r.pool.Exec(ctx, `UPDATE products SET cost_price_idr = $1, updated_at = NOW() WHERE sku = $2`, costPrice, sku)
+	return err
+}
+
+func (r *PGProductRepository) SyncPrice(ctx context.Context, sku string, costPrice, sellingPrice int) error {
+	_, err := r.pool.Exec(ctx, `UPDATE products SET cost_price_idr = $1, price_idr = $2, updated_at = NOW() WHERE sku = $3`, costPrice, sellingPrice, sku)
+	return err
+}
+
+func (r *PGProductRepository) CreateFromDigiflazz(ctx context.Context, sku, name, game string, priceIDR, costPriceIDR, diamonds int, description string) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO products (id, game, name, description, price_idr, cost_price_idr, diamonds, sku, is_active)
+		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, true)
+	`, game, name, description, priceIDR, costPriceIDR, diamonds, sku)
+	return err
+}

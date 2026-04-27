@@ -35,6 +35,9 @@ type ProductRepository interface {
 	Update(ctx context.Context, p *models.Product) error
 	Delete(ctx context.Context, id string) error
 	ExistsBySKU(ctx context.Context, sku string, excludeID string) (bool, error)
+	UpdateCostPrice(ctx context.Context, sku string, costPrice int) error
+	SyncPrice(ctx context.Context, sku string, costPrice, sellingPrice int) error
+	CreateFromDigiflazz(ctx context.Context, sku, name, game string, priceIDR, costPriceIDR, diamonds int, description string) error
 }
 
 type WebhookRepository interface {

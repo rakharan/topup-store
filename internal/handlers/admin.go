@@ -267,3 +267,125 @@ func (h *AdminHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	apperrors.WriteSuccess(w, http.StatusOK, map[string]string{"status": "ok", "message": "product deleted"}, middleware.GetRequestID(r.Context()))
 }
+
+func (h *AdminHandler) SyncPrices(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Prices     []struct {
+			SKU   string `json:"buyer_sku_code"`
+			Price int    `json:"price"`
+		} `json:"prices"`
+		MarginType  string `json:"margin_type"`
+		MarginValue int    `json:"margin_value"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	if req.MarginType == "" {
+		req.MarginType = "tiered"
+	}
+
+	type result struct {
+		SKU    string `json:"sku"`
+		Cost   int    `json:"cost"`
+		Price  int    `json:"price"`
+		Margin int    `json:"margin"`
+		Tier   string `json:"tier"`
+	}
+
+	var results []result
+	updated := 0
+	skipped := 0
+
+	for _, p := range req.Prices {
+		if p.Price <= 0 || p.SKU == "" {
+			skipped++
+			continue
+		}
+
+		costPrice := p.Price
+		sellingPrice, tier := calcTieredPrice(costPrice, req.MarginType, req.MarginValue)
+
+		if err := h.productRepo.SyncPrice(r.Context(), p.SKU, costPrice, sellingPrice); err != nil {
+			h.logger.Warn("sync prices: failed to update", slog.String("sku", p.SKU), slog.String("error", err.Error()))
+			skipped++
+			continue
+		}
+
+		updated++
+		results = append(results, result{
+			SKU:    p.SKU,
+			Cost:   costPrice,
+			Price:  sellingPrice,
+			Margin: sellingPrice - costPrice,
+			Tier:   tier,
+		})
+	}
+
+	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
+		"updated": updated,
+		"skipped": skipped,
+		"total":   len(req.Prices),
+		"products": results,
+	}, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) SyncPricesFromDigiflazz(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		MarginType  string `json:"margin_type"`
+		MarginValue int    `json:"margin_value"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	results, updated, created, skipped, err := h.topupSvc.SyncPricesWithAutoCreate(r.Context(), req.MarginType, req.MarginValue)
+	if err != nil {
+		h.logger.Error("sync prices from digiflazz: failed", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.FieldError("digiflazz", err.Error()), middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
+		"updated": updated,
+		"created": created,
+		"skipped": skipped,
+		"total":   len(results),
+		"products": results,
+	}, middleware.GetRequestID(r.Context()))
+}
+
+func calcTieredPrice(costPrice int, marginType string, marginValue int) (sellingPrice int, tier string) {
+	if marginType == "fixed" {
+		sellingPrice = costPrice + marginValue
+		tier = "fixed"
+	} else if marginType == "percent" {
+		sellingPrice = int(float64(costPrice) * (1 + float64(marginValue)/100))
+		tier = "flat_percent"
+	} else {
+		switch {
+		case costPrice < 5000:
+			sellingPrice = int(float64(costPrice) * 1.15)
+			minPrice := costPrice + 200
+			if sellingPrice < minPrice {
+				sellingPrice = minPrice
+			}
+			tier = "low (<5k, 15% min 200)"
+		case costPrice <= 50000:
+			sellingPrice = int(float64(costPrice) * 1.10)
+			tier = "mid (5k-50k, 10%)"
+		default:
+			sellingPrice = int(float64(costPrice) * 1.05)
+			maxPrice := costPrice + 5000
+			if sellingPrice > maxPrice {
+				sellingPrice = maxPrice
+			}
+			tier = "high (>50k, 5% max 5k)"
+		}
+	}
+
+	sellingPrice = (sellingPrice + 50) / 100 * 100
+	return
+}

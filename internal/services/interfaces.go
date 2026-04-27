@@ -26,6 +26,8 @@ type TopupServiceInterface interface {
 	ListProducts(ctx context.Context, game string) ([]models.Product, error)
 	ListAllProducts(ctx context.Context) ([]models.Product, error)
 	ProcessOrder(orderID string) error
+	FetchDigiflazzPrices(ctx context.Context) ([]DigiflazzPrice, error)
+	SyncPricesWithAutoCreate(ctx context.Context, marginType string, marginValue int) ([]SyncResult, int, int, int, error)
 }
 
 type NotifyServiceInterface interface {

@@ -139,6 +139,8 @@ func main() {
 		r.Post("/", admin.CreateProduct)
 		r.Put("/{id}", admin.UpdateProduct)
 		r.Delete("/{id}", admin.DeleteProduct)
+		r.Post("/sync-prices", admin.SyncPrices)
+		r.Post("/sync-all", admin.SyncPricesFromDigiflazz)
 	})
 
 	fs := http.FileServer(http.Dir("web/static"))
