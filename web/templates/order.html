@@ -38,8 +38,8 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-white/70 mb-1" for="phone">Nomor WhatsApp</label>
-                <input type="text" id="phone" name="phone" placeholder="628xxxxxxxxxx" inputmode="tel" required aria-describedby="phoneHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
-                <p class="text-xs text-white/40 mt-1" id="phoneHint">Untuk konfirmasi order via WhatsApp</p>
+                <input type="text" id="phone" name="phone" placeholder="08xxxxxxxxxx atau 628xxx" inputmode="tel" required aria-describedby="phoneHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+                <p class="text-xs text-white/40 mt-1" id="phoneHint">Format: 628xxx atau 08xxx (tanpa + atau spasi)</p>
             </div>
             <button type="submit" id="submitBtn" class="w-full bg-primary hover:bg-orange-600 disabled:bg-white/20 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 focus-ring">
                 <span id="submitText">Buat Order</span>
@@ -167,10 +167,13 @@
     function showConfirmModal() {
         const game = gameSelect.options[gameSelect.selectedIndex]?.text;
         const uid = document.getElementById("gameUid").value.trim();
+        const opt = productSelect.options[productSelect.selectedIndex];
+        const productName = selectedProduct?.name || (opt && opt.dataset.name) || '';
+        const productPrice = selectedProduct?.price || (opt && opt.dataset.amount) || '0';
         document.getElementById("confirmGame").textContent = game;
-        document.getElementById("confirmProduct").textContent = selectedProduct?.name || '';
+        document.getElementById("confirmProduct").textContent = productName;
         document.getElementById("confirmUid").textContent = uid + (serverGroup.classList.contains('hidden') ? '' : ' (' + document.getElementById("gameServer").value.trim() + ')');
-        document.getElementById("confirmPrice").textContent = 'Rp ' + (selectedProduct?.price ? parseInt(selectedProduct.price).toLocaleString("id-ID") : '0');
+        document.getElementById("confirmPrice").textContent = 'Rp ' + (productPrice ? parseInt(productPrice).toLocaleString("id-ID") : '0');
         confirmModal.classList.remove('hidden');
     }
 

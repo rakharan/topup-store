@@ -67,17 +67,23 @@ func (s *NotifyService) SendNotification(phone, message string) error {
 
 func (s *NotifyService) sendNotification(ctx context.Context, phone, message string) error {
 	cleaned := strings.TrimSpace(phone)
-	if cleaned == "" || (!strings.HasPrefix(cleaned, "+") && !strings.HasPrefix(cleaned, "62")) {
+	if cleaned == "" {
+		return fmt.Errorf("invalid phone number format: %s", phone)
+	}
+	if strings.HasPrefix(cleaned, "0") {
+		cleaned = "62" + cleaned[1:]
+	}
+	if !strings.HasPrefix(cleaned, "+") && !strings.HasPrefix(cleaned, "62") {
 		return fmt.Errorf("invalid phone number format: %s", phone)
 	}
 	if s.waToken != "" && s.waPhoneID != "" {
-		err := s.sendViaCloudAPI(ctx, phone, message)
+		err := s.sendViaCloudAPI(ctx, cleaned, message)
 		if err == nil {
 			return nil
 		}
 		s.logger.Warn("cloud api failed, falling back to bot", "error", err)
 	}
-	return s.sendViaBot(ctx, phone, message)
+	return s.sendViaBot(ctx, cleaned, message)
 }
 
 func (s *NotifyService) sendViaCloudAPI(ctx context.Context, phone, message string) error {
