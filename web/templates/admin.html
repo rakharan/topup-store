@@ -198,7 +198,7 @@
 
     async function initCSRF() {
         try {
-            const res = await fetch('/admin/products');
+            const res = await fetch('/admin');
             const token = res.headers.get('X-CSRF-Token');
             if (token) csrfToken = token;
         } catch (e) {}
