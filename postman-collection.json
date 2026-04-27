@@ -8,6 +8,7 @@
 		{"key": "DIGIFLAZZ_URL", "value": "https://api.digiflazz.com/v1/transaction", "type": "string"},
 		{"key": "DIGIFLAZZ_USERNAME", "value": "your_username", "type": "string"},
 		{"key": "DIGIFLAZZ_API_KEY", "value": "your_api_key", "type": "string"},
+		{"key": "DIGIFLAZZ_WEBHOOK_ID", "value": "your_webhook_id", "type": "string"},
 		{"key": "REF_ID", "value": "test-001", "type": "string"},
 		{"key": "BUYER_SKU_CODE", "value": "ff_12", "type": "string"},
 		{"key": "CUSTOMER_NO", "value": "123456789", "type": "string"},
@@ -39,8 +40,8 @@
 						"script": {
 							"type": "text/javascript",
 							"exec": [
-								"const raw = pm.environment.get('DIGIFLAZZ_USERNAME') + pm.environment.get('DIGIFLAZZ_API_KEY') + pm.environment.get('REF_ID');",
-								"pm.environment.set('SIGN', CryptoJS.MD5(raw).toString());"
+								"const raw = pm.variables.get('DIGIFLAZZ_USERNAME') + pm.variables.get('DIGIFLAZZ_API_KEY') + pm.variables.get('REF_ID');",
+								"pm.variables.set('SIGN', CryptoJS.MD5(raw).toString());"
 							]
 						}
 					}]
@@ -61,8 +62,8 @@
 						"script": {
 							"type": "text/javascript",
 							"exec": [
-								"const raw = pm.environment.get('DIGIFLAZZ_USERNAME') + pm.environment.get('DIGIFLAZZ_API_KEY') + pm.environment.get('REF_ID');",
-								"pm.environment.set('SIGN', CryptoJS.MD5(raw).toString());"
+								"const raw = pm.variables.get('DIGIFLAZZ_USERNAME') + pm.variables.get('DIGIFLAZZ_API_KEY') + pm.variables.get('REF_ID');",
+								"pm.variables.set('SIGN', CryptoJS.MD5(raw).toString());"
 							]
 						}
 					}]
@@ -117,7 +118,7 @@
 							"type": "text/javascript",
 							"exec": [
 								"const token = pm.response.headers.get('X-CSRF-Token');",
-								"if (token) { pm.environment.set('CSRF_TOKEN', token); console.log('CSRF:', token); }"
+								"if (token) { pm.variables.set('CSRF_TOKEN', token); console.log('CSRF:', token); }"
 							]
 						}
 					}]
@@ -142,11 +143,11 @@
 							"type": "text/javascript",
 							"exec": [
 								"const nt = pm.response.headers.get('X-CSRF-Token');",
-								"if (nt) pm.environment.set('CSRF_TOKEN', nt);",
+								"if (nt) pm.variables.set('CSRF_TOKEN', nt);",
 								"if (pm.response.code === 201) {",
 								"  const j = pm.response.json();",
 								"  const oid = j.data?.order_id || j.order_id;",
-								"  if (oid) { pm.environment.set('ORDER_ID', oid); console.log('Order:', oid); }",
+								"  if (oid) { pm.variables.set('ORDER_ID', oid); console.log('Order:', oid); }",
 								"}"
 							]
 						}
@@ -185,6 +186,15 @@
 		{
 			"name": "Webhooks",
 			"item": [
+				{
+					"name": "Digiflazz Webhook Ping (Remote)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {"mode": "raw", "raw": ""},
+						"url": {"raw": "https://api.digiflazz.com/v1/report/hooks/{{DIGIFLAZZ_WEBHOOK_ID}}/pings", "host": ["api.digiflazz.com"], "path": ["v1", "report", "hooks", "{{DIGIFLAZZ_WEBHOOK_ID}}", "pings"]}
+					}
+				},
 				{
 					"name": "Digiflazz Webhook - Ping",
 					"request": {
@@ -234,9 +244,9 @@
 						"script": {
 							"type": "text/javascript",
 							"exec": [
-								"const orderId = pm.environment.get('ORDER_ID') || 'test-order';",
-								"const raw = orderId + '200' + '1811.00' + pm.environment.get('MIDTRANS_SERVER_KEY');",
-								"pm.environment.set('MIDTRANS_SIGNATURE', CryptoJS.SHA512(raw).toString());"
+								"const orderId = pm.variables.get('ORDER_ID') || 'test-order';",
+								"const raw = orderId + '200' + '1811.00' + pm.variables.get('MIDTRANS_SERVER_KEY');",
+								"pm.variables.set('MIDTRANS_SIGNATURE', CryptoJS.SHA512(raw).toString());"
 							]
 						}
 					}]
@@ -257,9 +267,9 @@
 						"script": {
 							"type": "text/javascript",
 							"exec": [
-								"const orderId = pm.environment.get('ORDER_ID') || 'test-order';",
-								"const raw = orderId + '201' + '1811.00' + pm.environment.get('MIDTRANS_SERVER_KEY');",
-								"pm.environment.set('MIDTRANS_SIGNATURE', CryptoJS.SHA512(raw).toString());"
+								"const orderId = pm.variables.get('ORDER_ID') || 'test-order';",
+								"const raw = orderId + '201' + '1811.00' + pm.variables.get('MIDTRANS_SERVER_KEY');",
+								"pm.variables.set('MIDTRANS_SIGNATURE', CryptoJS.SHA512(raw).toString());"
 							]
 						}
 					}]
@@ -282,7 +292,7 @@
 							"type": "text/javascript",
 							"exec": [
 								"const token = pm.response.headers.get('X-CSRF-Token');",
-								"if (token) { pm.environment.set('CSRF_TOKEN', token); }"
+								"if (token) { pm.variables.set('CSRF_TOKEN', token); }"
 							]
 						}
 					}]
