@@ -101,8 +101,10 @@ func main() {
 	r.Get("/", pages.Home)
 	r.With(csrfMW).Get("/order", pages.OrderForm)
 	r.Get("/status", pages.Status)
-	r.Get("/admin", pages.Admin)
-	r.With(csrfMW).Post("/admin", pages.Admin)
+	r.With(csrfMW).Route("/admin", func(r chi.Router) {
+		r.Get("/", pages.Admin)
+		r.Post("/", pages.Admin)
+	})
 
 	r.Route("/api", func(r chi.Router) {
 		var allowedOrigins []string
