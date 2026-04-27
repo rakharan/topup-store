@@ -51,6 +51,10 @@ func (s *PaymentService) CreateQRIS(ctx context.Context, order *models.Order) (s
 
 	qrisURL := snapResp.RedirectURL
 
+	if err := s.orderRepo.UpsertQRIS(ctx, order.ID, qrisURL, ""); err != nil {
+		return "", "", fmt.Errorf("upsert qris data: %w", err)
+	}
+
 	if err := s.orderRepo.UpdateWithQRIS(ctx, order.ID, order.ID, qrisURL); err != nil {
 		return "", "", fmt.Errorf("update order with qris details: %w", err)
 	}
@@ -75,7 +79,11 @@ func (s *PaymentService) UpdateOrderSerialNumber(ctx context.Context, orderID, s
 }
 
 func (s *PaymentService) GetOrder(ctx context.Context, orderID string) (*models.Order, error) {
-	return s.orderRepo.GetByID(ctx, orderID)
+	order, err := s.orderRepo.GetByID(ctx, orderID)
+	if err != nil {
+		return s.orderRepo.GetByDigiflazzRefID(ctx, orderID)
+	}
+	return order, nil
 }
 
 func (s *PaymentService) ListOrders(ctx context.Context, page, perPage int) ([]models.Order, int, error) {
@@ -88,4 +96,16 @@ func (s *PaymentService) CreateOrder(ctx context.Context, order *models.Order) e
 
 func (s *PaymentService) GetOrderByUIDAndPhone(ctx context.Context, gameUID, phone string) (*models.Order, error) {
 	return s.orderRepo.GetByUIDAndPhone(ctx, gameUID, phone)
+}
+
+func (s *PaymentService) RecordStatusChange(ctx context.Context, orderID, fromStatus, toStatus, reason string) error {
+	return s.orderRepo.InsertStatusHistory(ctx, orderID, fromStatus, toStatus, reason)
+}
+
+func (s *PaymentService) GetOrderStatusHistory(ctx context.Context, orderID string) ([]models.OrderStatusHistory, error) {
+	return s.orderRepo.GetStatusHistory(ctx, orderID)
+}
+
+func (s *PaymentService) GetOrderQRIS(ctx context.Context, orderID string) (*models.OrderQRIS, error) {
+	return s.orderRepo.GetQRIS(ctx, orderID)
 }

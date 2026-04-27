@@ -77,14 +77,15 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	orderID := uuid.New().String()
 	order := &models.Order{
-		ID:         orderID,
-		ProductID:  product.ID,
-		UserPhone:  req.Phone,
-		GameUID:    req.GameUID,
-		GameServer: req.GameServer,
-		AmountIDR:  product.PriceIDR,
-		Status:     constants.StatusPending,
-		Channel:    constants.ChannelWeb,
+		ID:             orderID,
+		ProductID:      product.ID,
+		UserPhone:      req.Phone,
+		GameUID:        req.GameUID,
+		GameServer:     req.GameServer,
+		AmountIDR:      product.PriceIDR,
+		Status:         constants.StatusPending,
+		Channel:        constants.ChannelWeb,
+		DigiflazzRefID: orderID,
 	}
 
 	if err := h.paymentSvc.CreateOrder(r.Context(), order); err != nil {

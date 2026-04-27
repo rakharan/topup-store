@@ -206,7 +206,7 @@
 							"type": "text/javascript",
 							"exec": [
 								"const token = pm.response.headers.get('X-CSRF-Token');",
-								"if (token) { pm.variables.set('CSRF_TOKEN', token); console.log('CSRF:', token); }"
+								"if (token) { pm.collectionVariables.set('CSRF_TOKEN', token); console.log('CSRF:', token); }"
 							]
 						}
 					}]
@@ -231,11 +231,11 @@
 							"type": "text/javascript",
 							"exec": [
 								"const nt = pm.response.headers.get('X-CSRF-Token');",
-								"if (nt) pm.variables.set('CSRF_TOKEN', nt);",
+								"if (nt) pm.collectionVariables.set('CSRF_TOKEN', nt);",
 								"if (pm.response.code === 201) {",
 								"  const j = pm.response.json();",
 								"  const oid = j.data?.order_id || j.order_id;",
-								"  if (oid) { pm.variables.set('ORDER_ID', oid); console.log('Order:', oid); }",
+								"  if (oid) { pm.collectionVariables.set('ORDER_ID', oid); pm.collectionVariables.set('REF_ID', oid); console.log('Order:', oid); }",
 								"}"
 							]
 						}
@@ -380,7 +380,7 @@
 							"type": "text/javascript",
 							"exec": [
 								"const token = pm.response.headers.get('X-CSRF-Token');",
-								"if (token) { pm.variables.set('CSRF_TOKEN', token); }"
+								"if (token) { pm.collectionVariables.set('CSRF_TOKEN', token); }"
 							]
 						}
 					}]

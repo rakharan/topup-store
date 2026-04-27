@@ -55,11 +55,14 @@ func (s *TopupService) ProcessOrder(orderID string) error {
 		return fmt.Errorf("order %s was already being processed or is not in paid status", orderID)
 	}
 
+	s.orderRepo.InsertStatusHistory(ctx, orderID, constants.StatusPaid, constants.StatusProcessing, "auto process after payment")
+
 	order, err := s.orderRepo.GetByID(ctx, orderID)
 	if err != nil {
 		if err2 := s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusFailed); err2 != nil {
 			s.logger.Error("failed to mark order as failed", slog.String("order_id", orderID), slog.String("error", err2.Error()))
 		}
+		s.orderRepo.InsertStatusHistory(ctx, orderID, constants.StatusProcessing, constants.StatusFailed, "order not found")
 		return fmt.Errorf("fetch order %s: %w", orderID, err)
 	}
 
@@ -68,6 +71,7 @@ func (s *TopupService) ProcessOrder(orderID string) error {
 		if err2 := s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusFailed); err2 != nil {
 			s.logger.Error("failed to mark order as failed", slog.String("order_id", orderID), slog.String("error", err2.Error()))
 		}
+		s.orderRepo.InsertStatusHistory(ctx, orderID, constants.StatusProcessing, constants.StatusFailed, "product not found")
 		return fmt.Errorf("fetch product %s: %w", order.ProductID, err)
 	}
 
@@ -75,23 +79,29 @@ func (s *TopupService) ProcessOrder(orderID string) error {
 		if err2 := s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusFailed); err2 != nil {
 			s.logger.Error("failed to mark order as failed", slog.String("order_id", orderID), slog.String("error", err2.Error()))
 		}
+		s.orderRepo.InsertStatusHistory(ctx, orderID, constants.StatusProcessing, constants.StatusFailed, err.Error())
 		return fmt.Errorf("digiflazz topup: %w", err)
 	}
 
+	s.orderRepo.InsertStatusHistory(ctx, orderID, constants.StatusProcessing, constants.StatusSuccess, "digiflazz topup completed")
 	return s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusSuccess)
 }
 
 func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *models.Order, product *models.Product) error {
 	customerNo := s.buildCustomerNo(order, product)
-	sign := s.generateSign(order.ID)
+	refID := order.DigiflazzRefID
+	if refID == "" {
+		refID = order.ID
+	}
+	sign := s.generateSign(refID)
 
 	payload := map[string]any{
-		"username":         s.digiflazzUser,
-		"buyer_sku_code":   product.SKU,
-		"customer_no":      customerNo,
-		"ref_id":           order.ID,
-		"sign":             sign,
-		"testing":          s.digiflazzTest,
+		"username":       s.digiflazzUser,
+		"buyer_sku_code": product.SKU,
+		"customer_no":    customerNo,
+		"ref_id":         refID,
+		"sign":           sign,
+		"testing":        s.digiflazzTest,
 	}
 
 	body, err := json.Marshal(payload)
@@ -101,11 +111,11 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 
 	var result struct {
 		Data struct {
-			Status          string `json:"status"`
-			Message         string `json:"message"`
-			SN              string `json:"sn"`
-			BuyerLastSaldo  int    `json:"buyer_last_saldo"`
-			Price           int    `json:"price"`
+			Status         string `json:"status"`
+			Message        string `json:"message"`
+			SN             string `json:"sn"`
+			BuyerLastSaldo int    `json:"buyer_last_saldo"`
+			Price          int    `json:"price"`
 		} `json:"data"`
 	}
 
@@ -192,13 +202,17 @@ func (s *TopupService) CheckTransactionStatus(orderID string) (status string, sn
 	}
 
 	customerNo := s.buildCustomerNo(order, product)
-	sign := s.generateSign(orderID)
+	refID := order.DigiflazzRefID
+	if refID == "" {
+		refID = orderID
+	}
+	sign := s.generateSign(refID)
 
 	payload := map[string]string{
 		"username":       s.digiflazzUser,
 		"buyer_sku_code": product.SKU,
 		"customer_no":    customerNo,
-		"ref_id":         orderID,
+		"ref_id":         refID,
 		"sign":           sign,
 	}
 

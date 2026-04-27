@@ -65,6 +65,7 @@ func main() {
 
 	orderRepo := repositories.NewOrderRepository(pool)
 	productRepo := repositories.NewProductRepository(pool)
+	webhookRepo := repositories.NewWebhookRepository(pool)
 
 	paymentSvc := services.NewPaymentService(orderRepo, cfg.MidtransServerKey, cfg.MidtransIsProd)
 	topupSvc := services.NewTopupService(orderRepo, productRepo, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzAPIURL, cfg.DigiflazzTesting, logger)
@@ -73,7 +74,7 @@ func main() {
 	pages := handlers.NewPageHandler(topupSvc, paymentSvc, notifySvc, cfg.WhatsappNumber, cfg.AdminPassword, cfg.MidtransIsProd, logger)
 	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, logger)
 	products := handlers.NewProductHandler(topupSvc, logger)
-	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, cfg.MidtransServerKey, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzWebhookSecret, logger)
+	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, webhookRepo, cfg.MidtransServerKey, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzWebhookSecret, logger)
 	admin := handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, cfg.AdminPassword, logger)
 	csrfStore := middleware.NewCSRFStore()
 	csrfMW := middleware.CSRFMiddleware(csrfStore)

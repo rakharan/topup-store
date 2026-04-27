@@ -140,13 +140,14 @@ func (h *AdminHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 
 func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Game        string `json:"game"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		PriceIDR    int    `json:"price_idr"`
-		Diamonds    int    `json:"diamonds"`
-		SKU         string `json:"sku"`
-		IsActive    bool   `json:"is_active"`
+		Game         string `json:"game"`
+		Name         string `json:"name"`
+		Description  string `json:"description"`
+		PriceIDR     int    `json:"price_idr"`
+		CostPriceIDR int    `json:"cost_price_idr"`
+		Diamonds     int    `json:"diamonds"`
+		SKU          string `json:"sku"`
+		IsActive     bool   `json:"is_active"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
@@ -174,14 +175,15 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	product := &models.Product{
-		ID:          uuid.New().String(),
-		Game:        req.Game,
-		Name:        req.Name,
-		Description: req.Description,
-		PriceIDR:    req.PriceIDR,
-		Diamonds:    req.Diamonds,
-		SKU:         req.SKU,
-		IsActive:    req.IsActive,
+		ID:           uuid.New().String(),
+		Game:         req.Game,
+		Name:         req.Name,
+		Description:  req.Description,
+		PriceIDR:     req.PriceIDR,
+		CostPriceIDR: req.CostPriceIDR,
+		Diamonds:     req.Diamonds,
+		SKU:          req.SKU,
+		IsActive:     req.IsActive,
 	}
 
 	if err := h.productRepo.Create(r.Context(), product); err != nil {
@@ -202,13 +204,14 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Game        string `json:"game"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		PriceIDR    int    `json:"price_idr"`
-		Diamonds    int    `json:"diamonds"`
-		SKU         string `json:"sku"`
-		IsActive    bool   `json:"is_active"`
+		Game         string `json:"game"`
+		Name         string `json:"name"`
+		Description  string `json:"description"`
+		PriceIDR     int    `json:"price_idr"`
+		CostPriceIDR int    `json:"cost_price_idr"`
+		Diamonds     int    `json:"diamonds"`
+		SKU          string `json:"sku"`
+		IsActive     bool   `json:"is_active"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
@@ -236,14 +239,15 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	product := &models.Product{
-		ID:          existing.ID,
-		Game:        req.Game,
-		Name:        req.Name,
-		Description: req.Description,
-		PriceIDR:    req.PriceIDR,
-		Diamonds:    req.Diamonds,
-		SKU:         req.SKU,
-		IsActive:    req.IsActive,
+		ID:           existing.ID,
+		Game:         req.Game,
+		Name:         req.Name,
+		Description:  req.Description,
+		PriceIDR:     req.PriceIDR,
+		CostPriceIDR: req.CostPriceIDR,
+		Diamonds:     req.Diamonds,
+		SKU:          req.SKU,
+		IsActive:     req.IsActive,
 	}
 
 	if err := h.productRepo.Update(r.Context(), product); err != nil {
