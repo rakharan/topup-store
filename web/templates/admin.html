@@ -120,6 +120,17 @@
                         <input type="number" id="prodCostPrice" required min="1" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     </div>
                     <div>
+                        <label class="block text-sm text-white/70 mb-1" for="prodMarginType">Margin Type</label>
+                        <select id="prodMarginType" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                            <option value="tiered">Tiered (auto)</option>
+                            <option value="percent">Fixed %</option>
+                        </select>
+                    </div>
+                    <div id="marginValueWrap" class="hidden">
+                        <label class="block text-sm text-white/70 mb-1" for="prodMarginValue">Margin %</label>
+                        <input type="number" id="prodMarginValue" min="0" max="100" value="10" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                    </div>
+                    <div>
                         <label class="block text-sm text-white/70 mb-1" for="prodPrice">Selling Price (IDR)</label>
                         <input type="number" id="prodPrice" required min="1" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                         <div id="priceMarginInfo" class="text-xs text-white/40 mt-1"></div>
@@ -220,22 +231,27 @@
     }
     initCSRF();
 
-    function calcTieredPrice(costPrice) {
+    function calcTieredPrice(costPrice, marginType, marginPercent) {
         let sellingPrice;
         let tier;
-        if (costPrice < 5000) {
-            sellingPrice = Math.round(costPrice * 1.15);
-            const minPrice = costPrice + 200;
-            if (sellingPrice < minPrice) sellingPrice = minPrice;
-            tier = '<5k (15% min 200)';
-        } else if (costPrice <= 50000) {
-            sellingPrice = Math.round(costPrice * 1.10);
-            tier = '5k-50k (10%)';
+        if (marginType === 'percent') {
+            sellingPrice = Math.round(costPrice * (1 + marginPercent / 100));
+            tier = marginPercent + '%';
         } else {
-            sellingPrice = Math.round(costPrice * 1.05);
-            const maxPrice = costPrice + 5000;
-            if (sellingPrice > maxPrice) sellingPrice = maxPrice;
-            tier = '>50k (5% max 5k)';
+            if (costPrice < 5000) {
+                sellingPrice = Math.round(costPrice * 1.15);
+                const minPrice = costPrice + 200;
+                if (sellingPrice < minPrice) sellingPrice = minPrice;
+                tier = '<5k (15% min 200)';
+            } else if (costPrice <= 50000) {
+                sellingPrice = Math.round(costPrice * 1.10);
+                tier = '5k-50k (10%)';
+            } else {
+                sellingPrice = Math.round(costPrice * 1.05);
+                const maxPrice = costPrice + 5000;
+                if (sellingPrice > maxPrice) sellingPrice = maxPrice;
+                tier = '>50k (5% max 5k)';
+            }
         }
         sellingPrice = Math.round((sellingPrice + 50) / 100) * 100;
         return { sellingPrice, tier };
@@ -246,24 +262,35 @@
         if (!cost || !price) { info.textContent = ''; return; }
         const margin = price - cost;
         const pct = cost > 0 ? Math.round((margin / cost) * 100) : 0;
-        const { sellingPrice, tier } = calcTieredPrice(cost);
+        const marginType = document.getElementById('prodMarginType').value;
+        const marginPercent = parseInt(document.getElementById('prodMarginValue').value) || 10;
+        const { sellingPrice, tier } = calcTieredPrice(cost, marginType, marginPercent);
         const auto = price === sellingPrice;
         info.innerHTML = auto
-            ? `<span class="text-green-400">Auto: Rp ${sellingPrice.toLocaleString('id-ID')} margin (+${pct}%)</span>`
+            ? `<span class="text-green-400">Auto: Rp ${sellingPrice.toLocaleString('id-ID')} margin (+${pct}%) [${tier}]</span>`
             : `<span class="text-yellow-400">Override: Rp ${price.toLocaleString('id-ID')} (+${pct}%) — auto would be Rp ${sellingPrice.toLocaleString('id-ID')}</span>`;
     }
 
-    document.getElementById('prodCostPrice')?.addEventListener('input', (e) => {
-        const cost = parseInt(e.target.value) || 0;
+    function recalcSellingPrice() {
+        const cost = parseInt(document.getElementById('prodCostPrice').value) || 0;
+        const marginType = document.getElementById('prodMarginType').value;
+        const marginPercent = parseInt(document.getElementById('prodMarginValue').value) || 10;
         if (cost > 0) {
-            const { sellingPrice } = calcTieredPrice(cost);
+            const { sellingPrice } = calcTieredPrice(cost, marginType, marginPercent);
             document.getElementById('prodPrice').value = sellingPrice;
             updateMarginInfo(cost, sellingPrice);
         } else {
             document.getElementById('prodPrice').value = '';
             document.getElementById('priceMarginInfo').textContent = '';
         }
+    }
+
+    document.getElementById('prodCostPrice')?.addEventListener('input', recalcSellingPrice);
+    document.getElementById('prodMarginType')?.addEventListener('change', (e) => {
+        document.getElementById('marginValueWrap').classList.toggle('hidden', e.target.value !== 'percent');
+        recalcSellingPrice();
     });
+    document.getElementById('prodMarginValue')?.addEventListener('input', recalcSellingPrice);
 
     document.getElementById('prodPrice')?.addEventListener('input', (e) => {
         const cost = parseInt(document.getElementById('prodCostPrice').value) || 0;
@@ -426,6 +453,9 @@
         document.getElementById('prodName').value = '';
         document.getElementById('prodSku').value = '';
         document.getElementById('prodCostPrice').value = '';
+        document.getElementById('prodMarginType').value = 'tiered';
+        document.getElementById('prodMarginValue').value = '10';
+        document.getElementById('marginValueWrap').classList.add('hidden');
         document.getElementById('prodPrice').value = '';
         document.getElementById('prodDiamonds').value = '';
         document.getElementById('prodType').value = 'diamond';
