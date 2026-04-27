@@ -23,9 +23,3 @@ html {
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(249, 115, 22, 0.7);
 }
-
-/* Focus visible styles for better accessibility */
-.focus-ring:focus-visible {
-    outline: 2px solid #F97316;
-    outline-offset: 2px;
-}

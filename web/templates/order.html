@@ -28,18 +28,18 @@
             </div>
             <div id="uidGroup">
                 <label class="block text-sm font-medium text-white/70 mb-1" for="gameUid">Game UID</label>
-                <input type="text" id="gameUid" name="game_uid" placeholder="Masukkan UID" inputmode="numeric" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+                <input type="text" id="gameUid" name="game_uid" placeholder="Masukkan UID" inputmode="numeric" required aria-describedby="uidHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
                 <p class="text-xs text-white/40 mt-1" id="uidHint">Masukkan UID game kamu</p>
             </div>
             <div id="serverGroup" class="hidden">
                 <label class="block text-sm font-medium text-white/70 mb-1" for="gameServer">Server ID</label>
-                <input type="text" id="gameServer" name="game_server" placeholder="Masukkan Server ID" inputmode="numeric" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
-                <p class="text-xs text-white/40 mt-1">Server ID bisa ditemukan di profil game</p>
+                <input type="text" id="gameServer" name="game_server" placeholder="Masukkan Server ID" inputmode="numeric" aria-describedby="serverHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+                <p class="text-xs text-white/40 mt-1" id="serverHint">Server ID bisa ditemukan di profil game</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-white/70 mb-1" for="phone">Nomor WhatsApp</label>
-                <input type="text" id="phone" name="phone" placeholder="628xxxxxxxxxx" inputmode="tel" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
-                <p class="text-xs text-white/40 mt-1">Untuk konfirmasi order via WhatsApp</p>
+                <input type="text" id="phone" name="phone" placeholder="628xxxxxxxxxx" inputmode="tel" required aria-describedby="phoneHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+                <p class="text-xs text-white/40 mt-1" id="phoneHint">Untuk konfirmasi order via WhatsApp</p>
             </div>
             <button type="submit" id="submitBtn" class="w-full bg-primary hover:bg-orange-600 disabled:bg-white/20 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 focus-ring">
                 <span id="submitText">Buat Order</span>
@@ -47,9 +47,9 @@
             </button>
         </form>
 
-        <div id="confirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop">
+        <div id="confirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
             <div class="bg-dark rounded-xl p-6 max-w-sm mx-4 border border-white/10 animate-fade-in">
-                <h3 class="text-xl font-bold mb-4">Konfirmasi Order</h3>
+                <h3 id="confirmTitle" class="text-xl font-bold mb-4">Konfirmasi Order</h3>
                 <div class="space-y-2 text-sm mb-6">
                     <div class="flex justify-between"><span class="text-white/50">Game</span><span id="confirmGame"></span></div>
                     <div class="flex justify-between"><span class="text-white/50">Paket</span><span id="confirmProduct"></span></div>
@@ -90,7 +90,7 @@
     let selectedProduct = null;
     let pollInterval = null;
 
-    document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
         const menu = document.getElementById('mobileMenu');
         const btn = document.getElementById('mobileMenuBtn');
         menu.classList.toggle('hidden');
@@ -177,6 +177,12 @@
     function closeConfirmModal() {
         confirmModal.classList.add('hidden');
     }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !confirmModal.classList.contains('hidden')) {
+            closeConfirmModal();
+        }
+    });
 
     async function confirmOrder() {
         closeConfirmModal();

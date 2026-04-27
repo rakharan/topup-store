@@ -48,7 +48,7 @@
     };
     const statusSteps = ['pending', 'paid', 'processing', 'success'];
 
-    document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
         const menu = document.getElementById('mobileMenu');
         const btn = document.getElementById('mobileMenuBtn');
         menu.classList.toggle('hidden');

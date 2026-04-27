@@ -5,10 +5,10 @@
 
 ## Stack
 - Backend: Go 1.22, chi router, pgx/v5, PostgreSQL
-- Frontend: Go html/template + Tailwind CSS (CDN)
+- Frontend: Go html/template + Tailwind CSS (CLI build)
 - Payments: Midtrans QRIS (midtrans-go SDK)
 - Top-up supplier: Digiflazz H2H API
-- WhatsApp bot: Baileys (@whiskeysockets/baileys), Node.js 20, runs as sidecar on port 3001
+- WhatsApp bot: Meta Cloud API, Node.js 20, runs as sidecar on port 3001
 
 ## Commands
 - First setup: `go mod tidy` (generates go.sum)
@@ -25,11 +25,15 @@
 /internal/models/            → Order, Product, User structs
 /internal/handlers/          → HTTP handlers + webhook handlers
 /internal/services/          → payment, topup, notify services
-/internal/middleware/         → logging, auth, rate limiting
-/web/templates/              → Go html/template files
-/web/static/                 → CSS, JS
+/internal/middleware/         → logging, auth, rate limiting, CSRF, CORS, security headers, metrics
+/internal/repositories/      → database query layer (order_repo, product_repo)
+/internal/apperrors/         → standardized error responses
+/internal/constants/         → game/status/channel constants
+/internal/retry/             → retry logic with backoff
+/web/templates/              → Go html/template files (includes partials/)
+/web/static/                 → CSS, JS, images
 /migrations/                 → SQL migration files
-/whatsapp-bot/               → Node.js Baileys sidecar
+/whatsapp-bot/               → Node.js Meta Cloud API sidecar
 
 ## Conventions
 - All env vars loaded via godotenv from .env (never hardcode secrets)
