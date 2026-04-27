@@ -20,6 +20,7 @@ type Config struct {
 	DigiflazzAPIKey        string
 	DigiflazzWebhookSecret string
 	DigiflazzAPIURL        string
+	DigiflazzTesting       bool
 	WhatsappNumber         string
 	WhatsappToken          string
 	WhatsappPhoneID        string
@@ -46,6 +47,7 @@ func Load() (*Config, error) {
 		DigiflazzAPIKey:        getEnv("DIGIFLAZZ_API_KEY", ""),
 		DigiflazzWebhookSecret: getEnv("DIGIFLAZZ_WEBHOOK_SECRET", ""),
 		DigiflazzAPIURL:        getEnv("DIGIFLAZZ_API_URL", "https://api.digiflazz.com/v1/transaction"),
+		DigiflazzTesting:       getEnv("DIGIFLAZZ_TESTING", "true") == "true",
 		WhatsappNumber:         getEnv("WHATSAPP_NUMBER", ""),
 		WhatsappToken:          getEnv("WHATSAPP_TOKEN", ""),
 		WhatsappPhoneID:        getEnv("WHATSAPP_PHONE_NUMBER_ID", ""),

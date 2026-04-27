@@ -31,7 +31,7 @@
 						"header": [{"key": "Content-Type", "value": "application/json"}],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"username\": \"{{DIGIFLAZZ_USERNAME}}\",\n  \"buyer_sku_code\": \"{{BUYER_SKU_CODE}}\",\n  \"customer_no\": \"{{CUSTOMER_NO}}\",\n  \"ref_id\": \"{{REF_ID}}\",\n  \"sign\": \"{{SIGN}}\"\n}"
+							"raw": "{\n  \"username\": \"{{DIGIFLAZZ_USERNAME}}\",\n  \"buyer_sku_code\": \"{{BUYER_SKU_CODE}}\",\n  \"customer_no\": \"{{CUSTOMER_NO}}\",\n  \"ref_id\": \"{{REF_ID}}\",\n  \"testing\": true,\n  \"sign\": \"{{SIGN}}\"\n}"
 						},
 						"url": {"raw": "{{DIGIFLAZZ_URL}}", "host": ["{{DIGIFLAZZ_URL}}"]}
 					},
@@ -53,7 +53,95 @@
 						"header": [{"key": "Content-Type", "value": "application/json"}],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"username\": \"{{DIGIFLAZZ_USERNAME}}\",\n  \"buyer_sku_code\": \"{{BUYER_SKU_CODE}}\",\n  \"customer_no\": \"{{CUSTOMER_NO}}\",\n  \"ref_id\": \"{{REF_ID}}\",\n  \"sign\": \"{{SIGN}}\"\n}"
+							"raw": "{\n  \"username\": \"{{DIGIFLAZZ_USERNAME}}\",\n  \"buyer_sku_code\": \"{{BUYER_SKU_CODE}}\",\n  \"customer_no\": \"{{CUSTOMER_NO}}\",\n  \"ref_id\": \"{{REF_ID}}\",\n  \"testing\": true,\n  \"sign\": \"{{SIGN}}\"\n}"
+						},
+						"url": {"raw": "{{DIGIFLAZZ_URL}}", "host": ["{{DIGIFLAZZ_URL}}"]}
+					},
+					"event": [{
+						"listen": "prerequest",
+						"script": {
+							"type": "text/javascript",
+							"exec": [
+								"const raw = pm.variables.get('DIGIFLAZZ_USERNAME') + pm.variables.get('DIGIFLAZZ_API_KEY') + pm.variables.get('REF_ID');",
+								"pm.variables.set('SIGN', CryptoJS.MD5(raw).toString());"
+							]
+						}
+					}]
+				},
+				{
+					"name": "Test Case - Success",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{DIGIFLAZZ_USERNAME}}\",\n  \"buyer_sku_code\": \"xld10\",\n  \"customer_no\": \"087800001230\",\n  \"ref_id\": \"{{REF_ID}}\",\n  \"testing\": true,\n  \"sign\": \"{{SIGN}}\"\n}"
+						},
+						"url": {"raw": "{{DIGIFLAZZ_URL}}", "host": ["{{DIGIFLAZZ_URL}}"]}
+					},
+					"event": [{
+						"listen": "prerequest",
+						"script": {
+							"type": "text/javascript",
+							"exec": [
+								"const raw = pm.variables.get('DIGIFLAZZ_USERNAME') + pm.variables.get('DIGIFLAZZ_API_KEY') + pm.variables.get('REF_ID');",
+								"pm.variables.set('SIGN', CryptoJS.MD5(raw).toString());"
+							]
+						}
+					}]
+				},
+				{
+					"name": "Test Case - Failed",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{DIGIFLAZZ_USERNAME}}\",\n  \"buyer_sku_code\": \"xld10\",\n  \"customer_no\": \"087800001232\",\n  \"ref_id\": \"{{REF_ID}}\",\n  \"testing\": true,\n  \"sign\": \"{{SIGN}}\"\n}"
+						},
+						"url": {"raw": "{{DIGIFLAZZ_URL}}", "host": ["{{DIGIFLAZZ_URL}}"]}
+					},
+					"event": [{
+						"listen": "prerequest",
+						"script": {
+							"type": "text/javascript",
+							"exec": [
+								"const raw = pm.variables.get('DIGIFLAZZ_USERNAME') + pm.variables.get('DIGIFLAZZ_API_KEY') + pm.variables.get('REF_ID');",
+								"pm.variables.set('SIGN', CryptoJS.MD5(raw).toString());"
+							]
+						}
+					}]
+				},
+				{
+					"name": "Test Case - Pending then Callback Success",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{DIGIFLAZZ_USERNAME}}\",\n  \"buyer_sku_code\": \"xld10\",\n  \"customer_no\": \"087800001233\",\n  \"ref_id\": \"{{REF_ID}}\",\n  \"testing\": true,\n  \"sign\": \"{{SIGN}}\"\n}"
+						},
+						"url": {"raw": "{{DIGIFLAZZ_URL}}", "host": ["{{DIGIFLAZZ_URL}}"]}
+					},
+					"event": [{
+						"listen": "prerequest",
+						"script": {
+							"type": "text/javascript",
+							"exec": [
+								"const raw = pm.variables.get('DIGIFLAZZ_USERNAME') + pm.variables.get('DIGIFLAZZ_API_KEY') + pm.variables.get('REF_ID');",
+								"pm.variables.set('SIGN', CryptoJS.MD5(raw).toString());"
+							]
+						}
+					}]
+				},
+				{
+					"name": "Test Case - Pending then Callback Failed",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{DIGIFLAZZ_USERNAME}}\",\n  \"buyer_sku_code\": \"xld10\",\n  \"customer_no\": \"087800001234\",\n  \"ref_id\": \"{{REF_ID}}\",\n  \"testing\": true,\n  \"sign\": \"{{SIGN}}\"\n}"
 						},
 						"url": {"raw": "{{DIGIFLAZZ_URL}}", "host": ["{{DIGIFLAZZ_URL}}"]}
 					},

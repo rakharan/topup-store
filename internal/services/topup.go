@@ -19,22 +19,24 @@ import (
 )
 
 type TopupService struct {
-	orderRepo     repositories.OrderRepository
-	productRepo   repositories.ProductRepository
+	orderRepo       repositories.OrderRepository
+	productRepo     repositories.ProductRepository
 	digiflazzUser   string
 	digiflazzAPIKey string
 	digiflazzURL    string
+	digiflazzTest   bool
 	httpClient      *http.Client
 	logger          *slog.Logger
 }
 
-func NewTopupService(orderRepo repositories.OrderRepository, productRepo repositories.ProductRepository, user, apiKey, digiflazzURL string, logger *slog.Logger) *TopupService {
+func NewTopupService(orderRepo repositories.OrderRepository, productRepo repositories.ProductRepository, user, apiKey, digiflazzURL string, testing bool, logger *slog.Logger) *TopupService {
 	return &TopupService{
-		orderRepo:     orderRepo,
-		productRepo:   productRepo,
+		orderRepo:       orderRepo,
+		productRepo:     productRepo,
 		digiflazzUser:   user,
 		digiflazzAPIKey: apiKey,
 		digiflazzURL:    digiflazzURL,
+		digiflazzTest:   testing,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -83,12 +85,13 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 	customerNo := s.buildCustomerNo(order, product)
 	sign := s.generateSign(order.ID)
 
-	payload := map[string]string{
+	payload := map[string]any{
 		"username":         s.digiflazzUser,
 		"buyer_sku_code":   product.SKU,
 		"customer_no":      customerNo,
 		"ref_id":           order.ID,
 		"sign":             sign,
+		"testing":          s.digiflazzTest,
 	}
 
 	body, err := json.Marshal(payload)
@@ -98,9 +101,11 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 
 	var result struct {
 		Data struct {
-			Status  string `json:"status"`
-			Message string `json:"message"`
-			SN      string `json:"sn"`
+			Status          string `json:"status"`
+			Message         string `json:"message"`
+			SN              string `json:"sn"`
+			BuyerLastSaldo  int    `json:"buyer_last_saldo"`
+			Price           int    `json:"price"`
 		} `json:"data"`
 	}
 
@@ -144,9 +149,17 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 	}
 
 	if result.Data.Status == constants.StatusSuccess {
-		s.logger.Info("digiflazz topup success", slog.String("order_id", order.ID), slog.String("sn", result.Data.SN))
+		s.logger.Info("digiflazz topup success",
+			slog.String("order_id", order.ID),
+			slog.String("sn", result.Data.SN),
+			slog.Int("balance", result.Data.BuyerLastSaldo),
+			slog.Int("price", result.Data.Price),
+		)
 	} else {
-		s.logger.Info("digiflazz topup pending", slog.String("order_id", order.ID), slog.String("status", result.Data.Status))
+		s.logger.Info("digiflazz topup pending",
+			slog.String("order_id", order.ID),
+			slog.String("status", result.Data.Status),
+		)
 	}
 	return nil
 }
