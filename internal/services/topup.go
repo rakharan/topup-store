@@ -545,7 +545,7 @@ func extractDiamondsFromName(name string) int {
 	return 0
 }
 
-var subscriptionKeywords = []string{"weekly", "monthly", "membership", "season pass", "diamond pass", "twilight pass"}
+var subscriptionKeywords = []string{"weekly", "monthly", "membership", "season pass", "diamond pass", "twilight pass", "starlight pass", "starlight"}
 
 func detectProductType(name string) string {
 	nameLower := strings.ToLower(name)
