@@ -82,7 +82,7 @@
                             </td>
                         </tr>
                         {{else}}
-                        <tr><td colspan="9" class="py-8 text-center text-white/40">Belum ada order.</td></tr>
+                        <tr><td colspan="10" class="py-8 text-center text-white/40">Belum ada order.</td></tr>
                         {{end}}
                     </tbody>
                 </table>
@@ -116,8 +116,13 @@
                         <input type="text" id="prodSku" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     </div>
                     <div>
-                        <label class="block text-sm text-white/70 mb-1" for="prodPrice">Price (IDR)</label>
+                        <label class="block text-sm text-white/70 mb-1" for="prodCostPrice">Cost Price (IDR)</label>
+                        <input type="number" id="prodCostPrice" required min="1" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-white/70 mb-1" for="prodPrice">Selling Price (IDR)</label>
                         <input type="number" id="prodPrice" required min="1" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                        <div id="priceMarginInfo" class="text-xs text-white/40 mt-1"></div>
                     </div>
                     <div>
                         <label class="block text-sm text-white/70 mb-1" for="prodDiamonds">Diamonds</label>
@@ -154,6 +159,7 @@
                             <th class="pb-3 pr-4">Game</th>
                             <th class="pb-3 pr-4">Name</th>
                             <th class="pb-3 pr-4">SKU</th>
+                            <th class="pb-3 pr-4">Cost</th>
                             <th class="pb-3 pr-4">Price</th>
                             <th class="pb-3 pr-4">Diamonds</th>
                             <th class="pb-3 pr-4">Type</th>
@@ -162,7 +168,7 @@
                         </tr>
                     </thead>
                     <tbody id="productsTableBody">
-                        <tr><td colspan="9" class="py-8 text-center text-white/40">Loading products...</td></tr>
+                        <tr><td colspan="10" class="py-8 text-center text-white/40">Loading products...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -213,6 +219,59 @@
         } catch (e) {}
     }
     initCSRF();
+
+    function calcTieredPrice(costPrice) {
+        let sellingPrice;
+        let tier;
+        if (costPrice < 5000) {
+            sellingPrice = Math.round(costPrice * 1.15);
+            const minPrice = costPrice + 200;
+            if (sellingPrice < minPrice) sellingPrice = minPrice;
+            tier = '<5k (15% min 200)';
+        } else if (costPrice <= 50000) {
+            sellingPrice = Math.round(costPrice * 1.10);
+            tier = '5k-50k (10%)';
+        } else {
+            sellingPrice = Math.round(costPrice * 1.05);
+            const maxPrice = costPrice + 5000;
+            if (sellingPrice > maxPrice) sellingPrice = maxPrice;
+            tier = '>50k (5% max 5k)';
+        }
+        sellingPrice = Math.round((sellingPrice + 50) / 100) * 100;
+        return { sellingPrice, tier };
+    }
+
+    function updateMarginInfo(cost, price) {
+        const info = document.getElementById('priceMarginInfo');
+        if (!cost || !price) { info.textContent = ''; return; }
+        const margin = price - cost;
+        const pct = cost > 0 ? Math.round((margin / cost) * 100) : 0;
+        const { sellingPrice, tier } = calcTieredPrice(cost);
+        const auto = price === sellingPrice;
+        info.innerHTML = auto
+            ? `<span class="text-green-400">Auto: Rp ${sellingPrice.toLocaleString('id-ID')} margin (+${pct}%)</span>`
+            : `<span class="text-yellow-400">Override: Rp ${price.toLocaleString('id-ID')} (+${pct}%) — auto would be Rp ${sellingPrice.toLocaleString('id-ID')}</span>`;
+    }
+
+    document.getElementById('prodCostPrice')?.addEventListener('input', (e) => {
+        const cost = parseInt(e.target.value) || 0;
+        if (cost > 0) {
+            const { sellingPrice } = calcTieredPrice(cost);
+            document.getElementById('prodPrice').value = sellingPrice;
+            updateMarginInfo(cost, sellingPrice);
+        } else {
+            document.getElementById('prodPrice').value = '';
+            document.getElementById('priceMarginInfo').textContent = '';
+        }
+    });
+
+    document.getElementById('prodPrice')?.addEventListener('input', (e) => {
+        const cost = parseInt(document.getElementById('prodCostPrice').value) || 0;
+        const price = parseInt(e.target.value) || 0;
+        if (cost > 0 && price > 0) {
+            updateMarginInfo(cost, price);
+        }
+    });
 
     document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
         const menu = document.getElementById('mobileMenu');
@@ -334,7 +393,7 @@
     function renderProducts() {
         const tbody = document.getElementById('productsTableBody');
         if (!products.length) {
-            tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-white/40">No products found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="py-8 text-center text-white/40">No products found.</td></tr>';
             return;
         }
         const gameLabels = { free_fire: 'FF', mobile_legends: 'ML', pubg_mobile: 'PUBG' };
@@ -346,6 +405,7 @@
                 <td class="py-3 pr-4">${escapeHtml(gameLabels[p.game] || p.game)}</td>
                 <td class="py-3 pr-4">${escapeHtml(p.name)}</td>
                 <td class="py-3 pr-4 font-mono text-xs">${escapeHtml(p.sku)}</td>
+                <td class="py-3 pr-4">Rp ${(p.cost_price_idr || 0).toLocaleString('id-ID')}</td>
                 <td class="py-3 pr-4">Rp ${p.price_idr.toLocaleString('id-ID')}</td>
                 <td class="py-3 pr-4">${p.diamonds || '-'}</td>
                 <td class="py-3 pr-4"><span class="px-2 py-1 rounded-full text-xs ${typeColors[p.product_type] || typeColors.other}">${escapeHtml(typeLabels[p.product_type] || 'Other')}</span></td>
@@ -365,11 +425,13 @@
         document.getElementById('prodGame').value = 'free_fire';
         document.getElementById('prodName').value = '';
         document.getElementById('prodSku').value = '';
+        document.getElementById('prodCostPrice').value = '';
         document.getElementById('prodPrice').value = '';
         document.getElementById('prodDiamonds').value = '';
         document.getElementById('prodType').value = 'diamond';
         document.getElementById('prodDesc').value = '';
         document.getElementById('prodActive').checked = true;
+        document.getElementById('priceMarginInfo').textContent = '';
     }
 
     function hideProductForm() {
@@ -385,11 +447,13 @@
         document.getElementById('prodGame').value = p.game;
         document.getElementById('prodName').value = p.name;
         document.getElementById('prodSku').value = p.sku;
+        document.getElementById('prodCostPrice').value = p.cost_price_idr || '';
         document.getElementById('prodPrice').value = p.price_idr;
         document.getElementById('prodDiamonds').value = p.diamonds;
         document.getElementById('prodType').value = p.product_type || 'diamond';
         document.getElementById('prodDesc').value = p.description || '';
         document.getElementById('prodActive').checked = p.is_active;
+        updateMarginInfo(p.cost_price_idr || 0, p.price_idr);
     }
 
     async function deleteProduct(id) {
@@ -415,6 +479,7 @@
             game: document.getElementById('prodGame').value,
             name: document.getElementById('prodName').value,
             sku: document.getElementById('prodSku').value,
+            cost_price_idr: parseInt(document.getElementById('prodCostPrice').value),
             price_idr: parseInt(document.getElementById('prodPrice').value),
             diamonds: parseInt(document.getElementById('prodDiamonds').value),
             product_type: document.getElementById('prodType').value,
