@@ -1,0 +1,361 @@
+{
+	"info": {
+		"name": "TopUp Store",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{"key": "BASE_URL", "value": "http://localhost:8080", "type": "string"},
+		{"key": "DIGIFLAZZ_URL", "value": "https://api.digiflazz.com/v1/transaction", "type": "string"},
+		{"key": "DIGIFLAZZ_USERNAME", "value": "your_username", "type": "string"},
+		{"key": "DIGIFLAZZ_API_KEY", "value": "your_api_key", "type": "string"},
+		{"key": "REF_ID", "value": "test-001", "type": "string"},
+		{"key": "BUYER_SKU_CODE", "value": "ff_12", "type": "string"},
+		{"key": "CUSTOMER_NO", "value": "123456789", "type": "string"},
+		{"key": "SIGN", "value": "", "type": "string"},
+		{"key": "PRODUCT_ID", "value": "", "type": "string"},
+		{"key": "ORDER_ID", "value": "", "type": "string"},
+		{"key": "CSRF_TOKEN", "value": "", "type": "string"},
+		{"key": "ADMIN_PASSWORD", "value": "changeme", "type": "string"},
+		{"key": "MIDTRANS_SERVER_KEY", "value": "SB-Mid-server-xxxxxxxx", "type": "string"},
+		{"key": "MIDTRANS_SIGNATURE", "value": "", "type": "string"}
+	],
+	"item": [
+		{
+			"name": "Digiflazz",
+			"item": [
+				{
+					"name": "Create Transaction",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{DIGIFLAZZ_USERNAME}}\",\n  \"buyer_sku_code\": \"{{BUYER_SKU_CODE}}\",\n  \"customer_no\": \"{{CUSTOMER_NO}}\",\n  \"ref_id\": \"{{REF_ID}}\",\n  \"sign\": \"{{SIGN}}\"\n}"
+						},
+						"url": {"raw": "{{DIGIFLAZZ_URL}}", "host": ["{{DIGIFLAZZ_URL}}"]}
+					},
+					"event": [{
+						"listen": "prerequest",
+						"script": {
+							"type": "text/javascript",
+							"exec": [
+								"const raw = pm.environment.get('DIGIFLAZZ_USERNAME') + pm.environment.get('DIGIFLAZZ_API_KEY') + pm.environment.get('REF_ID');",
+								"pm.environment.set('SIGN', CryptoJS.MD5(raw).toString());"
+							]
+						}
+					}]
+				},
+				{
+					"name": "Check Transaction Status",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{DIGIFLAZZ_USERNAME}}\",\n  \"buyer_sku_code\": \"{{BUYER_SKU_CODE}}\",\n  \"customer_no\": \"{{CUSTOMER_NO}}\",\n  \"ref_id\": \"{{REF_ID}}\",\n  \"sign\": \"{{SIGN}}\"\n}"
+						},
+						"url": {"raw": "{{DIGIFLAZZ_URL}}", "host": ["{{DIGIFLAZZ_URL}}"]}
+					},
+					"event": [{
+						"listen": "prerequest",
+						"script": {
+							"type": "text/javascript",
+							"exec": [
+								"const raw = pm.environment.get('DIGIFLAZZ_USERNAME') + pm.environment.get('DIGIFLAZZ_API_KEY') + pm.environment.get('REF_ID');",
+								"pm.environment.set('SIGN', CryptoJS.MD5(raw).toString());"
+							]
+						}
+					}]
+				}
+			]
+		},
+		{
+			"name": "Your App - Public",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "{{BASE_URL}}/health", "host": ["{{BASE_URL}}"], "path": ["health"]}
+					}
+				},
+				{
+					"name": "List All Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "{{BASE_URL}}/api/products", "host": ["{{BASE_URL}}"], "path": ["api", "products"]}
+					}
+				},
+				{
+					"name": "List Products by Game",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "{{BASE_URL}}/api/products?game=free_fire", "host": ["{{BASE_URL}}"], "path": ["api", "products"], "query": [{"key": "game", "value": "free_fire"}]}
+					}
+				},
+				{
+					"name": "Get Product by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "{{BASE_URL}}/api/products/{{PRODUCT_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "products", "{{PRODUCT_ID}}"]}
+					}
+				},
+				{
+					"name": "Get Order Page (grabs CSRF)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "{{BASE_URL}}/order", "host": ["{{BASE_URL}}"], "path": ["order"]}
+					},
+					"event": [{
+						"listen": "test",
+						"script": {
+							"type": "text/javascript",
+							"exec": [
+								"const token = pm.response.headers.get('X-CSRF-Token');",
+								"if (token) { pm.environment.set('CSRF_TOKEN', token); console.log('CSRF:', token); }"
+							]
+						}
+					}]
+				},
+				{
+					"name": "Create Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-CSRF-Token", "value": "{{CSRF_TOKEN}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"game\": \"free_fire\",\n  \"product_id\": \"{{PRODUCT_ID}}\",\n  \"game_uid\": \"123456789\",\n  \"game_server\": \"\",\n  \"phone\": \"089697832017\"\n}"
+						},
+						"url": {"raw": "{{BASE_URL}}/api/orders", "host": ["{{BASE_URL}}"], "path": ["api", "orders"]}
+					},
+					"event": [{
+						"listen": "test",
+						"script": {
+							"type": "text/javascript",
+							"exec": [
+								"const nt = pm.response.headers.get('X-CSRF-Token');",
+								"if (nt) pm.environment.set('CSRF_TOKEN', nt);",
+								"if (pm.response.code === 201) {",
+								"  const j = pm.response.json();",
+								"  const oid = j.data?.order_id || j.order_id;",
+								"  if (oid) { pm.environment.set('ORDER_ID', oid); console.log('Order:', oid); }",
+								"}"
+							]
+						}
+					}]
+				},
+				{
+					"name": "Get Order by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "{{BASE_URL}}/api/orders/{{ORDER_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "orders", "{{ORDER_ID}}"]}
+					}
+				},
+				{
+					"name": "List Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "{{BASE_URL}}/api/orders", "host": ["{{BASE_URL}}"], "path": ["api", "orders"]}
+					}
+				},
+				{
+					"name": "Lookup Order",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"game_uid\": \"123456789\",\n  \"phone\": \"089697832017\"\n}"
+						},
+						"url": {"raw": "{{BASE_URL}}/api/orders/lookup", "host": ["{{BASE_URL}}"], "path": ["api", "orders", "lookup"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "Webhooks",
+			"item": [
+				{
+					"name": "Digiflazz Webhook - Ping",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{ \"sed\": \"ping\" }"},
+						"url": {"raw": "{{BASE_URL}}/webhook/digiflazz", "host": ["{{BASE_URL}}"], "path": ["webhook", "digiflazz"]}
+					}
+				},
+				{
+					"name": "Digiflazz Webhook - Transaction Success",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"data\": {\n    \"ref_id\": \"{{ORDER_ID}}\",\n    \"status\": \"Sukses\",\n    \"sn\": \"SN123456789\"\n  }\n}"
+						},
+						"url": {"raw": "{{BASE_URL}}/webhook/digiflazz", "host": ["{{BASE_URL}}"], "path": ["webhook", "digiflazz"]}
+					}
+				},
+				{
+					"name": "Digiflazz Webhook - Transaction Failed",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"data\": {\n    \"ref_id\": \"{{ORDER_ID}}\",\n    \"status\": \"Gagal\",\n    \"message\": \"Insufficient balance\"\n  }\n}"
+						},
+						"url": {"raw": "{{BASE_URL}}/webhook/digiflazz", "host": ["{{BASE_URL}}"], "path": ["webhook", "digiflazz"]}
+					}
+				},
+				{
+					"name": "Midtrans Webhook - Payment Settlement",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"order_id\": \"{{ORDER_ID}}\",\n  \"status_code\": \"200\",\n  \"gross_amount\": \"1811.00\",\n  \"transaction_status\": \"settlement\",\n  \"signature_key\": \"{{MIDTRANS_SIGNATURE}}\"\n}"
+						},
+						"url": {"raw": "{{BASE_URL}}/webhook/midtrans", "host": ["{{BASE_URL}}"], "path": ["webhook", "midtrans"]}
+					},
+					"event": [{
+						"listen": "prerequest",
+						"script": {
+							"type": "text/javascript",
+							"exec": [
+								"const orderId = pm.environment.get('ORDER_ID') || 'test-order';",
+								"const raw = orderId + '200' + '1811.00' + pm.environment.get('MIDTRANS_SERVER_KEY');",
+								"pm.environment.set('MIDTRANS_SIGNATURE', CryptoJS.SHA512(raw).toString());"
+							]
+						}
+					}]
+				},
+				{
+					"name": "Midtrans Webhook - Payment Pending",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"order_id\": \"{{ORDER_ID}}\",\n  \"status_code\": \"201\",\n  \"gross_amount\": \"1811.00\",\n  \"transaction_status\": \"pending\",\n  \"signature_key\": \"{{MIDTRANS_SIGNATURE}}\"\n}"
+						},
+						"url": {"raw": "{{BASE_URL}}/webhook/midtrans", "host": ["{{BASE_URL}}"], "path": ["webhook", "midtrans"]}
+					},
+					"event": [{
+						"listen": "prerequest",
+						"script": {
+							"type": "text/javascript",
+							"exec": [
+								"const orderId = pm.environment.get('ORDER_ID') || 'test-order';",
+								"const raw = orderId + '201' + '1811.00' + pm.environment.get('MIDTRANS_SERVER_KEY');",
+								"pm.environment.set('MIDTRANS_SIGNATURE', CryptoJS.SHA512(raw).toString());"
+							]
+						}
+					}]
+				}
+			]
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Get Admin Page (grabs CSRF)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "{{BASE_URL}}/admin", "host": ["{{BASE_URL}}"], "path": ["admin"]}
+					},
+					"event": [{
+						"listen": "test",
+						"script": {
+							"type": "text/javascript",
+							"exec": [
+								"const token = pm.response.headers.get('X-CSRF-Token');",
+								"if (token) { pm.environment.set('CSRF_TOKEN', token); }"
+							]
+						}
+					}]
+				},
+				{
+					"name": "Admin Login",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/x-www-form-urlencoded"}],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{"key": "password", "value": "{{ADMIN_PASSWORD}}"},
+								{"key": "csrf_token", "value": "{{CSRF_TOKEN}}"}
+							]
+						},
+						"url": {"raw": "{{BASE_URL}}/admin", "host": ["{{BASE_URL}}"], "path": ["admin"]}
+					}
+				},
+				{
+					"name": "List Admin Products",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "X-CSRF-Token", "value": "{{CSRF_TOKEN}}"}],
+						"url": {"raw": "{{BASE_URL}}/admin/products", "host": ["{{BASE_URL}}"], "path": ["admin", "products"]}
+					}
+				},
+				{
+					"name": "Process Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-CSRF-Token", "value": "{{CSRF_TOKEN}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"order_id\": \"{{ORDER_ID}}\"\n}"
+						},
+						"url": {"raw": "{{BASE_URL}}/admin/process-order", "host": ["{{BASE_URL}}"], "path": ["admin", "process-order"]}
+					}
+				},
+				{
+					"name": "Retry Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-CSRF-Token", "value": "{{CSRF_TOKEN}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"order_id\": \"{{ORDER_ID}}\"\n}"
+						},
+						"url": {"raw": "{{BASE_URL}}/admin/retry-order", "host": ["{{BASE_URL}}"], "path": ["admin", "retry-order"]}
+					}
+				},
+				{
+					"name": "Create Product",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-CSRF-Token", "value": "{{CSRF_TOKEN}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"game\": \"free_fire\",\n  \"name\": \"20 Diamonds\",\n  \"sku\": \"ff_20\",\n  \"price_idr\": 3000,\n  \"diamonds\": 20,\n  \"description\": \"20 Free Fire Diamonds\",\n  \"is_active\": true\n}"
+						},
+						"url": {"raw": "{{BASE_URL}}/admin/products", "host": ["{{BASE_URL}}"], "path": ["admin", "products"]}
+					}
+				}
+			]
+		}
+	]
+}
