@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -63,6 +64,9 @@ func main() {
 	}
 	defer pool.Close()
 
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	defer rootCancel()
+
 	orderRepo := repositories.NewOrderRepository(pool)
 	productRepo := repositories.NewProductRepository(pool)
 	webhookRepo := repositories.NewWebhookRepository(pool)
@@ -72,11 +76,11 @@ func main() {
 	notifySvc := services.NewNotifyService(cfg.WhatsappNumber, cfg.WhatsappToken, cfg.WhatsappPhoneID, cfg.WaBotBaseURL, cfg.WaBotToken, logger)
 
 	pages := handlers.NewPageHandler(topupSvc, paymentSvc, notifySvc, cfg.WhatsappNumber, cfg.AdminPassword, cfg.MidtransIsProd, logger)
-	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, logger)
+	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, rootCtx, logger)
 	products := handlers.NewProductHandler(topupSvc, logger)
-	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, webhookRepo, cfg.MidtransServerKey, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzWebhookSecret, logger)
+	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, webhookRepo, cfg.MidtransServerKey, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzWebhookSecret, rootCtx, logger)
 	admin := handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, cfg.AdminPassword, logger)
-	csrfStore := middleware.NewCSRFStore()
+	csrfStore := middleware.NewCSRFStore(pool)
 	csrfMW := middleware.CSRFMiddleware(csrfStore)
 
 	r := chi.NewRouter()
@@ -174,35 +178,41 @@ func main() {
 		Handler: r,
 	}
 
+	serverErr := make(chan error, 1)
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
 				logger.Error("server panicked", slog.Any("panic", r))
+				serverErr <- fmt.Errorf("server panic: %v", r)
 			}
 		}()
 		logger.Info("Server starting", slog.String("port", cfg.Port))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("Server failed", slog.String("error", err.Error()))
-			os.Exit(1)
+			serverErr <- fmt.Errorf("server listen: %w", err)
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
 
-	logger.Info("Shutting down server...")
-	shutdownCancel()
+	select {
+	case <-quit:
+		logger.Info("Shutting down server...")
+		shutdownCancel()
 
-	shutdownCtx2, shutdownCancel2 := context.WithTimeout(context.Background(), 5*time.Second)
-	defer shutdownCancel2()
+		shutdownCtx2, shutdownCancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCancel2()
 
-	if err := srv.Shutdown(shutdownCtx2); err != nil {
-		logger.Error("Server forced to shutdown", slog.String("error", err.Error()))
-		os.Exit(1)
+		if err := srv.Shutdown(shutdownCtx2); err != nil {
+			logger.Error("Server forced to shutdown", slog.String("error", err.Error()))
+		} else {
+			logger.Info("Server stopped")
+		}
+	case err := <-serverErr:
+		logger.Error("Server failed, shutting down", slog.String("error", err.Error()))
+		shutdownCancel()
+		rootCancel()
 	}
-
-	logger.Info("Server stopped")
 }
 
 func healthHandler(pool interface{ Ping(context.Context) error }) http.HandlerFunc {

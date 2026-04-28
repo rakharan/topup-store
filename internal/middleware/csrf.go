@@ -4,10 +4,11 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"net/http"
-	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/topup-store/internal/apperrors"
 )
 
@@ -22,53 +23,65 @@ func GetCSRFToken(ctx context.Context) string {
 	return ""
 }
 
+var ErrCSRFGenerationFailed = errors.New("failed to generate CSRF token")
+
 type CSRFStore struct {
-	mu     sync.Mutex
-	tokens map[string]time.Time
+	pool *pgxpool.Pool
 }
 
-func NewCSRFStore() *CSRFStore {
-	return &CSRFStore{tokens: make(map[string]time.Time)}
+func NewCSRFStore(pool *pgxpool.Pool) *CSRFStore {
+	return &CSRFStore{pool: pool}
 }
 
-func (s *CSRFStore) Generate() string {
+func (s *CSRFStore) Generate() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
-		return ""
+		return "", ErrCSRFGenerationFailed
 	}
 	token := hex.EncodeToString(b)
-	s.mu.Lock()
-	s.tokens[token] = time.Now().Add(2 * time.Hour)
+	expiresAt := time.Now().Add(2 * time.Hour)
+
+	_, err := s.pool.Exec(context.Background(),
+		`INSERT INTO csrf_tokens (token, expires_at) VALUES ($1, $2)`,
+		token, expiresAt)
+	if err != nil {
+		return "", err
+	}
+
 	s.cleanup()
-	s.mu.Unlock()
-	return token
+	return token, nil
 }
 
 func (s *CSRFStore) Validate(token string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	exp, ok := s.tokens[token]
-	if !ok || time.Now().After(exp) {
+	var expiresAt time.Time
+	err := s.pool.QueryRow(context.Background(),
+		`SELECT expires_at FROM csrf_tokens WHERE token = $1`,
+		token).Scan(&expiresAt)
+	if err != nil {
 		return false
 	}
-	delete(s.tokens, token)
-	return true
+	if time.Now().After(expiresAt) {
+		s.pool.Exec(context.Background(), `DELETE FROM csrf_tokens WHERE token = $1`, token)
+		return false
+	}
+
+	_, err = s.pool.Exec(context.Background(), `DELETE FROM csrf_tokens WHERE token = $1`, token)
+	return err == nil
 }
 
 func (s *CSRFStore) cleanup() {
-	now := time.Now()
-	for t, exp := range s.tokens {
-		if now.After(exp) {
-			delete(s.tokens, t)
-		}
-	}
+	s.pool.Exec(context.Background(), `DELETE FROM csrf_tokens WHERE expires_at < NOW()`)
 }
 
 func CSRFMiddleware(store *CSRFStore) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
-				token := store.Generate()
+				token, err := store.Generate()
+				if err != nil {
+					apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, GetRequestID(r.Context()))
+					return
+				}
 				w.Header().Set("X-CSRF-Token", token)
 				r = r.WithContext(context.WithValue(r.Context(), csrfTokenKey, token))
 				next.ServeHTTP(w, r)
@@ -85,7 +98,11 @@ func CSRFMiddleware(store *CSRFStore) func(http.Handler) http.Handler {
 				return
 			}
 
-			newToken := store.Generate()
+			newToken, err := store.Generate()
+			if err != nil {
+				apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, GetRequestID(r.Context()))
+				return
+			}
 			w.Header().Set("X-CSRF-Token", newToken)
 			next.ServeHTTP(w, r)
 		})

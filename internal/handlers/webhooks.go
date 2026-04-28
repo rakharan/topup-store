@@ -30,10 +30,11 @@ type WebhookHandler struct {
 	digiflazzUser          string
 	digiflazzAPIKey        string
 	digiflazzWebhookSecret string
+	rootCtx                context.Context
 	logger                 *slog.Logger
 }
 
-func NewWebhookHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, webhookRepo repositories.WebhookRepository, midtransKey, digiflazzUser, digiflazzAPIKey, digiflazzWebhookSecret string, logger *slog.Logger) *WebhookHandler {
+func NewWebhookHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, webhookRepo repositories.WebhookRepository, midtransKey, digiflazzUser, digiflazzAPIKey, digiflazzWebhookSecret string, rootCtx context.Context, logger *slog.Logger) *WebhookHandler {
 	return &WebhookHandler{
 		paymentSvc:             paymentSvc,
 		topupSvc:               topupSvc,
@@ -43,6 +44,7 @@ func NewWebhookHandler(paymentSvc services.PaymentServiceInterface, topupSvc ser
 		digiflazzUser:          digiflazzUser,
 		digiflazzAPIKey:        digiflazzAPIKey,
 		digiflazzWebhookSecret: digiflazzWebhookSecret,
+		rootCtx:                rootCtx,
 		logger:                 logger,
 	}
 }
@@ -267,8 +269,7 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 					h.logger.Error("digiflazz notify panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", r))
 				}
 			}()
-			ctx := context.Background()
-			if err := h.notifySvc.SendTopupSuccess(ctx, &orderCopy, orderCopy.UserPhone); err != nil {
+			if err := h.notifySvc.SendTopupSuccess(h.rootCtx, &orderCopy, orderCopy.UserPhone); err != nil {
 				h.logger.Error("digiflazz webhook: failed to send notification",
 					slog.String("order_id", orderCopy.ID),
 					slog.String("error", err.Error()),
@@ -313,8 +314,7 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 					h.logger.Error("digiflazz failure notify panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", r))
 				}
 			}()
-			ctx := context.Background()
-			if err := h.notifySvc.SendTopupFailure(ctx, &orderCopy, orderCopy.UserPhone); err != nil {
+			if err := h.notifySvc.SendTopupFailure(h.rootCtx, &orderCopy, orderCopy.UserPhone); err != nil {
 				h.logger.Error("digiflazz webhook: failed to send failure notification",
 					slog.String("order_id", orderCopy.ID),
 					slog.String("error", err.Error()),

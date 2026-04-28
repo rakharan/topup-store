@@ -20,14 +20,16 @@ type OrderHandler struct {
 	paymentSvc services.PaymentServiceInterface
 	topupSvc   services.TopupServiceInterface
 	notifySvc  services.NotifyServiceInterface
+	rootCtx    context.Context
 	logger     *slog.Logger
 }
 
-func NewOrderHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, logger *slog.Logger) *OrderHandler {
+func NewOrderHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, rootCtx context.Context, logger *slog.Logger) *OrderHandler {
 	return &OrderHandler{
 		paymentSvc: paymentSvc,
 		topupSvc:   topupSvc,
 		notifySvc:  notifySvc,
+		rootCtx:    rootCtx,
 		logger:     logger,
 	}
 }
@@ -108,7 +110,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 				h.logger.Error("order notification panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", r))
 			}
 		}()
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(h.rootCtx, 10*time.Second)
 		defer cancel()
 		if err := h.notifySvc.SendOrderConfirmation(ctx, &orderCopy, orderCopy.UserPhone); err != nil {
 			h.logger.Error("failed to send notification", slog.String("order_id", orderCopy.ID), slog.String("error", err.Error()))

@@ -20,7 +20,7 @@
 
 ## MEDIUM PRIORITY:
 - [x] Rate limiter trusts `X-Forwarded-For` without validation — easily spoofed (file: internal/middleware/ratelimit.go)
-- [ ] Midtrans webhook signature uses SHA-512 — verify against Midtrans docs (typically SHA-256) (file: internal/handlers/webhooks.go)
+- [x] Midtrans webhook signature uses SHA-512 — verified correct per Midtrans docs (order_id + status_code + gross_amount + server_key) (file: internal/handlers/webhooks.go)
 - [x] Digiflazz webhook signature verification skipped when secret is empty — accepts any payload (file: internal/handlers/webhooks.go)
 - [ ] `http.FileServer` serves entire `web/static/` directory — no allowlist/blocklist (file: cmd/server/main.go)
 - [x] CORS allows `*` when `ALLOWED_ORIGINS` is empty (file: internal/middleware/cors.go)
@@ -46,9 +46,10 @@
 - [ ] No migration version tracking table — relies on `IF NOT EXISTS` idempotency (file: migrations/)
 - [x] `whatsapp-bot/.env.example` missing `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN` (file: whatsapp-bot/.env.example)
 - [ ] `game_uid` lookup ambiguous for Mobile Legends — stores `UID|SERVER` but lookup receives them separately (file: internal/repositories/order_repo.go)
-- [ ] `rand.Read` error silently returns empty CSRF token (file: internal/middleware/csrf.go)
-- [ ] Fire-and-forget goroutines use `context.Background()` — survive server shutdown (file: internal/handlers/webhooks.go, orders.go)
-- [ ] `os.Exit(1)` in server goroutine bypasses deferred cleanup (`pool.Close()`, etc.) (file: cmd/server/main.go)
+- [x] `rand.Read` error silently returns empty CSRF token — now returns HTTP 500 (file: internal/middleware/csrf.go)
+- [x] Fire-and-forget goroutines use `context.Background()` — now use server root context, cancelled on shutdown (file: internal/handlers/webhooks.go, orders.go)
+- [x] `os.Exit(1)` in server goroutine bypasses deferred cleanup — replaced with error channel + graceful shutdown (file: cmd/server/main.go)
+- [x] CSRF token store is in-memory — replaced with PostgreSQL-backed store (migration 018, file: internal/middleware/csrf.go)
 - [ ] Request body not drained on early JSON decode failure — connection reuse issues (file: internal/handlers/orders.go, admin.go)
 - [ ] `json.NewEncoder(w).Encode()` errors never checked (file: internal/apperrors/errors.go)
 - [ ] `strconv.Atoi` errors silently ignored in product handler (file: internal/handlers/products.go)

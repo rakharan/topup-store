@@ -1,17 +1,39 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func TestCSRFStore_GenerateAndValidate(t *testing.T) {
-	store := NewCSRFStore()
+func testPool(t *testing.T) *pgxpool.Pool {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set")
+	}
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		t.Fatalf("failed to connect to DB: %v", err)
+	}
+	t.Cleanup(func() { pool.Close() })
+	_, _ = pool.Exec(context.Background(), `DELETE FROM csrf_tokens`)
+	return pool
+}
 
-	token := store.Generate()
+func TestCSRFStore_GenerateAndValidate(t *testing.T) {
+	pool := testPool(t)
+	store := NewCSRFStore(pool)
+
+	token, err := store.Generate()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if token == "" {
 		t.Error("expected non-empty token")
 	}
@@ -26,7 +48,8 @@ func TestCSRFStore_GenerateAndValidate(t *testing.T) {
 }
 
 func TestCSRFStore_InvalidToken(t *testing.T) {
-	store := NewCSRFStore()
+	pool := testPool(t)
+	store := NewCSRFStore(pool)
 
 	if store.Validate("nonexistent") {
 		t.Error("expected invalid token to fail")
@@ -34,7 +57,8 @@ func TestCSRFStore_InvalidToken(t *testing.T) {
 }
 
 func TestCSRFMiddleware_GETReturnsToken(t *testing.T) {
-	store := NewCSRFStore()
+	pool := testPool(t)
+	store := NewCSRFStore(pool)
 	mw := CSRFMiddleware(store)
 
 	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
@@ -51,10 +75,14 @@ func TestCSRFMiddleware_GETReturnsToken(t *testing.T) {
 }
 
 func TestCSRFMiddleware_POSTValidToken(t *testing.T) {
-	store := NewCSRFStore()
+	pool := testPool(t)
+	store := NewCSRFStore(pool)
 	mw := CSRFMiddleware(store)
 
-	token := store.Generate()
+	token, err := store.Generate()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -72,7 +100,8 @@ func TestCSRFMiddleware_POSTValidToken(t *testing.T) {
 }
 
 func TestCSRFMiddleware_POSTMissingToken(t *testing.T) {
-	store := NewCSRFStore()
+	pool := testPool(t)
+	store := NewCSRFStore(pool)
 	mw := CSRFMiddleware(store)
 
 	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
@@ -88,10 +117,16 @@ func TestCSRFMiddleware_POSTMissingToken(t *testing.T) {
 }
 
 func TestCSRFMiddleware_POSTExpiredToken(t *testing.T) {
-	store := NewCSRFStore()
-	token := store.Generate()
+	pool := testPool(t)
+	store := NewCSRFStore(pool)
+	token, err := store.Generate()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
-	store.tokens[token] = time.Now().Add(-1 * time.Hour)
+	_, _ = pool.Exec(context.Background(),
+		`UPDATE csrf_tokens SET expires_at = $1 WHERE token = $2`,
+		time.Now().Add(-1*time.Hour), token)
 
 	mw := CSRFMiddleware(store)
 	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
@@ -108,8 +143,12 @@ func TestCSRFMiddleware_POSTExpiredToken(t *testing.T) {
 }
 
 func TestCSRFMiddleware_FormToken(t *testing.T) {
-	store := NewCSRFStore()
-	token := store.Generate()
+	pool := testPool(t)
+	store := NewCSRFStore(pool)
+	token, err := store.Generate()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	mw := CSRFMiddleware(store)
 	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
