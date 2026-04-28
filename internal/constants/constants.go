@@ -21,8 +21,7 @@ const (
 )
 
 const (
-	DigiflazzAPIURL     = "https://api.digiflazz.com/v1/transaction"
-	WhatsAppCloudAPIURL = "https://graph.facebook.com/v18.0"
+	DigiflazzAPIURL = "https://api.digiflazz.com/v1/transaction"
 )
 
 var ValidGames = map[string]bool{

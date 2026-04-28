@@ -10,26 +10,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/topup-store/internal/constants"
 	"github.com/topup-store/internal/models"
 	"github.com/topup-store/internal/retry"
 )
 
 type NotifyService struct {
-	whatsappNum   string
-	waToken       string
-	waPhoneID     string
-	waBotBaseURL  string
-	waBotToken    string
-	httpClient    *http.Client
-	logger        *slog.Logger
+	fonnteToken  string
+	waBotBaseURL string
+	waBotToken   string
+	httpClient   *http.Client
+	logger       *slog.Logger
 }
 
-func NewNotifyService(whatsappNum, waToken, waPhoneID, waBotBaseURL, waBotToken string, logger *slog.Logger) *NotifyService {
+func NewNotifyService(fonnteToken, waBotBaseURL, waBotToken string, logger *slog.Logger) *NotifyService {
 	return &NotifyService{
-		whatsappNum:  whatsappNum,
-		waToken:      waToken,
-		waPhoneID:    waPhoneID,
+		fonnteToken:  fonnteToken,
 		waBotBaseURL: waBotBaseURL,
 		waBotToken:   waBotToken,
 		httpClient:   &http.Client{Timeout: 10 * time.Second},
@@ -71,27 +66,25 @@ func (s *NotifyService) sendNotification(ctx context.Context, phone, message str
 		return fmt.Errorf("invalid phone number format: %s", phone)
 	}
 	if strings.HasPrefix(cleaned, "0") {
-		cleaned = "62" + cleaned[1:]
+		cleaned = cleaned[1:]
 	}
-	if !strings.HasPrefix(cleaned, "+") && !strings.HasPrefix(cleaned, "62") {
-		return fmt.Errorf("invalid phone number format: %s", phone)
-	}
-	if s.waToken != "" && s.waPhoneID != "" {
-		err := s.sendViaCloudAPI(ctx, cleaned, message)
+	cleaned = strings.TrimPrefix(cleaned, "+")
+
+	if s.fonnteToken != "" {
+		err := s.sendViaFonnte(ctx, cleaned, message)
 		if err == nil {
 			return nil
 		}
-		s.logger.Warn("cloud api failed, falling back to bot", "error", err)
+		s.logger.Warn("fonnte api failed, falling back to bot", "error", err)
 	}
 	return s.sendViaBot(ctx, cleaned, message)
 }
 
-func (s *NotifyService) sendViaCloudAPI(ctx context.Context, phone, message string) error {
-	payload := map[string]any{
-		"messaging_product": "whatsapp",
-		"to":                phone,
-		"type":              "text",
-		"text":              map[string]string{"body": message},
+func (s *NotifyService) sendViaFonnte(ctx context.Context, phone, message string) error {
+	payload := map[string]string{
+		"target":      phone,
+		"message":     message,
+		"countryCode": "62",
 	}
 
 	body, err := json.Marshal(payload)
@@ -103,13 +96,13 @@ func (s *NotifyService) sendViaCloudAPI(ctx context.Context, phone, message stri
 	return retry.Do(ctx, retryCfg, func(ctx context.Context) error {
 		req, err := http.NewRequestWithContext(ctx,
 			http.MethodPost,
-			fmt.Sprintf("%s/%s/messages", constants.WhatsAppCloudAPIURL, s.waPhoneID),
+			"https://api.fonnte.com/send",
 			bytes.NewReader(body),
 		)
 		if err != nil {
 			return fmt.Errorf("create request: %w", err)
 		}
-		req.Header.Set("Authorization", "Bearer "+s.waToken)
+		req.Header.Set("Authorization", s.fonnteToken)
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := s.httpClient.Do(req)
@@ -119,7 +112,7 @@ func (s *NotifyService) sendViaCloudAPI(ctx context.Context, phone, message stri
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("cloud api returned status %d", resp.StatusCode)
+			return fmt.Errorf("fonnte api returned status %d", resp.StatusCode)
 		}
 
 		return nil

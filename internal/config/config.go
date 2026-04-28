@@ -22,8 +22,7 @@ type Config struct {
 	DigiflazzAPIURL        string
 	DigiflazzTesting       bool
 	WhatsappNumber         string
-	WhatsappToken          string
-	WhatsappPhoneID        string
+	FonnteToken            string
 	AdminPassword          string
 	WaBotBaseURL           string
 	WaBotToken             string
@@ -49,8 +48,7 @@ func Load() (*Config, error) {
 		DigiflazzAPIURL:        getEnv("DIGIFLAZZ_API_URL", "https://api.digiflazz.com/v1/transaction"),
 		DigiflazzTesting:       getEnv("DIGIFLAZZ_TESTING", "true") == "true",
 		WhatsappNumber:         getEnv("WHATSAPP_NUMBER", ""),
-		WhatsappToken:          getEnv("WHATSAPP_TOKEN", ""),
-		WhatsappPhoneID:        getEnv("WHATSAPP_PHONE_NUMBER_ID", ""),
+		FonnteToken:            getEnv("FONNTE_TOKEN", ""),
 		AdminPassword:          getEnv("ADMIN_PASSWORD", ""),
 		WaBotBaseURL:           getEnv("WA_BOT_BASE_URL", "http://localhost:3001"),
 		WaBotToken:             getEnv("WA_BOT_TOKEN", ""),

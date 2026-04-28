@@ -145,7 +145,7 @@ func TestPaymentService_UpdateOrderStatusIf(t *testing.T) {
 }
 
 func TestNotifyService_InvalidPhone(t *testing.T) {
-	svc := NewNotifyService("", "", "", "http://localhost:3001", nil)
+	svc := NewNotifyService("", "http://localhost:3001", "", nil)
 
 	err := svc.SendNotification("invalid", "test message")
 	if err == nil {
@@ -165,7 +165,7 @@ func TestNotifyService_ValidPhonePrefix(t *testing.T) {
 		{"  ", false},
 	}
 
-	svc := NewNotifyService("", "", "", "http://localhost:3001", nil)
+	svc := NewNotifyService("", "http://localhost:3001", "", nil)
 
 	for _, tt := range tests {
 		err := svc.SendNotification(tt.phone, "test")

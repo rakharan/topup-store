@@ -4,12 +4,11 @@ const axios = require("axios");
 
 const GO_BACKEND_URL = process.env.GO_BACKEND_URL || "http://localhost:8080";
 const BOT_PORT = process.env.BOT_PORT || 3001;
-const WA_TOKEN = process.env.WHATSAPP_TOKEN;
-const WA_PHONE_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
+const FONNTE_TOKEN = process.env.FONNTE_TOKEN;
 const WA_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || "topup-store-verify";
 const BOT_NOTIFY_TOKEN = process.env.BOT_NOTIFY_TOKEN;
 
-const WA_API = `https://graph.facebook.com/v18.0/${WA_PHONE_ID}/messages`;
+const FONNTE_API = "https://api.fonnte.com/send";
 
 const app = express();
 app.use(express.json());
@@ -86,7 +85,7 @@ async function handleOrder(sender, order) {
     if (qris_url) {
       await sendImageWithCaption(sender, qris_url, caption);
     } else if (qris_base64) {
-      await sendImageBase64(sender, qris_base64, caption);
+      await sendText(sender, `${caption}\n(Gambar QRIS tidak dapat dikirim via base64)`);
     } else {
       await sendText(sender, `${caption}\nQRIS URL: ${qris_url}`);
     }
@@ -114,19 +113,24 @@ async function sendHelpMenu(sender) {
   await sendText(sender, helpText);
 }
 
+async function sendFonnte(to, message) {
+  const cleaned = to.startsWith("0") ? "62" + to.slice(1) : to.replace("+", "");
+
+  await axios.post(FONNTE_API, {
+    target: cleaned,
+    message: message,
+    countryCode: "62",
+  }, {
+    headers: {
+      Authorization: FONNTE_TOKEN,
+      "Content-Type": "application/json",
+    },
+  });
+}
+
 async function sendText(to, text) {
   try {
-    await axios.post(WA_API, {
-      messaging_product: "whatsapp",
-      to,
-      type: "text",
-      text: { body: text },
-    }, {
-      headers: {
-        Authorization: `Bearer ${WA_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-    });
+    await sendFonnte(to, text);
   } catch (err) {
     console.error("Failed to send text:", err.response?.data || err.message);
   }
@@ -134,59 +138,10 @@ async function sendText(to, text) {
 
 async function sendImageWithCaption(to, imageUrl, caption) {
   try {
-    await axios.post(WA_API, {
-      messaging_product: "whatsapp",
-      to,
-      type: "image",
-      image: { link: imageUrl, caption },
-    }, {
-      headers: {
-        Authorization: `Bearer ${WA_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-    });
+    await sendFonnte(to, `${caption}\n${imageUrl}`);
   } catch (err) {
     console.error("Failed to send image:", err.response?.data || err.message);
     await sendText(to, `${caption}\nQRIS URL: ${imageUrl}`);
-  }
-}
-
-async function sendImageBase64(to, base64Data, caption) {
-  try {
-    const buffer = Buffer.from(base64Data, "base64");
-    const FormData = (await import("form-data")).default;
-    const formData = new FormData();
-    formData.append("messaging_product", "whatsapp");
-    formData.append("file", buffer, { filename: "qris.png", contentType: "image/png" });
-    formData.append("type", "image/png");
-
-    const uploadResp = await axios.post(
-      `https://graph.facebook.com/v18.0/${WA_PHONE_ID}/media`,
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${WA_TOKEN}`,
-          ...formData.getHeaders(),
-        },
-      }
-    );
-
-    const mediaId = uploadResp.data.id;
-
-    await axios.post(WA_API, {
-      messaging_product: "whatsapp",
-      to,
-      type: "image",
-      image: { id: mediaId, caption },
-    }, {
-      headers: {
-        Authorization: `Bearer ${WA_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-    });
-  } catch (err) {
-    console.error("Failed to send image base64:", err.response?.data || err.message);
-    await sendText(to, `${caption}\n(Gambar QRIS tidak dapat dikirim)`);
   }
 }
 
