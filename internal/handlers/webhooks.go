@@ -263,13 +263,19 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 		h.logWebhook(r.Context(), "digiflazz", refID, string(rawBody), sigHeader, r.UserAgent(), "processed", "")
 
 		orderCopy := *order
+		snCopy := sn
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
 					h.logger.Error("digiflazz notify panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", r))
 				}
 			}()
-			if err := h.notifySvc.SendTopupSuccess(h.rootCtx, &orderCopy, orderCopy.UserPhone); err != nil {
+			product, err := h.topupSvc.GetProduct(h.rootCtx, orderCopy.ProductID)
+			if err != nil {
+				h.logger.Error("digiflazz webhook: failed to get product for notification", slog.String("order_id", orderCopy.ID), slog.String("error", err.Error()))
+				return
+			}
+			if err := h.notifySvc.SendTopupSuccess(h.rootCtx, &orderCopy, product, orderCopy.UserPhone, snCopy); err != nil {
 				h.logger.Error("digiflazz webhook: failed to send notification",
 					slog.String("order_id", orderCopy.ID),
 					slog.String("error", err.Error()),
@@ -314,7 +320,12 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 					h.logger.Error("digiflazz failure notify panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", r))
 				}
 			}()
-			if err := h.notifySvc.SendTopupFailure(h.rootCtx, &orderCopy, orderCopy.UserPhone); err != nil {
+			product, err := h.topupSvc.GetProduct(h.rootCtx, orderCopy.ProductID)
+			if err != nil {
+				h.logger.Error("digiflazz webhook: failed to get product for failure notification", slog.String("order_id", orderCopy.ID), slog.String("error", err.Error()))
+				return
+			}
+			if err := h.notifySvc.SendTopupFailure(h.rootCtx, &orderCopy, product, orderCopy.UserPhone); err != nil {
 				h.logger.Error("digiflazz webhook: failed to send failure notification",
 					slog.String("order_id", orderCopy.ID),
 					slog.String("error", err.Error()),

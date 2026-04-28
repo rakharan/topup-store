@@ -104,6 +104,8 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orderCopy := *order
+	productCopy := *product
+	qrisURLCopy := qrisURL
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -112,7 +114,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		}()
 		ctx, cancel := context.WithTimeout(h.rootCtx, 10*time.Second)
 		defer cancel()
-		if err := h.notifySvc.SendOrderConfirmation(ctx, &orderCopy, orderCopy.UserPhone); err != nil {
+		if err := h.notifySvc.SendOrderConfirmation(ctx, &orderCopy, &productCopy, orderCopy.UserPhone, qrisURLCopy); err != nil {
 			h.logger.Error("failed to send notification", slog.String("order_id", orderCopy.ID), slog.String("error", err.Error()))
 		}
 	}()

@@ -32,26 +32,87 @@ func NewNotifyService(fonnteToken, waBotBaseURL, waBotToken string, logger *slog
 	}
 }
 
-func (s *NotifyService) SendOrderConfirmation(ctx context.Context, order *models.Order, phone string) error {
+func (s *NotifyService) SendOrderConfirmation(ctx context.Context, order *models.Order, product *models.Product, phone, qrisURL string) error {
+	gameLabel := map[string]string{
+		"free_fire":      "Free Fire",
+		"mobile_legends": "Mobile Legends",
+		"pubg_mobile":    "PUBG Mobile",
+	}[product.Game]
+
+	uidInfo := order.GameUID
+	if product.Game == "mobile_legends" && order.GameServer != "" {
+		uidInfo = order.GameUID + " (" + order.GameServer + ")"
+	}
+
 	message := fmt.Sprintf(
-		"Halo! Order kamu telah dibuat.\nID Order: %s\nTotal: Rp %d\nSilakan scan QRIS untuk membayar.",
-		order.ID, order.AmountIDR,
+		"🎮 *Order Dibuat*\n\n"+
+			"ID Order: %s\n"+
+			"Game: %s\n"+
+			"Paket: %s\n"+
+			"UID: %s\n"+
+			"Total: Rp %d\n\n"+
+			"Bayar di: %s\n\n"+
+			"⏳ Proses pembayaran akan memakan waktu beberapa menit setelah pembayaran dikonfirmasi.\n"+
+			"Cek status order di: https://topup-store.com/status\n\n"+
+			"Terima kasih!",
+		order.ID, gameLabel, product.Name, uidInfo, order.AmountIDR, qrisURL,
 	)
 	return s.sendNotification(ctx, phone, message)
 }
 
-func (s *NotifyService) SendTopupSuccess(ctx context.Context, order *models.Order, phone string) error {
+func (s *NotifyService) SendTopupSuccess(ctx context.Context, order *models.Order, product *models.Product, phone, serialNumber string) error {
+	gameLabel := map[string]string{
+		"free_fire":      "Free Fire",
+		"mobile_legends": "Mobile Legends",
+		"pubg_mobile":    "PUBG Mobile",
+	}[product.Game]
+
+	uidInfo := order.GameUID
+	if product.Game == "mobile_legends" && order.GameServer != "" {
+		uidInfo = order.GameUID + " (" + order.GameServer + ")"
+	}
+
+	snLine := ""
+	if serialNumber != "" {
+		snLine = fmt.Sprintf("\nSN: %s", serialNumber)
+	}
+
 	message := fmt.Sprintf(
-		"Top-up berhasil!\nID Order: %s\nGame UID: %s\nTerima kasih telah berbelanja di TopUp Store.",
-		order.ID, order.GameUID,
+		"✅ *Pesanan Berhasil!*\n\n"+
+			"ID Order: %s\n"+
+			"Game: %s\n"+
+			"Produk: %s\n"+
+			"UID: %s\n"+
+			"Total: Rp %d%s\n\n"+
+			"Item telah dikirim ke akun kamu. Silakan cek dalam game.\n\n"+
+			"Terima kasih telah berbelanja di TopUp Store!",
+		order.ID, gameLabel, product.Name, uidInfo, order.AmountIDR, snLine,
 	)
 	return s.sendNotification(ctx, phone, message)
 }
 
-func (s *NotifyService) SendTopupFailure(ctx context.Context, order *models.Order, phone string) error {
+func (s *NotifyService) SendTopupFailure(ctx context.Context, order *models.Order, product *models.Product, phone string) error {
+	gameLabel := map[string]string{
+		"free_fire":      "Free Fire",
+		"mobile_legends": "Mobile Legends",
+		"pubg_mobile":    "PUBG Mobile",
+	}[product.Game]
+
+	uidInfo := order.GameUID
+	if product.Game == "mobile_legends" && order.GameServer != "" {
+		uidInfo = order.GameUID + " (" + order.GameServer + ")"
+	}
+
 	message := fmt.Sprintf(
-		"Top-up gagal!\nID Order: %s\nGame UID: %s\nSilakan hubungi admin untuk bantuan.",
-		order.ID, order.GameUID,
+		"❌ *Pesanan Gagal!*\n\n"+
+			"ID Order: %s\n"+
+			"Game: %s\n"+
+			"Produk: %s\n"+
+			"UID: %s\n"+
+			"Total: Rp %d\n\n"+
+			"Top-up gagal diproses. Saldo kamu akan dikembalikan.\n"+
+			"Silakan hubungi admin untuk bantuan.",
+		order.ID, gameLabel, product.Name, uidInfo, order.AmountIDR,
 	)
 	return s.sendNotification(ctx, phone, message)
 }

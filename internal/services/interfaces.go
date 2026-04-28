@@ -31,8 +31,8 @@ type TopupServiceInterface interface {
 }
 
 type NotifyServiceInterface interface {
-	SendOrderConfirmation(ctx context.Context, order *models.Order, phone string) error
-	SendTopupSuccess(ctx context.Context, order *models.Order, phone string) error
-	SendTopupFailure(ctx context.Context, order *models.Order, phone string) error
+	SendOrderConfirmation(ctx context.Context, order *models.Order, product *models.Product, phone, qrisURL string) error
+	SendTopupSuccess(ctx context.Context, order *models.Order, product *models.Product, phone, serialNumber string) error
+	SendTopupFailure(ctx context.Context, order *models.Order, product *models.Product, phone string) error
 	SendNotification(phone, message string) error
 }

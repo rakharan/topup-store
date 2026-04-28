@@ -93,12 +93,16 @@ type mockNotifyService struct {
 	sendNotificationErr      error
 }
 
-func (m *mockNotifyService) SendOrderConfirmation(ctx context.Context, order *models.Order, phone string) error {
+func (m *mockNotifyService) SendOrderConfirmation(ctx context.Context, order *models.Order, product *models.Product, phone, qrisURL string) error {
 	return m.sendOrderConfirmationErr
 }
 
-func (m *mockNotifyService) SendTopupSuccess(ctx context.Context, order *models.Order, phone string) error {
+func (m *mockNotifyService) SendTopupSuccess(ctx context.Context, order *models.Order, product *models.Product, phone, serialNumber string) error {
 	return m.sendTopupSuccessErr
+}
+
+func (m *mockNotifyService) SendTopupFailure(ctx context.Context, order *models.Order, product *models.Product, phone string) error {
+	return m.sendTopupFailureErr
 }
 
 func (m *mockNotifyService) SendTopupFailure(ctx context.Context, order *models.Order, phone string) error {

@@ -317,7 +317,12 @@ func startDigiflazzPoller(ctx context.Context, orderRepo repositories.OrderRepos
 							return
 						}
 						logger.Info("digiflazz poller: order completed via polling", slog.String("order_id", o.ID), slog.String("sn", sn))
-						if err := notifySvc.SendTopupSuccess(context.Background(), &o, o.UserPhone); err != nil {
+						product, err := topupSvc.GetProduct(ctx, o.ProductID)
+						if err != nil {
+							logger.Error("digiflazz poller: failed to get product for notification", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+							return
+						}
+						if err := notifySvc.SendTopupSuccess(ctx, &o, product, o.UserPhone, sn); err != nil {
 							logger.Error("digiflazz poller: failed to notify", slog.String("order_id", o.ID), slog.String("error", err.Error()))
 						}
 					} else if status == "Gagal" || status == "Fail" {
@@ -325,7 +330,12 @@ func startDigiflazzPoller(ctx context.Context, orderRepo repositories.OrderRepos
 							logger.Error("digiflazz poller: failed to fail order", slog.String("order_id", o.ID), slog.String("error", err.Error()))
 						}
 						logger.Info("digiflazz poller: order failed via polling", slog.String("order_id", o.ID))
-						if err := notifySvc.SendTopupFailure(context.Background(), &o, o.UserPhone); err != nil {
+						product, err := topupSvc.GetProduct(ctx, o.ProductID)
+						if err != nil {
+							logger.Error("digiflazz poller: failed to get product for failure notification", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+							return
+						}
+						if err := notifySvc.SendTopupFailure(ctx, &o, product, o.UserPhone); err != nil {
 							logger.Error("digiflazz poller: failed to notify failure", slog.String("order_id", o.ID), slog.String("error", err.Error()))
 						}
 					}
