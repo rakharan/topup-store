@@ -1,5 +1,12 @@
-{{template "head" .}}
-{{template "nav" dict "ActivePage" "terms"}}
+{{define "terms.html"}}<!DOCTYPE html>
+<html lang="id">
+<head>
+    <title>Syarat & Ketentuan - Faza TopUP Store</title>
+    <meta name="description" content="Syarat dan ketentuan layanan Faza TopUP Store.">
+    {{template "head"}}
+</head>
+<body class="bg-dark text-white min-h-screen">
+    {{template "nav" (dict "ActivePage" "terms")}}
 
 <main class="max-w-4xl mx-auto px-4 py-8">
     <h1 class="text-2xl font-bold text-primary mb-6">Syarat & Ketentuan</h1>
@@ -64,3 +71,6 @@
 </main>
 
 {{template "footer"}}
+</body>
+</html>
+{{end}}

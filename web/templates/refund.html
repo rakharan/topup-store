@@ -1,5 +1,12 @@
-{{template "head" .}}
-{{template "nav" dict "ActivePage" "refund"}}
+{{define "refund.html"}}<!DOCTYPE html>
+<html lang="id">
+<head>
+    <title>Kebijakan Refund - Faza TopUP Store</title>
+    <meta name="description" content="Kebijakan pengembalian dana Faza TopUP Store.">
+    {{template "head"}}
+</head>
+<body class="bg-dark text-white min-h-screen">
+    {{template "nav" (dict "ActivePage" "refund")}}
 
 <main class="max-w-4xl mx-auto px-4 py-8">
     <h1 class="text-2xl font-bold text-primary mb-6">Kebijakan Pengembalian Dana (Refund)</h1>
@@ -64,3 +71,6 @@
 </main>
 
 {{template "footer"}}
+</body>
+</html>
+{{end}}
