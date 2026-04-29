@@ -20,6 +20,26 @@
                     <option value="pubg_mobile">PUBG Mobile</option>
                 </select>
             </div>
+            <div id="uidGuide" class="hidden bg-white/5 border border-white/10 rounded-xl p-4">
+                <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Format UID
+                </h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-start gap-2">
+                        <span class="text-yellow-400 font-bold min-w-[16px]">🔥</span>
+                        <div><span class="text-white/70">Free Fire:</span> <code class="bg-white/10 px-1 rounded text-primary">123456789</code> <span class="text-white/40">(angka saja)</span></div>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-blue-400 font-bold min-w-[16px]">🎮</span>
+                        <div><span class="text-white/70">Mobile Legends:</span> <code class="bg-white/10 px-1 rounded text-primary">12345678 | 1234</code> <span class="text-white/40">(UID | Server)</span></div>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-orange-400 font-bold min-w-[16px]">🎯</span>
+                        <div><span class="text-white/70">PUBG Mobile:</span> <code class="bg-white/10 px-1 rounded text-primary">5123456789</code> <span class="text-white/40">(angka saja)</span></div>
+                    </div>
+                </div>
+            </div>
             <div>
                 <label class="block text-sm font-medium text-white/70 mb-1" for="product">Paket</label>
                 <select id="product" name="product" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring" disabled>
@@ -29,12 +49,12 @@
             <div id="uidGroup">
                 <label class="block text-sm font-medium text-white/70 mb-1" for="gameUid">Game UID</label>
                 <input type="text" id="gameUid" name="game_uid" placeholder="Masukkan UID" inputmode="numeric" required aria-describedby="uidHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
-                <p class="text-xs text-white/40 mt-1" id="uidHint">Masukkan UID game kamu</p>
+                <p class="text-xs text-white/40 mt-1" id="uidHint">Pilih game terlebih dahulu</p>
             </div>
             <div id="serverGroup" class="hidden">
                 <label class="block text-sm font-medium text-white/70 mb-1" for="gameServer">Server ID</label>
                 <input type="text" id="gameServer" name="game_server" placeholder="Masukkan Server ID" inputmode="numeric" aria-describedby="serverHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
-                <p class="text-xs text-white/40 mt-1" id="serverHint">Server ID bisa ditemukan di profil game</p>
+                <p class="text-xs text-white/40 mt-1" id="serverHint">Buka profil game → lihat angka di sebelah kanan UID (contoh: 1234)</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-white/70 mb-1" for="phone">Nomor WhatsApp</label>
@@ -121,17 +141,24 @@
         }
     }
 
+    const uidGuide = document.getElementById("uidGuide");
+
     gameSelect.addEventListener("change", async () => {
         const game = gameSelect.value;
         productSelect.innerHTML = '<option value="">Loading...</option>';
         productSelect.disabled = true;
         if (game === "mobile_legends") {
             serverGroup.classList.remove("hidden");
-            document.getElementById("uidHint").textContent = "Masukkan UID Mobile Legends (contoh: 12345678)";
+            document.getElementById("uidHint").textContent = "Contoh: 12345678";
         } else {
             serverGroup.classList.add("hidden");
             document.getElementById("gameServer").value = "";
-            document.getElementById("uidHint").textContent = "Masukkan UID game kamu (angka saja)";
+            document.getElementById("uidHint").textContent = "Angka saja, tanpa spasi atau karakter lain";
+        }
+        if (game) {
+            uidGuide.classList.remove("hidden");
+        } else {
+            uidGuide.classList.add("hidden");
         }
         if (!game) return;
         await loadProductsForGame(game);
