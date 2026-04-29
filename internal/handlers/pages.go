@@ -116,6 +116,20 @@ func (h *PageHandler) Status(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *PageHandler) Terms(w http.ResponseWriter, r *http.Request) {
+	if err := h.templates.ExecuteTemplate(w, "terms.html", nil); err != nil {
+		h.logger.Error("template error (terms.html)", slog.String("error", err.Error()))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+func (h *PageHandler) Refund(w http.ResponseWriter, r *http.Request) {
+	if err := h.templates.ExecuteTemplate(w, "refund.html", nil); err != nil {
+		h.logger.Error("template error (refund.html)", slog.String("error", err.Error()))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
 func (h *PageHandler) Admin(w http.ResponseWriter, r *http.Request) {
 	data := map[string]any{
 		"CSRFToken": middleware.GetCSRFToken(r.Context()),

@@ -105,6 +105,8 @@ func main() {
 	r.Get("/", pages.Home)
 	r.With(csrfMW).Get("/order", pages.OrderForm)
 	r.Get("/status", pages.Status)
+	r.Get("/terms", pages.Terms)
+	r.Get("/refund", pages.Refund)
 	r.With(csrfMW).Route("/admin", func(r chi.Router) {
 		r.Get("/", pages.Admin)
 		r.Post("/", pages.Admin)
