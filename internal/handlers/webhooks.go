@@ -79,7 +79,9 @@ func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logWebhook(r.Context(), "midtrans", payload.OrderID, string(rawBody), payload.SignatureKey, r.UserAgent(), "skipped", "order not found")
 		h.logger.Warn("midtrans webhook: order not found", slog.String("order_id", payload.OrderID))
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
 		return
 	}
 
@@ -87,14 +89,18 @@ func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
 	if newStatus == "" {
 		h.logWebhook(r.Context(), "midtrans", payload.OrderID, string(rawBody), payload.SignatureKey, r.UserAgent(), "skipped", "unmapped status")
 		h.logger.Warn("midtrans webhook: unmapped status", slog.String("status", payload.TransactionStatus), slog.String("order_id", payload.OrderID))
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
 		return
 	}
 
 	if order.Status == newStatus {
 		h.logWebhook(r.Context(), "midtrans", payload.OrderID, string(rawBody), payload.SignatureKey, r.UserAgent(), "skipped", "already in status")
 		h.logger.Info("midtrans webhook: order already in status", slog.String("order_id", order.ID), slog.String("status", newStatus))
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
 		return
 	}
 
@@ -102,7 +108,9 @@ func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
 	if err := h.paymentSvc.UpdateOrderStatus(r.Context(), order.ID, newStatus); err != nil {
 		h.logWebhook(r.Context(), "midtrans", payload.OrderID, string(rawBody), payload.SignatureKey, r.UserAgent(), "failed", err.Error())
 		h.logger.Error("midtrans webhook: failed to update order", slog.String("order_id", order.ID), slog.String("error", err.Error()))
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
 		return
 	}
 
@@ -125,7 +133,9 @@ func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
 		}()
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
 }
 
 func (h *WebhookHandler) verifySignature(payload struct {
@@ -151,6 +161,8 @@ func (h *WebhookHandler) mapTransactionStatus(txStatus, fraudStatus string) stri
 		}
 	case "settlement":
 		return constants.StatusPaid
+	case "authorize":
+		return constants.StatusPending
 	case "pending":
 		return constants.StatusPending
 	case "deny", "expire", "cancel":

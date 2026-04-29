@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/topup-store/internal/models"
@@ -258,6 +259,34 @@ func (r *PGOrderRepository) ExpireOldPending(ctx context.Context) ([]models.Orde
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("expire old pending: %w", err)
+	}
+	defer rows.Close()
+
+	var orders []models.Order
+	for rows.Next() {
+		var o models.Order
+		if err := rows.Scan(&o.ID, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
+			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.Channel,
+			&o.SerialNumber, &o.DigiflazzRefID, &o.CreatedAt, &o.UpdatedAt); err != nil {
+			return nil, err
+		}
+		orders = append(orders, o)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return orders, nil
+}
+
+func (r *PGOrderRepository) GetPendingOrdersOlderThan(ctx context.Context, age time.Duration) ([]models.Order, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
+		FROM orders WHERE status = 'pending' AND created_at < NOW() - ($1 * INTERVAL '1 minute')
+		ORDER BY created_at ASC
+	`, int(age.Minutes()))
+	if err != nil {
+		return nil, fmt.Errorf("get pending orders older than: %w", err)
 	}
 	defer rows.Close()
 

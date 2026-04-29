@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"time"
 
 	"github.com/topup-store/internal/models"
 )
@@ -24,6 +25,7 @@ type OrderRepository interface {
 	ListByStatus(ctx context.Context, status string, page, perPage int) ([]models.Order, int, error)
 	ListProcessing(ctx context.Context) ([]models.Order, error)
 	ExpireOldPending(ctx context.Context) ([]models.Order, error)
+	GetPendingOrdersOlderThan(ctx context.Context, age time.Duration) ([]models.Order, error)
 }
 
 type ProductRepository interface {

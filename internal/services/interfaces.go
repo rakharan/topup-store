@@ -18,6 +18,8 @@ type PaymentServiceInterface interface {
 	RecordStatusChange(ctx context.Context, orderID, fromStatus, toStatus, reason string) error
 	GetOrderStatusHistory(ctx context.Context, orderID string) ([]models.OrderStatusHistory, error)
 	GetOrderQRIS(ctx context.Context, orderID string) (*models.OrderQRIS, error)
+	CancelTransaction(orderID string) error
+	CheckTransactionStatus(orderID string) (string, string, error)
 }
 
 type TopupServiceInterface interface {

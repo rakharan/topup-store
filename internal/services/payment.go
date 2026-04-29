@@ -3,8 +3,10 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/midtrans/midtrans-go"
+	"github.com/midtrans/midtrans-go/coreapi"
 	"github.com/midtrans/midtrans-go/snap"
 	"github.com/topup-store/internal/models"
 	"github.com/topup-store/internal/repositories"
@@ -13,30 +15,70 @@ import (
 type PaymentService struct {
 	orderRepo repositories.OrderRepository
 	snap      *snap.Client
+	core      *coreapi.Client
 	isProd    bool
+	logger    *slog.Logger
 }
 
-func NewPaymentService(orderRepo repositories.OrderRepository, serverKey string, isProd bool) *PaymentService {
+func NewPaymentService(orderRepo repositories.OrderRepository, serverKey string, isProd bool, logger *slog.Logger) *PaymentService {
 	env := midtrans.Sandbox
 	if isProd {
 		env = midtrans.Production
 	}
 
-	client := &snap.Client{}
-	client.New(serverKey, env)
+	snapClient := &snap.Client{}
+	snapClient.New(serverKey, env)
+
+	coreClient := &coreapi.Client{}
+	coreClient.New(serverKey, env)
 
 	return &PaymentService{
 		orderRepo: orderRepo,
-		snap:      client,
+		snap:      snapClient,
+		core:      coreClient,
 		isProd:    isProd,
+		logger:    logger,
 	}
 }
 
 func (s *PaymentService) CreateQRIS(ctx context.Context, order *models.Order) (string, string, error) {
+	gameName := map[string]string{
+		"free_fire":       "Free Fire",
+		"mobile_legends":  "Mobile Legends",
+		"pubg_mobile":     "PUBG Mobile",
+	}[order.Channel]
+	if gameName == "" {
+		gameName = "Game Top-Up"
+	}
+
 	req := &snap.Request{
 		TransactionDetails: midtrans.TransactionDetails{
 			OrderID:  order.ID,
 			GrossAmt: int64(order.AmountIDR),
+		},
+		Expiry: &snap.ExpiryDetails{
+			Unit:     "minute",
+			Duration: 30,
+		},
+		CustomerDetail: &midtrans.CustomerDetails{
+			Phone: order.UserPhone,
+		},
+		Items: &[]midtrans.ItemDetails{
+			{
+				ID:    order.ProductID,
+				Price: int64(order.AmountIDR),
+				Qty:   1,
+				Name:  gameName,
+			},
+		},
+		CustomField1: order.GameUID,
+		CustomField2: order.UserPhone,
+		CustomField3: gameName,
+		Metadata: map[string]string{
+			"game_uid":     order.GameUID,
+			"game_server":  order.GameServer,
+			"product_id":   order.ProductID,
+			"channel":      order.Channel,
 		},
 	}
 
@@ -108,4 +150,21 @@ func (s *PaymentService) GetOrderStatusHistory(ctx context.Context, orderID stri
 
 func (s *PaymentService) GetOrderQRIS(ctx context.Context, orderID string) (*models.OrderQRIS, error) {
 	return s.orderRepo.GetQRIS(ctx, orderID)
+}
+
+func (s *PaymentService) CancelTransaction(orderID string) error {
+	resp, mErr := s.core.CancelTransaction(orderID)
+	if mErr != nil {
+		return fmt.Errorf("midtrans cancel transaction: %s", mErr.Message)
+	}
+	s.logger.Info("midtrans: transaction canceled", slog.String("order_id", orderID), slog.String("status", resp.TransactionStatus))
+	return nil
+}
+
+func (s *PaymentService) CheckTransactionStatus(orderID string) (string, string, error) {
+	resp, mErr := s.core.CheckTransaction(orderID)
+	if mErr != nil {
+		return "", "", fmt.Errorf("midtrans check transaction: %s", mErr.Message)
+	}
+	return resp.TransactionStatus, resp.FraudStatus, nil
 }

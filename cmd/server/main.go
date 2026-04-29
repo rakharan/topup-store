@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/topup-store/internal/config"
+	"github.com/topup-store/internal/constants"
 	"github.com/topup-store/internal/db"
 	"github.com/topup-store/internal/handlers"
 	"github.com/topup-store/internal/middleware"
@@ -71,7 +72,7 @@ func main() {
 	productRepo := repositories.NewProductRepository(pool)
 	webhookRepo := repositories.NewWebhookRepository(pool)
 
-	paymentSvc := services.NewPaymentService(orderRepo, cfg.MidtransServerKey, cfg.MidtransIsProd)
+	paymentSvc := services.NewPaymentService(orderRepo, cfg.MidtransServerKey, cfg.MidtransIsProd, logger)
 	topupSvc := services.NewTopupService(orderRepo, productRepo, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzAPIURL, cfg.DigiflazzTesting, logger)
 	notifySvc := services.NewNotifyService(cfg.FonnteToken, cfg.WaBotBaseURL, cfg.WaBotToken, logger)
 
@@ -163,7 +164,7 @@ func main() {
 				logger.Error("order expiry ticker panicked", slog.Any("panic", r))
 			}
 		}()
-		startOrderExpiryTickerWithNotify(shutdownCtx, orderRepo, notifySvc, logger)
+		startOrderExpiryTickerWithNotify(shutdownCtx, paymentSvc, orderRepo, notifySvc, logger)
 	}()
 	go func() {
 		defer func() {
@@ -172,6 +173,14 @@ func main() {
 			}
 		}()
 		startDigiflazzPoller(shutdownCtx, orderRepo, topupSvc, notifySvc, logger)
+	}()
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error("midtrans poller panicked", slog.Any("panic", r))
+			}
+		}()
+		startMidtransPoller(shutdownCtx, paymentSvc, topupSvc, notifySvc, orderRepo, logger)
 	}()
 	logger.Info("Background tickers started (expiry + digiflazz poller)")
 
@@ -240,7 +249,7 @@ func healthHandler(pool interface{ Ping(context.Context) error }) http.HandlerFu
 	}
 }
 
-func startOrderExpiryTickerWithNotify(ctx context.Context, orderRepo repositories.OrderRepository, notifySvc services.NotifyServiceInterface, logger *slog.Logger) {
+func startOrderExpiryTickerWithNotify(ctx context.Context, paymentSvc services.PaymentServiceInterface, orderRepo repositories.OrderRepository, notifySvc services.NotifyServiceInterface, logger *slog.Logger) {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
@@ -261,16 +270,19 @@ func startOrderExpiryTickerWithNotify(ctx context.Context, orderRepo repositorie
 			if len(expiredOrders) > 0 {
 				logger.Info("order expiry ticker: expired orders", slog.Int("count", len(expiredOrders)))
 				for _, o := range expiredOrders {
-					if o.UserPhone != "" {
-						sem <- struct{}{}
-						go func(order models.Order) {
-							defer func() { <-sem }()
+					sem <- struct{}{}
+					go func(order models.Order) {
+						defer func() { <-sem }()
+						if err := paymentSvc.CancelTransaction(order.ID); err != nil {
+							logger.Error("order expiry ticker: failed to cancel in midtrans", slog.String("order_id", order.ID), slog.String("error", err.Error()))
+						}
+						if order.UserPhone != "" {
 							msg := "Order " + order.ID + " telah kadaluarsa karena belum dibayar dalam 30 menit."
 							if err := notifySvc.SendNotification(order.UserPhone, msg); err != nil {
 								logger.Error("order expiry ticker: failed to notify", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 							}
-						}(o)
-					}
+						}
+					}(o)
 				}
 			}
 		}
@@ -340,6 +352,78 @@ func startDigiflazzPoller(ctx context.Context, orderRepo repositories.OrderRepos
 						if err := notifySvc.SendTopupFailure(ctx, &o, product, o.UserPhone); err != nil {
 							logger.Error("digiflazz poller: failed to notify failure", slog.String("order_id", o.ID), slog.String("error", err.Error()))
 						}
+					}
+				}(order)
+			}
+		}
+	}
+}
+
+func startMidtransPoller(ctx context.Context, paymentSvc services.PaymentServiceInterface, topupSvc *services.TopupService, notifySvc services.NotifyServiceInterface, orderRepo repositories.OrderRepository, logger *slog.Logger) {
+	ticker := time.NewTicker(3 * time.Minute)
+	defer ticker.Stop()
+
+	sem := make(chan struct{}, 5)
+
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info("Midtrans poller stopped")
+			return
+		case <-ticker.C:
+			orders, err := orderRepo.GetPendingOrdersOlderThan(ctx, 5*time.Minute)
+			if err != nil {
+				logger.Error("midtrans poller: failed to get pending orders", slog.String("error", err.Error()))
+				continue
+			}
+			if len(orders) == 0 {
+				continue
+			}
+
+			for _, order := range orders {
+				sem <- struct{}{}
+				go func(o models.Order) {
+					defer func() { <-sem }()
+					txStatus, fraudStatus, err := paymentSvc.CheckTransactionStatus(o.ID)
+					if err != nil {
+						logger.Error("midtrans poller: failed to check status", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+						return
+					}
+
+					switch txStatus {
+					case "settlement", "capture":
+						if fraudStatus == "deny" && txStatus == "capture" {
+							logger.Info("midtrans poller: order captured but denied by FDS", slog.String("order_id", o.ID))
+							return
+						}
+						if o.Status == constants.StatusPaid {
+							return
+						}
+						if err := paymentSvc.UpdateOrderStatus(ctx, o.ID, constants.StatusPaid); err != nil {
+							logger.Error("midtrans poller: failed to update order to paid", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+							return
+						}
+						paymentSvc.RecordStatusChange(ctx, o.ID, o.Status, constants.StatusPaid, "midtrans poller")
+						logger.Info("midtrans poller: order marked as paid", slog.String("order_id", o.ID))
+						if err := topupSvc.ProcessOrder(o.ID); err != nil {
+							logger.Error("midtrans poller: failed to process order", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+						}
+					case "expire", "cancel", "deny":
+						if o.Status == constants.StatusExpired || o.Status == constants.StatusFailed {
+							return
+						}
+						newStatus := constants.StatusFailed
+						if txStatus == "expire" || txStatus == "cancel" {
+							newStatus = constants.StatusExpired
+						}
+						if err := paymentSvc.UpdateOrderStatus(ctx, o.ID, newStatus); err != nil {
+							logger.Error("midtrans poller: failed to update order", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+							return
+						}
+						paymentSvc.RecordStatusChange(ctx, o.ID, o.Status, newStatus, "midtrans poller")
+						logger.Info("midtrans poller: order marked as "+newStatus, slog.String("order_id", o.ID))
+					case "pending":
+						logger.Info("midtrans poller: order still pending", slog.String("order_id", o.ID))
 					}
 				}(order)
 			}
