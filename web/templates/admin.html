@@ -188,7 +188,7 @@
     {{else}}
     <section class="max-w-sm mx-auto px-4 py-24">
         <h1 class="text-3xl font-bold mb-8 text-center">Admin Login</h1>
-        <form method="POST" action="/admin" class="space-y-5">
+        <form method="POST" action="{{.AdminPath}}" class="space-y-5">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <div>
                 <label class="block text-sm font-medium text-white/70 mb-1" for="password">Password Admin</label>
@@ -206,6 +206,7 @@
     {{template "toast"}}
 
     <script>
+    const ADMIN_PATH = '{{.AdminPath}}';
     function escapeHtml(str) {
         const div = document.createElement('div');
         div.textContent = str;
@@ -224,7 +225,7 @@
 
     async function initCSRF() {
         try {
-            const res = await fetch('/admin');
+            const res = await fetch(ADMIN_PATH);
             const token = res.headers.get('X-CSRF-Token');
             if (token) csrfToken = token;
         } catch (e) {}
@@ -312,7 +313,7 @@
     async function processOrder(orderId) {
         if (!confirm('Proses order ini?')) return;
         try {
-            const res = await fetchWithCSRF('/admin/process-order', {
+            const res = await fetchWithCSRF(ADMIN_PATH + '/process-order', {
                 method: 'POST',
                 body: JSON.stringify({ order_id: orderId }),
             });
@@ -331,7 +332,7 @@
     async function retryOrder(orderId) {
         if (!confirm('Retry order ini?')) return;
         try {
-            const res = await fetchWithCSRF('/admin/retry-order', {
+            const res = await fetchWithCSRF(ADMIN_PATH + '/retry-order', {
                 method: 'POST',
                 body: JSON.stringify({ order_id: orderId }),
             });
@@ -406,7 +407,7 @@
 
     async function loadProducts() {
         try {
-            const res = await fetchWithCSRF('/admin/products');
+            const res = await fetchWithCSRF(ADMIN_PATH + '/products');
             const json = await res.json();
             if (res.ok) {
                 products = json.data || [];
@@ -489,7 +490,7 @@
     async function deleteProduct(id) {
         if (!confirm('Delete this product?')) return;
         try {
-            const res = await fetchWithCSRF(`/admin/products/${id}`, { method: 'DELETE' });
+            const res = await fetchWithCSRF(`${ADMIN_PATH}/products/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 showToast('Product deleted', 'success');
                 loadProducts();
@@ -518,7 +519,7 @@
         };
 
         try {
-            const url = id ? `/admin/products/${id}` : '/admin/products';
+            const url = id ? `${ADMIN_PATH}/products/${id}` : ADMIN_PATH + '/products';
             const method = id ? 'PUT' : 'POST';
             const res = await fetchWithCSRF(url, { method, body: JSON.stringify(body) });
             const data = await res.json();

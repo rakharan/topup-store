@@ -75,7 +75,7 @@ func main() {
 	topupSvc := services.NewTopupService(orderRepo, productRepo, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzAPIURL, cfg.DigiflazzTesting, logger)
 	notifySvc := services.NewNotifyService(cfg.FonnteToken, cfg.WaBotBaseURL, cfg.WaBotToken, logger)
 
-	pages := handlers.NewPageHandler(topupSvc, paymentSvc, notifySvc, cfg.WhatsappNumber, cfg.AdminPassword, cfg.MidtransIsProd, logger)
+	pages := handlers.NewPageHandler(topupSvc, paymentSvc, notifySvc, cfg.WhatsappNumber, cfg.AdminPassword, cfg.AdminPath, cfg.MidtransIsProd, logger)
 	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, rootCtx, logger)
 	products := handlers.NewProductHandler(topupSvc, logger)
 	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, webhookRepo, cfg.MidtransServerKey, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzWebhookSecret, rootCtx, logger)
@@ -107,7 +107,7 @@ func main() {
 	r.Get("/status", pages.Status)
 	r.Get("/terms", pages.Terms)
 	r.Get("/refund", pages.Refund)
-	r.With(csrfMW).Route("/admin", func(r chi.Router) {
+	r.With(csrfMW).Route(cfg.AdminPath, func(r chi.Router) {
 		r.Get("/", pages.Admin)
 		r.Post("/", pages.Admin)
 	})
@@ -136,10 +136,10 @@ func main() {
 	r.Post("/webhook/digiflazz", webhook.Digiflazz)
 
 	adminRateLimiter := middleware.NewRateLimiter(30, time.Minute)
-	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post("/admin/process-order", admin.ProcessOrder)
-	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post("/admin/retry-order", admin.RetryOrder)
+	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post(cfg.AdminPath+"/process-order", admin.ProcessOrder)
+	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post(cfg.AdminPath+"/retry-order", admin.RetryOrder)
 
-	r.Route("/admin/products", func(r chi.Router) {
+	r.Route(cfg.AdminPath+"/products", func(r chi.Router) {
 		r.Use(middleware.AdminAuth(cfg.AdminPassword))
 		r.Use(adminRateLimiter.Middleware)
 		r.Use(csrfMW)

@@ -68,11 +68,12 @@ type PageHandler struct {
 	templates    *template.Template
 	waNumber     string
 	adminPass    string
+	adminPath    string
 	cookieSecure bool
 	logger       *slog.Logger
 }
 
-func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass string, cookieSecure bool, logger *slog.Logger) *PageHandler {
+func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass, adminPath string, cookieSecure bool, logger *slog.Logger) *PageHandler {
 	templates, err := parseTemplates()
 	if err != nil {
 		logger.Error("Failed to parse templates", slog.String("error", err.Error()))
@@ -85,6 +86,7 @@ func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services
 		templates:    templates,
 		waNumber:     waNumber,
 		adminPass:    adminPass,
+		adminPath:    adminPath,
 		cookieSecure: cookieSecure,
 		logger:       logger,
 	}
@@ -133,6 +135,7 @@ func (h *PageHandler) Refund(w http.ResponseWriter, r *http.Request) {
 func (h *PageHandler) Admin(w http.ResponseWriter, r *http.Request) {
 	data := map[string]any{
 		"CSRFToken": middleware.GetCSRFToken(r.Context()),
+		"AdminPath": h.adminPath,
 	}
 
 	if r.Method == http.MethodPost {
@@ -148,13 +151,13 @@ func (h *PageHandler) Admin(w http.ResponseWriter, r *http.Request) {
 			http.SetCookie(w, &http.Cookie{
 				Name:     "admin_auth",
 				Value:    timestamp + ":" + token,
-				Path:     "/admin",
+				Path:     h.adminPath,
 				HttpOnly: true,
 				Secure:   h.cookieSecure,
 				SameSite: http.SameSiteStrictMode,
 				MaxAge:   3600,
 			})
-			http.Redirect(w, r, "/admin", http.StatusSeeOther)
+			http.Redirect(w, r, h.adminPath, http.StatusSeeOther)
 			return
 		}
 		data["LoginFailed"] = true

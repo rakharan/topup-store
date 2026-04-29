@@ -11,7 +11,6 @@
             <a href="/status" class="{{if eq .ActivePage "status"}}text-primary font-medium{{else}}hover:text-primary transition{{end}} focus-ring">Cek Order</a>
             <a href="/terms" class="{{if eq .ActivePage "terms"}}text-primary font-medium{{else}}hover:text-primary transition{{end}} focus-ring">Syarat</a>
             <a href="/refund" class="{{if eq .ActivePage "refund"}}text-primary font-medium{{else}}hover:text-primary transition{{end}} focus-ring">Refund</a>
-            <a href="/admin" class="{{if eq .ActivePage "admin"}}text-primary font-medium{{else}}hover:text-primary transition{{end}} focus-ring">Admin</a>
         </div>
         <button id="mobileMenuBtn" class="md:hidden p-2 hover:bg-white/10 rounded-lg focus-ring" aria-label="Toggle mobile menu" aria-expanded="false" aria-controls="mobileMenu">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -23,7 +22,6 @@
         <a href="/status" class="block {{if eq .ActivePage "status"}}text-primary font-medium{{else}}hover:text-primary transition{{end}}" role="menuitem">Cek Order</a>
         <a href="/terms" class="block {{if eq .ActivePage "terms"}}text-primary font-medium{{else}}hover:text-primary transition{{end}}" role="menuitem">Syarat & Ketentuan</a>
         <a href="/refund" class="block {{if eq .ActivePage "refund"}}text-primary font-medium{{else}}hover:text-primary transition{{end}}" role="menuitem">Kebijakan Refund</a>
-        <a href="/admin" class="block {{if eq .ActivePage "admin"}}text-primary font-medium{{else}}hover:text-primary transition{{end}}" role="menuitem">Admin</a>
     </div>
 </nav>
 {{end}}
