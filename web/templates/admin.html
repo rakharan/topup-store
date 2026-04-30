@@ -301,15 +301,6 @@
         }
     });
 
-    document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
-        const menu = document.getElementById('mobileMenu');
-        const btn = document.getElementById('mobileMenuBtn');
-        if (menu && btn) {
-            menu.classList.toggle('hidden');
-            btn.setAttribute('aria-expanded', !menu.classList.contains('hidden'));
-        }
-    });
-
     async function processOrder(orderId) {
         if (!confirm('Proses order ini?')) return;
         try {

@@ -61,13 +61,6 @@
     const gameLabels = { free_fire: "FF", mobile_legends: "ML", pubg_mobile: "PUBG" };
     let activeGame = "free_fire";
 
-    document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
-        const menu = document.getElementById('mobileMenu');
-        const btn = document.getElementById('mobileMenuBtn');
-        menu.classList.toggle('hidden');
-        btn.setAttribute('aria-expanded', !menu.classList.contains('hidden'));
-    });
-
     async function loadProducts(game) {
         const grid = document.getElementById("productGrid");
         grid.innerHTML = Array(5).fill('<div class="skeleton rounded-xl h-32"></div>').join('');

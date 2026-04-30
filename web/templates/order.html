@@ -110,13 +110,6 @@
     let selectedProduct = null;
     let pollInterval = null;
 
-    document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
-        const menu = document.getElementById('mobileMenu');
-        const btn = document.getElementById('mobileMenuBtn');
-        menu.classList.toggle('hidden');
-        btn.setAttribute('aria-expanded', !menu.classList.contains('hidden'));
-    });
-
     async function loadProductsForGame(game) {
         try {
             const res = await fetch(`/api/products?game=${game}`);

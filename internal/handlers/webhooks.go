@@ -12,6 +12,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/topup-store/internal/apperrors"
 	"github.com/topup-store/internal/constants"
@@ -72,6 +73,15 @@ func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
 		h.logWebhook(r.Context(), "midtrans", payload.OrderID, string(rawBody), payload.SignatureKey, r.UserAgent(), "failed", "invalid signature")
 		h.logger.Warn("midtrans webhook: invalid signature", slog.String("order_id", payload.OrderID))
 		apperrors.WriteError(w, http.StatusUnauthorized, apperrors.FieldError("signature", "invalid signature"), middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	if strings.HasPrefix(payload.OrderID, "payment_notif_test") {
+		h.logger.Info("midtrans webhook: test notification received, ignoring")
+		h.logWebhook(r.Context(), "midtrans", payload.OrderID, string(rawBody), payload.SignatureKey, r.UserAgent(), "skipped", "test notification")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
 		return
 	}
 
