@@ -477,9 +477,9 @@ func (h *AdminHandler) OverrideOrderStatus(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	validStatuses := map[string]bool{"failed": true, "expired": true, "refunded": true}
+	validStatuses := map[string]bool{"failed": true, "expired": true, "cancelled": true}
 	if !validStatuses[req.Status] {
-		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("status", "must be failed, expired, or refunded"), middleware.GetRequestID(r.Context()))
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("status", "must be failed, expired, or cancelled"), middleware.GetRequestID(r.Context()))
 		return
 	}
 

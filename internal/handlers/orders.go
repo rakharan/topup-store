@@ -195,6 +195,50 @@ func (h *OrderHandler) RecentOrders(w http.ResponseWriter, r *http.Request) {
 	apperrors.WriteSuccess(w, http.StatusOK, orders, middleware.GetRequestID(r.Context()))
 }
 
+func (h *OrderHandler) CancelOrder(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	order, err := h.paymentSvc.GetOrder(r.Context(), id)
+	if err != nil {
+		apperrors.WriteError(w, http.StatusNotFound, apperrors.ErrNotFound, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	if order.Status != constants.StatusPending {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("status", "only pending orders can be cancelled"), middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	if err := h.paymentSvc.CancelTransaction(id); err != nil {
+		h.logger.Warn("cancel order: midtrans cancel failed (may be already expired)", slog.String("order_id", id), slog.String("error", err.Error()))
+	}
+
+	if err := h.paymentSvc.UpdateOrderStatus(r.Context(), id, constants.StatusCancelled); err != nil {
+		h.logger.Error("cancel order: update status failed", slog.String("order_id", id), slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	h.paymentSvc.RecordStatusChange(r.Context(), id, order.Status, constants.StatusCancelled, "user cancelled")
+
+	orderCopy := *order
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				h.logger.Error("cancel notification panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", r))
+			}
+		}()
+		msg := "Order " + orderCopy.ID + " telah dibatalkan. Jika sudah terlanjur bayar, hubungi admin untuk refund."
+		if err := h.notifySvc.SendNotification(orderCopy.UserPhone, msg); err != nil {
+			h.logger.Error("cancel order: failed to notify user", slog.String("order_id", orderCopy.ID), slog.String("error", err.Error()))
+		}
+	}()
+
+	apperrors.WriteSuccess(w, http.StatusOK, map[string]string{
+		"status":  "ok",
+		"message": "order cancelled",
+	}, middleware.GetRequestID(r.Context()))
+}
+
 var (
 	reNumeric     = regexp.MustCompile(`^\d+$`)
 	reNumericPair = regexp.MustCompile(`^\d+\|\d+$`)

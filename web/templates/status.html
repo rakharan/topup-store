@@ -37,6 +37,7 @@
         success: "bg-green-500/20 text-green-400 border-green-500/30",
         failed: "bg-red-500/20 text-red-400 border-red-500/30",
         expired: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+        cancelled: "bg-gray-500/20 text-gray-400 border-gray-500/30",
     };
     const statusLabels = {
         pending: "Menunggu Pembayaran",
@@ -45,6 +46,7 @@
         success: "Berhasil",
         failed: "Gagal",
         expired: "Kadaluarsa",
+        cancelled: "Dibatalkan",
     };
     const statusSteps = ['pending', 'paid', 'processing', 'success'];
 
@@ -111,8 +113,14 @@
                         ${serialNumber ? `<div class="flex justify-between"><span class="text-white/50">Serial Number</span><span class="font-mono">${serialNumber}</span></div>` : ''}
                     </div>
                     ${order.status === 'pending' && qrisUrl ? `
-                        <div class="mt-4 pt-4 border-t border-white/10 text-center">
+                        <div class="mt-4 pt-4 border-t border-white/10 text-center flex flex-col sm:flex-row gap-3 justify-center">
                             <a href="${qrisUrl}" target="_blank" rel="noopener noreferrer" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg transition focus-ring">Bayar Sekarang</a>
+                            <button onclick="cancelOrder('${orderId}')" class="inline-block bg-red-600/20 hover:bg-red-600/40 text-red-400 font-semibold px-6 py-2 rounded-lg transition focus-ring border border-red-500/30">Batalkan</button>
+                        </div>
+                    ` : ''}
+                    ${order.status === 'cancelled' ? `
+                        <div class="mt-4 pt-4 border-t border-white/10 text-center">
+                            <a href="/order" class="inline-block bg-primary hover:bg-orange-600 text-white font-semibold px-6 py-2 rounded-lg transition focus-ring">Order Ulang</a>
                         </div>
                     ` : ''}
                     ${order.status === 'failed' || order.status === 'expired' ? `
@@ -133,6 +141,26 @@
             result.classList.remove("hidden");
             result.innerHTML = '<p class="text-red-400">Terjadi kesalahan. Coba lagi.</p>';
             autoRefresh.classList.add("hidden");
+        }
+    }
+
+    async function cancelOrder(orderId) {
+        if (!confirm("Yakin ingin membatalkan order ini?")) return;
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            const res = await fetch(`/api/orders/${orderId}/cancel`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+            });
+            const json = await res.json();
+            if (res.ok) {
+                showToast("Order berhasil dibatalkan", "success");
+                fetchOrder(orderId);
+            } else {
+                showToast(json.error || "Gagal membatalkan order", "error");
+            }
+        } catch (e) {
+            showToast("Terjadi kesalahan. Coba lagi.", "error");
         }
     }
 

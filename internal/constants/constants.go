@@ -7,6 +7,7 @@ const (
 	StatusSuccess    = "success"
 	StatusFailed     = "failed"
 	StatusExpired    = "expired"
+	StatusCancelled  = "cancelled"
 )
 
 const (
@@ -43,4 +44,5 @@ var StatusLabels = map[string]string{
 	StatusSuccess:    "Berhasil",
 	StatusFailed:     "Gagal",
 	StatusExpired:    "Kadaluarsa",
+	StatusCancelled:  "Dibatalkan",
 }

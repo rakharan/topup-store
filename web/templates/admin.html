@@ -37,6 +37,7 @@
                     <option value="success">Success</option>
                     <option value="failed">Failed</option>
                     <option value="expired">Expired</option>
+                    <option value="cancelled">Cancelled</option>
                 </select>
                 <button onclick="window.location.href='{{.AdminPath}}/orders/export'" class="bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg px-4 py-2 text-white text-sm transition focus-ring whitespace-nowrap">Export CSV</button>
             </div>
@@ -70,6 +71,7 @@
                                 {{else if eq .Status "paid"}}<span class="px-2 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400">Lunas</span>
                                 {{else if eq .Status "processing"}}<span class="px-2 py-1 rounded-full text-xs bg-purple-500/20 text-purple-400">Proses</span>
                                 {{else if eq .Status "expired"}}<span class="px-2 py-1 rounded-full text-xs bg-gray-500/20 text-gray-400">Expired</span>
+                                {{else if eq .Status "cancelled"}}<span class="px-2 py-1 rounded-full text-xs bg-gray-500/20 text-gray-400">Dibatalkan</span>
                                 {{else}}<span class="px-2 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-400">Pending</span>{{end}}
                             </td>
                             <td class="py-3 pr-4 font-mono text-xs">{{if .SerialNumber}}{{.SerialNumber}}{{else}}-{{end}}</td>
@@ -227,13 +229,16 @@
                 </div>
                 <div id="orderDetailContent" class="space-y-3 text-sm"></div>
                 <div id="orderStatusHistory" class="mt-4 pt-4 border-t border-white/10"></div>
+                <div id="cancelSection" class="mt-4 pt-4 border-t border-white/10 hidden">
+                    <button onclick="cancelOrderAdmin()" class="w-full bg-red-600/20 hover:bg-red-600/40 text-red-400 font-semibold px-4 py-2 rounded-lg transition focus-ring border border-red-500/30">Cancel Order</button>
+                </div>
                 <div id="overrideSection" class="mt-4 pt-4 border-t border-white/10 hidden">
                     <h4 class="font-semibold mb-2 text-red-400">Override Status</h4>
                     <div class="flex gap-2">
                         <select id="overrideStatus" class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-primary focus:outline-none">
                             <option value="failed">Failed</option>
                             <option value="expired">Expired</option>
-                            <option value="refunded">Refunded</option>
+                            <option value="cancelled">Cancelled</option>
                         </select>
                         <input type="text" id="overrideReason" placeholder="Reason" class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-primary focus:outline-none">
                         <button onclick="overrideOrderStatus()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">Apply</button>
@@ -706,6 +711,7 @@
                 document.getElementById('orderStatusHistory').innerHTML = '';
             }
 
+            document.getElementById('cancelSection').classList.toggle('hidden', order.status !== 'pending');
             document.getElementById('overrideSection').classList.toggle('hidden', order.status === 'success');
             document.getElementById('orderDetailModal').classList.remove('hidden');
         } catch (e) {
@@ -736,6 +742,25 @@
             }
         } catch (e) {
             showToast('Failed to override', 'error');
+        }
+    }
+
+    async function cancelOrderAdmin() {
+        if (!confirm('Cancel this order? This will cancel in Midtrans and mark as cancelled.')) return;
+        try {
+            const res = await fetchWithCSRF('/api/orders/' + currentOrderId + '/cancel', {
+                method: 'POST',
+            });
+            const json = await res.json();
+            if (res.ok) {
+                showToast('Order cancelled', 'success');
+                closeOrderDetail();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(json.error?.message || 'Failed to cancel', 'error');
+            }
+        } catch (e) {
+            showToast('Failed to cancel order', 'error');
         }
     }
     </script>
