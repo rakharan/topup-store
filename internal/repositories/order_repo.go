@@ -368,6 +368,49 @@ func (r *PGOrderRepository) GetRecentByPhone(ctx context.Context, phone string, 
 	return orders, nil
 }
 
+type OrderExportRow struct {
+	OrderID      string
+	Game         string
+	ProductName  string
+	GameUID      string
+	GameServer   string
+	Phone        string
+	AmountIDR    int
+	Status       string
+	SerialNumber string
+	Channel      string
+	CreatedAt    time.Time
+}
+
+func (r *PGOrderRepository) ListAllForExport(ctx context.Context) ([]OrderExportRow, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT o.id, p.game, p.name, o.game_uid, o.game_server, o.user_phone,
+		       o.amount_idr, o.status, COALESCE(o.serial_number, ''), o.channel, o.created_at
+		FROM orders o
+		JOIN products p ON o.product_id = p.id
+		ORDER BY o.created_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []OrderExportRow
+	for rows.Next() {
+		var row OrderExportRow
+		if err := rows.Scan(&row.OrderID, &row.Game, &row.ProductName, &row.GameUID,
+			&row.GameServer, &row.Phone, &row.AmountIDR, &row.Status,
+			&row.SerialNumber, &row.Channel, &row.CreatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
 func nullIfEmpty(s string) any {
 	if s == "" {
 		return nil

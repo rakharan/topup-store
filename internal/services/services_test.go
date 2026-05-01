@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/topup-store/internal/models"
+	"github.com/topup-store/internal/repositories"
 )
 
 type mockOrderRepo struct {
@@ -90,6 +91,10 @@ func (m *mockOrderRepo) GetPendingOrdersOlderThan(ctx context.Context, age time.
 }
 
 func (m *mockOrderRepo) GetRecentByPhone(ctx context.Context, phone string, limit int) ([]models.Order, error) {
+	return nil, nil
+}
+
+func (m *mockOrderRepo) ListAllForExport(ctx context.Context) ([]repositories.OrderExportRow, error) {
 	return nil, nil
 }
 

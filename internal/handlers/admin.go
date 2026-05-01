@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/topup-store/internal/apperrors"
@@ -388,6 +390,42 @@ func (h *AdminHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
 		"balance": balance,
 	}, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) ExportOrdersCSV(w http.ResponseWriter, r *http.Request) {
+	rows, err := h.orderRepo.ListAllForExport(r.Context())
+	if err != nil {
+		h.logger.Error("export orders: failed to fetch", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=orders_%s.csv", time.Now().Format("2006-01-02")))
+
+	cw := csv.NewWriter(w)
+	defer cw.Flush()
+
+	cw.Write([]string{"Order ID", "Game", "Product", "UID", "Server", "Phone", "Amount (IDR)", "Status", "Serial No", "Channel", "Created At"})
+	for _, row := range rows {
+		server := ""
+		if row.GameServer != "" {
+			server = row.GameServer
+		}
+		cw.Write([]string{
+			row.OrderID,
+			row.Game,
+			row.ProductName,
+			row.GameUID,
+			server,
+			row.Phone,
+			strconv.Itoa(row.AmountIDR),
+			row.Status,
+			row.SerialNumber,
+			row.Channel,
+			row.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
 }
 
 func (h *AdminHandler) ListWebhookLogs(w http.ResponseWriter, r *http.Request) {
