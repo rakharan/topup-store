@@ -27,11 +27,12 @@ type AdminHandler struct {
 	webhookRepo repositories.WebhookRepository
 	orderRepo   repositories.OrderRepository
 	cache       *cache.Cache
+	retrySvc    *services.WebhookRetryService
 	adminPass   string
 	logger      *slog.Logger
 }
 
-func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, productRepo repositories.ProductRepository, webhookRepo repositories.WebhookRepository, orderRepo repositories.OrderRepository, cache *cache.Cache, adminPass string, logger *slog.Logger) *AdminHandler {
+func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, productRepo repositories.ProductRepository, webhookRepo repositories.WebhookRepository, orderRepo repositories.OrderRepository, cache *cache.Cache, retrySvc *services.WebhookRetryService, adminPass string, logger *slog.Logger) *AdminHandler {
 	return &AdminHandler{
 		paymentSvc:  paymentSvc,
 		topupSvc:    topupSvc,
@@ -40,6 +41,7 @@ func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc servi
 		webhookRepo: webhookRepo,
 		orderRepo:   orderRepo,
 		cache:       cache,
+		retrySvc:    retrySvc,
 		adminPass:   adminPass,
 		logger:      logger,
 	}
@@ -476,6 +478,52 @@ func (h *AdminHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 		"overall":       overall,
 		"period":        map[string]string{"start": startDate.Format("2006-01-02"), "end": endDate.Format("2006-01-02")},
 	}, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) GetRetryQueueStats(w http.ResponseWriter, r *http.Request) {
+	if h.retrySvc == nil {
+		apperrors.WriteSuccess(w, http.StatusOK, map[string]any{"enabled": false}, middleware.GetRequestID(r.Context()))
+		return
+	}
+	stats, err := h.retrySvc.GetStats(r.Context())
+	if err != nil {
+		h.logger.Error("retry queue stats: failed", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	result := map[string]any{"enabled": true}
+	for k, v := range stats {
+		result[k] = v
+	}
+	apperrors.WriteSuccess(w, http.StatusOK, result, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) ListDeadItems(w http.ResponseWriter, r *http.Request) {
+	if h.retrySvc == nil {
+		apperrors.WriteSuccess(w, http.StatusOK, []any{}, middleware.GetRequestID(r.Context()))
+		return
+	}
+	items, err := h.retrySvc.ListDeadItems(r.Context(), 50)
+	if err != nil {
+		h.logger.Error("list dead items: failed", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	apperrors.WriteSuccess(w, http.StatusOK, items, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) RetryDeadItem(w http.ResponseWriter, r *http.Request) {
+	if h.retrySvc == nil {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	id := r.PathValue("id")
+	if err := h.retrySvc.RetryDeadItem(r.Context(), id); err != nil {
+		h.logger.Error("retry dead item: failed", slog.String("id", id), slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	apperrors.WriteSuccess(w, http.StatusOK, map[string]string{"status": "ok"}, middleware.GetRequestID(r.Context()))
 }
 
 func (h *AdminHandler) ListWebhookLogs(w http.ResponseWriter, r *http.Request) {

@@ -85,11 +85,13 @@ func main() {
 		defer cacheStore.Close()
 	}
 
+	retrySvc := services.NewWebhookRetryService(pool, logger)
+
 	pages := handlers.NewPageHandler(topupSvc, paymentSvc, notifySvc, cfg.WhatsappNumber, cfg.AdminPassword, cfg.AdminPath, cfg.MidtransIsProd, logger)
 	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, rootCtx, logger)
 	products := handlers.NewProductHandler(topupSvc, cacheStore, logger)
 	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, webhookRepo, cfg.MidtransServerKey, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzWebhookSecret, rootCtx, logger)
-	admin := handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, cacheStore, cfg.AdminPassword, logger)
+	admin := handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, cacheStore, retrySvc, cfg.AdminPassword, logger)
 	csrfStore := middleware.NewCSRFStore(pool)
 	csrfMW := middleware.CSRFMiddleware(csrfStore)
 
@@ -166,6 +168,9 @@ func main() {
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware).Get(cfg.AdminPath+"/balance", admin.GetBalance)
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware).Get(cfg.AdminPath+"/orders/export", admin.ExportOrdersCSV)
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware).Get(cfg.AdminPath+"/analytics", admin.GetAnalytics)
+	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware).Get(cfg.AdminPath+"/retry-queue/stats", admin.GetRetryQueueStats)
+	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware).Get(cfg.AdminPath+"/retry-queue/dead", admin.ListDeadItems)
+	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post(cfg.AdminPath+"/retry-queue/{id}/retry", admin.RetryDeadItem)
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware).Get(cfg.AdminPath+"/webhooks", admin.ListWebhookLogs)
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware).Get(cfg.AdminPath+"/orders/{id}", admin.GetOrderDetail)
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post(cfg.AdminPath+"/override-status", admin.OverrideOrderStatus)
@@ -202,7 +207,15 @@ func main() {
 		}()
 		startMidtransPoller(shutdownCtx, paymentSvc, topupSvc, notifySvc, orderRepo, logger)
 	}()
-	logger.Info("Background tickers started (expiry + digiflazz poller)")
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error("webhook retry worker panicked", slog.Any("panic", r))
+			}
+		}()
+		retrySvc.RunWorker(shutdownCtx, 1*time.Minute)
+	}()
+	logger.Info("Background tickers started (expiry + digiflazz poller + webhook retry)")
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
