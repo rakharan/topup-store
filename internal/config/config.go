@@ -30,6 +30,7 @@ type Config struct {
 	WaBotToken                  string
 	RequestTimeout              string
 	AllowedOrigins              string
+	RedisURL                    string
 }
 
 func Load() (*Config, error) {
@@ -58,6 +59,7 @@ func Load() (*Config, error) {
 		WaBotToken:             getEnv("WA_BOT_TOKEN", ""),
 		RequestTimeout:         getEnv("REQUEST_TIMEOUT", "30s"),
 		AllowedOrigins:         getEnv("ALLOWED_ORIGINS", ""),
+		RedisURL:               getEnv("REDIS_URL", ""),
 	}
 
 	var missing []string

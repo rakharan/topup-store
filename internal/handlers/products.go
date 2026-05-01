@@ -4,8 +4,10 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/topup-store/internal/apperrors"
+	"github.com/topup-store/internal/cache"
 	"github.com/topup-store/internal/middleware"
 	"github.com/topup-store/internal/models"
 	"github.com/topup-store/internal/services"
@@ -13,11 +15,12 @@ import (
 
 type ProductHandler struct {
 	topupSvc services.TopupServiceInterface
+	cache    *cache.Cache
 	logger   *slog.Logger
 }
 
-func NewProductHandler(topupSvc services.TopupServiceInterface, logger *slog.Logger) *ProductHandler {
-	return &ProductHandler{topupSvc: topupSvc, logger: logger}
+func NewProductHandler(topupSvc services.TopupServiceInterface, cache *cache.Cache, logger *slog.Logger) *ProductHandler {
+	return &ProductHandler{topupSvc: topupSvc, cache: cache, logger: logger}
 }
 
 func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
@@ -32,9 +35,15 @@ func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 		perPage = 50
 	}
 
+	cacheKey := "products:" + game
 	var products []models.Product
-	var err error
 
+	if h.cache.Get(r.Context(), cacheKey, &products) {
+		apperrors.WriteSuccess(w, http.StatusOK, products, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	var err error
 	if game != "" {
 		products, err = h.topupSvc.ListProducts(r.Context(), game)
 	} else {
@@ -47,16 +56,26 @@ func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.cache.Set(r.Context(), cacheKey, products, 5*time.Minute)
 	apperrors.WriteSuccess(w, http.StatusOK, products, middleware.GetRequestID(r.Context()))
 }
 
 func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
+	cacheKey := "product:" + id
+	var product *models.Product
+
+	if h.cache.Get(r.Context(), cacheKey, &product) {
+		apperrors.WriteSuccess(w, http.StatusOK, product, middleware.GetRequestID(r.Context()))
+		return
+	}
+
 	product, err := h.topupSvc.GetProduct(r.Context(), id)
 	if err != nil {
 		apperrors.WriteError(w, http.StatusNotFound, apperrors.ErrNotFound, middleware.GetRequestID(r.Context()))
 		return
 	}
 
+	h.cache.Set(r.Context(), cacheKey, product, 5*time.Minute)
 	apperrors.WriteSuccess(w, http.StatusOK, product, middleware.GetRequestID(r.Context()))
 }

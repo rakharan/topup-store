@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/topup-store/internal/cache"
 	"github.com/topup-store/internal/config"
 	"github.com/topup-store/internal/constants"
 	"github.com/topup-store/internal/db"
@@ -75,11 +76,20 @@ func main() {
 	topupSvc := services.NewTopupService(orderRepo, productRepo, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzAPIURL, cfg.DigiflazzTesting, logger)
 	notifySvc := services.NewNotifyService(cfg.FonnteToken, cfg.WaBotBaseURL, cfg.WaBotToken, logger)
 
+	cacheStore, err := cache.New(cfg.RedisURL, logger)
+	if err != nil {
+		logger.Warn("Failed to initialize cache", slog.String("error", err.Error()))
+		cacheStore = nil
+	}
+	if cacheStore != nil {
+		defer cacheStore.Close()
+	}
+
 	pages := handlers.NewPageHandler(topupSvc, paymentSvc, notifySvc, cfg.WhatsappNumber, cfg.AdminPassword, cfg.AdminPath, cfg.MidtransIsProd, logger)
 	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, rootCtx, logger)
-	products := handlers.NewProductHandler(topupSvc, logger)
+	products := handlers.NewProductHandler(topupSvc, cacheStore, logger)
 	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, webhookRepo, cfg.MidtransServerKey, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzWebhookSecret, rootCtx, logger)
-	admin := handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, cfg.AdminPassword, logger)
+	admin := handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, cacheStore, cfg.AdminPassword, logger)
 	csrfStore := middleware.NewCSRFStore(pool)
 	csrfMW := middleware.CSRFMiddleware(csrfStore)
 

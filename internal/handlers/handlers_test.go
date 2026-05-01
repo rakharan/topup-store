@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/topup-store/internal/cache"
 	"github.com/topup-store/internal/models"
 )
 
@@ -360,6 +361,7 @@ func TestAdminHandler_ProcessOrder_Success(t *testing.T) {
 func TestProductHandler_GetProduct_NotFound(t *testing.T) {
 	ph := &ProductHandler{
 		topupSvc: &mockTopupService{getProductErr: errors.New("not found")},
+		cache:    &cache.Cache{},
 		logger:   testLogger,
 	}
 	req := httptest.NewRequest(http.MethodGet, "/api/products/nonexistent", nil)
@@ -383,6 +385,7 @@ func TestProductHandler_GetProduct_Success(t *testing.T) {
 
 	ph := &ProductHandler{
 		topupSvc: &mockTopupService{getProductResult: product},
+		cache:    &cache.Cache{},
 		logger:   testLogger,
 	}
 	req := httptest.NewRequest(http.MethodGet, "/api/products/prod-1", nil)
@@ -403,6 +406,7 @@ func TestProductHandler_ListProducts_ByGame(t *testing.T) {
 
 	ph := &ProductHandler{
 		topupSvc: &mockTopupService{listProductsResult: products},
+		cache:    &cache.Cache{},
 		logger:   testLogger,
 	}
 	req := httptest.NewRequest(http.MethodGet, "/api/products?game=free_fire", nil)
@@ -423,6 +427,7 @@ func TestProductHandler_ListProducts_All(t *testing.T) {
 
 	ph := &ProductHandler{
 		topupSvc: &mockTopupService{listAllProductsResult: products},
+		cache:    &cache.Cache{},
 		logger:   testLogger,
 	}
 	req := httptest.NewRequest(http.MethodGet, "/api/products", nil)

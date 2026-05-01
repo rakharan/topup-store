@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/topup-store/internal/apperrors"
+	"github.com/topup-store/internal/cache"
 	"github.com/topup-store/internal/constants"
 	"github.com/topup-store/internal/middleware"
 	"github.com/topup-store/internal/models"
@@ -25,11 +26,12 @@ type AdminHandler struct {
 	productRepo repositories.ProductRepository
 	webhookRepo repositories.WebhookRepository
 	orderRepo   repositories.OrderRepository
+	cache       *cache.Cache
 	adminPass   string
 	logger      *slog.Logger
 }
 
-func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, productRepo repositories.ProductRepository, webhookRepo repositories.WebhookRepository, orderRepo repositories.OrderRepository, adminPass string, logger *slog.Logger) *AdminHandler {
+func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, productRepo repositories.ProductRepository, webhookRepo repositories.WebhookRepository, orderRepo repositories.OrderRepository, cache *cache.Cache, adminPass string, logger *slog.Logger) *AdminHandler {
 	return &AdminHandler{
 		paymentSvc:  paymentSvc,
 		topupSvc:    topupSvc,
@@ -37,6 +39,7 @@ func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc servi
 		productRepo: productRepo,
 		webhookRepo: webhookRepo,
 		orderRepo:   orderRepo,
+		cache:       cache,
 		adminPass:   adminPass,
 		logger:      logger,
 	}
@@ -210,6 +213,8 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.cache.DeleteByPrefix(r.Context(), "product")
+
 	apperrors.WriteSuccess(w, http.StatusCreated, product, middleware.GetRequestID(r.Context()))
 }
 
@@ -284,6 +289,8 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.cache.DeleteByPrefix(r.Context(), "product")
+
 	apperrors.WriteSuccess(w, http.StatusOK, product, middleware.GetRequestID(r.Context()))
 }
 
@@ -293,6 +300,7 @@ func (h *AdminHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 		apperrors.WriteError(w, http.StatusNotFound, apperrors.ErrNotFound, middleware.GetRequestID(r.Context()))
 		return
 	}
+	h.cache.DeleteByPrefix(r.Context(), "product")
 	apperrors.WriteSuccess(w, http.StatusOK, map[string]string{"status": "ok", "message": "product deleted"}, middleware.GetRequestID(r.Context()))
 }
 
@@ -375,6 +383,8 @@ func (h *AdminHandler) SyncPricesFromDigiflazz(w http.ResponseWriter, r *http.Re
 		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.FieldError("digiflazz", err.Error()), middleware.GetRequestID(r.Context()))
 		return
 	}
+
+	h.cache.DeleteByPrefix(r.Context(), "product")
 
 	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
 		"updated": updated,
