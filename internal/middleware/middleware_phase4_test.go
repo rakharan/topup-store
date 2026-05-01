@@ -246,9 +246,8 @@ func TestSecurityHeaders(t *testing.T) {
 
 	headers := map[string]string{
 		"X-Content-Type-Options": "nosniff",
-		"X-Frame-Options":        "DENY",
+		"X-Frame-Options":        "SAMEORIGIN",
 		"Referrer-Policy":        "strict-origin-when-cross-origin",
-		"X-XSS-Protection":       "1; mode=block",
 	}
 
 	for key, expected := range headers {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -121,6 +122,8 @@ func (s *NotifyService) SendNotification(phone, message string) error {
 	return s.sendNotification(context.Background(), phone, message)
 }
 
+var phoneRegex = regexp.MustCompile(`^\d{8,15}$`)
+
 func (s *NotifyService) sendNotification(ctx context.Context, phone, message string) error {
 	cleaned := strings.TrimSpace(phone)
 	if cleaned == "" {
@@ -130,6 +133,10 @@ func (s *NotifyService) sendNotification(ctx context.Context, phone, message str
 		cleaned = cleaned[1:]
 	}
 	cleaned = strings.TrimPrefix(cleaned, "+")
+
+	if !phoneRegex.MatchString(cleaned) {
+		return fmt.Errorf("invalid phone number format: %s", phone)
+	}
 
 	if s.fonnteToken != "" {
 		err := s.sendViaFonnte(ctx, cleaned, message)
