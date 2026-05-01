@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net"
 	"net/http"
 	"strconv"
@@ -16,6 +17,8 @@ type RateLimiter struct {
 	rate           int
 	window         time.Duration
 	trustForwarded bool
+	allowedIPs     map[string]bool
+	logger         *slog.Logger
 }
 
 type visitor struct {
@@ -25,11 +28,24 @@ type visitor struct {
 
 func NewRateLimiter(rate int, window time.Duration) *RateLimiter {
 	rl := &RateLimiter{
-		visitors: make(map[string]*visitor),
-		rate:     rate,
-		window:   window,
+		visitors:   make(map[string]*visitor),
+		rate:       rate,
+		window:     window,
+		allowedIPs: make(map[string]bool),
 	}
 	go rl.cleanup()
+	return rl
+}
+
+func (rl *RateLimiter) WithAllowedIPs(ips []string) *RateLimiter {
+	for _, ip := range ips {
+		rl.allowedIPs[strings.TrimSpace(ip)] = true
+	}
+	return rl
+}
+
+func (rl *RateLimiter) WithLogger(logger *slog.Logger) *RateLimiter {
+	rl.logger = logger
 	return rl
 }
 
@@ -60,6 +76,11 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 
 		ip := extractIP(r)
 
+		if rl.allowedIPs[ip] {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		rl.mu.Lock()
 		v, exists := rl.visitors[ip]
 		if !exists || time.Since(v.lastSeen) > rl.window {
@@ -85,6 +106,9 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 			retryAfter := int(rl.window.Seconds())
 			w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
 			rl.mu.Unlock()
+			if rl.logger != nil {
+				rl.logger.Warn("rate limit exceeded", slog.String("ip", ip), slog.String("path", r.URL.Path))
+			}
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusTooManyRequests)
 			json.NewEncoder(w).Encode(map[string]any{
