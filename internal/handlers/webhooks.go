@@ -393,8 +393,10 @@ func (h *WebhookHandler) logWebhook(ctx context.Context, source, refID, payload,
 		Status:    status,
 		Error:     nilIfEmpty(errMsg),
 	}
-	if err := h.webhookRepo.Log(ctx, log); err != nil {
-		h.logger.Error("webhook: failed to log", slog.String("source", source), slog.String("error", err.Error()))
+	if h.webhookRepo != nil {
+		if err := h.webhookRepo.Log(ctx, log); err != nil {
+			h.logger.Error("webhook: failed to log", slog.String("source", source), slog.String("error", err.Error()))
+		}
 	}
 }
 

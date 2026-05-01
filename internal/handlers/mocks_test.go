@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/topup-store/internal/models"
+	"github.com/topup-store/internal/services"
 )
 
 type mockPaymentService struct {
@@ -21,6 +22,9 @@ type mockPaymentService struct {
 	createQRISErr          error
 	getByUIDPhoneResult    *models.Order
 	getByUIDPhoneErr       error
+	cancelTransactionErr   error
+	checkTransactionStatus string
+	checkTransactionErr    error
 }
 
 func (m *mockPaymentService) CreateOrder(ctx context.Context, order *models.Order) error {
@@ -55,6 +59,26 @@ func (m *mockPaymentService) UpdateOrderSerialNumber(ctx context.Context, orderI
 	return nil
 }
 
+func (m *mockPaymentService) RecordStatusChange(ctx context.Context, orderID, fromStatus, toStatus, reason string) error {
+	return nil
+}
+
+func (m *mockPaymentService) GetOrderStatusHistory(ctx context.Context, orderID string) ([]models.OrderStatusHistory, error) {
+	return nil, nil
+}
+
+func (m *mockPaymentService) GetOrderQRIS(ctx context.Context, orderID string) (*models.OrderQRIS, error) {
+	return nil, nil
+}
+
+func (m *mockPaymentService) CancelTransaction(orderID string) error {
+	return m.cancelTransactionErr
+}
+
+func (m *mockPaymentService) CheckTransactionStatus(orderID string) (string, string, error) {
+	return m.checkTransactionStatus, "", m.checkTransactionErr
+}
+
 type mockTopupService struct {
 	getProductResult       *models.Product
 	getProductErr          error
@@ -87,9 +111,18 @@ func (m *mockTopupService) ProcessOrder(orderID string) error {
 	return m.processOrderErr
 }
 
+func (m *mockTopupService) FetchDigiflazzPrices(ctx context.Context) ([]services.DigiflazzPrice, error) {
+	return nil, nil
+}
+
+func (m *mockTopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType string, marginValue int) ([]services.SyncResult, int, int, int, error) {
+	return nil, 0, 0, 0, nil
+}
+
 type mockNotifyService struct {
 	sendOrderConfirmationErr error
 	sendTopupSuccessErr      error
+	sendTopupFailureErr      error
 	sendNotificationErr      error
 }
 
@@ -103,10 +136,6 @@ func (m *mockNotifyService) SendTopupSuccess(ctx context.Context, order *models.
 
 func (m *mockNotifyService) SendTopupFailure(ctx context.Context, order *models.Order, product *models.Product, phone string) error {
 	return m.sendTopupFailureErr
-}
-
-func (m *mockNotifyService) SendTopupFailure(ctx context.Context, order *models.Order, phone string) error {
-	return nil
 }
 
 func (m *mockNotifyService) SendNotification(phone, message string) error {
@@ -155,4 +184,16 @@ func (m *mockProductRepo) Delete(ctx context.Context, id string) error {
 
 func (m *mockProductRepo) ExistsBySKU(ctx context.Context, sku string, excludeID string) (bool, error) {
 	return m.existsBySKU, m.existsBySKUErr
+}
+
+func (m *mockProductRepo) UpdateCostPrice(ctx context.Context, sku string, costPrice int) error {
+	return nil
+}
+
+func (m *mockProductRepo) SyncPrice(ctx context.Context, sku string, costPrice, sellingPrice int) error {
+	return nil
+}
+
+func (m *mockProductRepo) CreateFromDigiflazz(ctx context.Context, sku, name, game, productType string, priceIDR, costPriceIDR, diamonds int, description string) error {
+	return nil
 }

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/topup-store/internal/models"
 )
@@ -64,6 +65,30 @@ func (m *mockOrderRepo) ExpireOldPending(ctx context.Context) ([]models.Order, e
 	return nil, nil
 }
 
+func (m *mockOrderRepo) GetByDigiflazzRefID(ctx context.Context, refID string) (*models.Order, error) {
+	return nil, nil
+}
+
+func (m *mockOrderRepo) UpsertQRIS(ctx context.Context, orderID, qrisURL, qrisImageBase64 string) error {
+	return nil
+}
+
+func (m *mockOrderRepo) GetQRIS(ctx context.Context, orderID string) (*models.OrderQRIS, error) {
+	return nil, nil
+}
+
+func (m *mockOrderRepo) InsertStatusHistory(ctx context.Context, orderID, fromStatus, toStatus, reason string) error {
+	return nil
+}
+
+func (m *mockOrderRepo) GetStatusHistory(ctx context.Context, orderID string) ([]models.OrderStatusHistory, error) {
+	return nil, nil
+}
+
+func (m *mockOrderRepo) GetPendingOrdersOlderThan(ctx context.Context, age time.Duration) ([]models.Order, error) {
+	return nil, nil
+}
+
 type mockProductRepo struct {
 	getByIDResult *models.Product
 	getByIDErr    error
@@ -101,12 +126,24 @@ func (m *mockProductRepo) ExistsBySKU(ctx context.Context, sku string, excludeID
 	return false, nil
 }
 
+func (m *mockProductRepo) UpdateCostPrice(ctx context.Context, sku string, costPrice int) error {
+	return nil
+}
+
+func (m *mockProductRepo) SyncPrice(ctx context.Context, sku string, costPrice, sellingPrice int) error {
+	return nil
+}
+
+func (m *mockProductRepo) CreateFromDigiflazz(ctx context.Context, sku, name, game, productType string, priceIDR, costPriceIDR, diamonds int, description string) error {
+	return nil
+}
+
 func TestTopupService_ProcessOrder_NotPaid(t *testing.T) {
 	orderRepo := &mockOrderRepo{
 		getByIDResult: &models.Order{ID: "order-1", Status: "pending"},
 	}
 	productRepo := &mockProductRepo{}
-	svc := NewTopupService(orderRepo, productRepo, "user", "key", "https://api.example.com", nil)
+	svc := NewTopupService(orderRepo, productRepo, "user", "key", "https://api.example.com", true, nil)
 
 	err := svc.ProcessOrder("order-1")
 	if err == nil {
@@ -120,7 +157,7 @@ func TestTopupService_ProcessOrder_GetOrderFails(t *testing.T) {
 		getByIDErr:       context.Canceled,
 	}
 	productRepo := &mockProductRepo{}
-	svc := NewTopupService(orderRepo, productRepo, "user", "key", "https://api.example.com", nil)
+	svc := NewTopupService(orderRepo, productRepo, "user", "key", "https://api.example.com", true, nil)
 
 	err := svc.ProcessOrder("order-1")
 	if err == nil {
@@ -133,7 +170,7 @@ func TestPaymentService_UpdateOrderStatusIf(t *testing.T) {
 		updateStatusIfOk:  true,
 		updateStatusIfErr: nil,
 	}
-	svc := NewPaymentService(orderRepo, "key", false)
+	svc := NewPaymentService(orderRepo, "key", false, nil)
 
 	ok, err := svc.UpdateOrderStatusIf(context.Background(), "order-1", "processing", "paid")
 	if err != nil {
