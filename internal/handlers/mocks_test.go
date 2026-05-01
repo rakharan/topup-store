@@ -125,8 +125,8 @@ func (m *mockTopupService) SyncPricesWithAutoCreate(ctx context.Context, marginT
 	return nil, 0, 0, 0, nil
 }
 
-func (m *mockTopupService) CheckBalance(ctx context.Context) (int, error) {
-	return 100000, nil
+func (m *mockTopupService) GetBalance() int {
+	return 100000
 }
 
 type mockNotifyService struct {

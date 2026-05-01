@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/topup-store/internal/constants"
@@ -30,6 +31,7 @@ type TopupService struct {
 	digiflazzTest   bool
 	httpClient      *http.Client
 	logger          *slog.Logger
+	balance         atomic.Int64
 }
 
 func NewTopupService(orderRepo repositories.OrderRepository, productRepo repositories.ProductRepository, user, apiKey, digiflazzURL string, testing bool, logger *slog.Logger) *TopupService {
@@ -168,6 +170,9 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 			slog.Int("balance", result.Data.BuyerLastSaldo),
 			slog.Int("price", result.Data.Price),
 		)
+		if result.Data.BuyerLastSaldo > 0 {
+			s.balance.Store(int64(result.Data.BuyerLastSaldo))
+		}
 	} else {
 		s.logger.Info("digiflazz topup pending",
 			slog.String("order_id", order.ID),
@@ -248,13 +253,18 @@ func (s *TopupService) CheckTransactionStatus(orderID string) (status string, sn
 
 	var result struct {
 		Data struct {
-			Status  string `json:"status"`
-			Message string `json:"message"`
-			SN      string `json:"sn"`
+			Status         string `json:"status"`
+			Message        string `json:"message"`
+			SN             string `json:"sn"`
+			BuyerLastSaldo int    `json:"buyer_last_saldo"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &result); err != nil {
 		return "", "", fmt.Errorf("parse response: %w, body: %s", err, string(respBody))
+	}
+
+	if result.Data.BuyerLastSaldo > 0 {
+		s.balance.Store(int64(result.Data.BuyerLastSaldo))
 	}
 
 	return result.Data.Status, result.Data.SN, nil
@@ -368,51 +378,8 @@ func (s *TopupService) FetchDigiflazzPrices(ctx context.Context) ([]DigiflazzPri
 	return prices, nil
 }
 
-func (s *TopupService) CheckBalance(ctx context.Context) (balance int, err error) {
-	sign := s.generateSign("")
-
-	payload := map[string]string{
-		"username": s.digiflazzUser,
-		"sign":     sign,
-	}
-
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return 0, fmt.Errorf("marshal payload: %w", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.digiflazzURL+"/../info", bytes.NewReader(body))
-	if err != nil {
-		return 0, fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return 0, fmt.Errorf("send request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		respBody, _ := io.ReadAll(resp.Body)
-		return 0, fmt.Errorf("digiflazz returned status %d: %s", resp.StatusCode, string(respBody))
-	}
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return 0, fmt.Errorf("read response: %w", err)
-	}
-
-	var result struct {
-		Data struct {
-			Balance int `json:"balance"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(respBody, &result); err != nil {
-		return 0, fmt.Errorf("parse response: %w, body: %s", err, string(respBody))
-	}
-
-	return result.Data.Balance, nil
+func (s *TopupService) GetBalance() int {
+	return int(s.balance.Load())
 }
 
 func (s *TopupService) CompleteOrder(ctx context.Context, orderID, sn string) error {

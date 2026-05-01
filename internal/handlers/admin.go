@@ -384,13 +384,7 @@ func (h *AdminHandler) SyncPricesFromDigiflazz(w http.ResponseWriter, r *http.Re
 }
 
 func (h *AdminHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
-	balance, err := h.topupSvc.CheckBalance(r.Context())
-	if err != nil {
-		h.logger.Error("get balance: failed", slog.String("error", err.Error()))
-		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.FieldError("digiflazz", err.Error()), middleware.GetRequestID(r.Context()))
-		return
-	}
-
+	balance := h.topupSvc.GetBalance()
 	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
 		"balance": balance,
 	}, middleware.GetRequestID(r.Context()))
