@@ -221,3 +221,19 @@ func (h *PageHandler) Admin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
+
+func (h *PageHandler) NotFound(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotFound)
+	if err := h.templates.ExecuteTemplate(w, "404.html", nil); err != nil {
+		h.logger.Error("template error (404.html)", slog.String("error", err.Error()))
+		http.Error(w, "Not Found", http.StatusNotFound)
+	}
+}
+
+func (h *PageHandler) ServerError(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusInternalServerError)
+	if err := h.templates.ExecuteTemplate(w, "500.html", nil); err != nil {
+		h.logger.Error("template error (500.html)", slog.String("error", err.Error()))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}

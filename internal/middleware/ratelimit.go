@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"encoding/json"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -62,18 +64,36 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 		v, exists := rl.visitors[ip]
 		if !exists || time.Since(v.lastSeen) > rl.window {
 			rl.visitors[ip] = &visitor{count: 1, lastSeen: time.Now()}
+			remaining := rl.rate - 1
 			rl.mu.Unlock()
+			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(rl.rate))
+			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
 			next.ServeHTTP(w, r)
 			return
 		}
 
 		v.count++
 		v.lastSeen = time.Now()
+		remaining := rl.rate - v.count
+		if remaining < 0 {
+			remaining = 0
+		}
+		w.Header().Set("X-RateLimit-Limit", strconv.Itoa(rl.rate))
+		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
+
 		if v.count > rl.rate {
+			retryAfter := int(rl.window.Seconds())
+			w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
 			rl.mu.Unlock()
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusTooManyRequests)
-			w.Write([]byte(`{"error":"rate limit exceeded"}`))
+			json.NewEncoder(w).Encode(map[string]any{
+				"success": false,
+				"error": map[string]string{
+					"code":    "rate_limit_exceeded",
+					"message": "Terlalu banyak permintaan. Silakan coba lagi nanti.",
+				},
+			})
 			return
 		}
 		rl.mu.Unlock()

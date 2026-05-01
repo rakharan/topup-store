@@ -1,0 +1,29 @@
+{{define "500.html"}}<!DOCTYPE html>
+<html lang="id">
+<head>
+    <title>500 - Terjadi Kesalahan | Faza TopUP Store</title>
+    <meta name="robots" content="noindex">
+    {{template "head"}}
+</head>
+<body class="bg-dark text-white min-h-screen flex flex-col">
+    {{template "nav" (dict "ActivePage" "")}}
+
+    <main class="flex-1 flex items-center justify-center px-4 py-16">
+        <div class="text-center max-w-md">
+            <div class="text-8xl font-bold text-red-500 mb-4">500</div>
+            <h1 class="text-2xl font-bold mb-4">Terjadi Kesalahan</h1>
+            <p class="text-white/60 mb-8">Maaf, terjadi kesalahan pada server kami. Silakan coba beberapa saat lagi.</p>
+            <div class="flex gap-4 justify-center">
+                <a href="/" class="inline-block bg-primary hover:bg-orange-600 text-white font-semibold px-6 py-3 rounded-lg transition focus-ring">
+                    Kembali ke Beranda
+                </a>
+                <a href="javascript:location.reload()" class="inline-block bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-3 rounded-lg transition focus-ring">
+                    Coba Lagi
+                </a>
+            </div>
+        </div>
+    </main>
+
+    {{template "footer"}}
+</body>
+</html>{{end}}

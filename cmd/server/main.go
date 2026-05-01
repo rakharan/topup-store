@@ -154,6 +154,8 @@ func main() {
 	fs := http.FileServer(http.Dir("web/static"))
 	r.Handle("/static/*", http.StripPrefix("/static/", fs))
 
+	r.NotFound(pages.NotFound)
+
 	shutdownCtx, shutdownCancel := context.WithCancel(context.Background())
 	defer shutdownCancel()
 

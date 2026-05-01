@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -130,8 +131,17 @@ func TestRateLimiter_JSONErrorResponse(t *testing.T) {
 	}
 
 	body := w2.Body.String()
-	if body != `{"error":"rate limit exceeded"}` {
-		t.Errorf("expected JSON error body, got: %s", body)
+	if !strings.Contains(body, "rate_limit_exceeded") {
+		t.Errorf("expected JSON error body with rate_limit_exceeded, got: %s", body)
+	}
+	if w2.Header().Get("Retry-After") == "" {
+		t.Error("expected Retry-After header")
+	}
+	if w2.Header().Get("X-RateLimit-Limit") != "1" {
+		t.Errorf("expected X-RateLimit-Limit 1, got %s", w2.Header().Get("X-RateLimit-Limit"))
+	}
+	if w2.Header().Get("X-RateLimit-Remaining") != "0" {
+		t.Errorf("expected X-RateLimit-Remaining 0, got %s", w2.Header().Get("X-RateLimit-Remaining"))
 	}
 }
 
