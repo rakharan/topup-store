@@ -377,6 +377,19 @@ func (h *AdminHandler) SyncPricesFromDigiflazz(w http.ResponseWriter, r *http.Re
 	}, middleware.GetRequestID(r.Context()))
 }
 
+func (h *AdminHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
+	balance, err := h.topupSvc.CheckBalance(r.Context())
+	if err != nil {
+		h.logger.Error("get balance: failed", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.FieldError("digiflazz", err.Error()), middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
+		"balance": balance,
+	}, middleware.GetRequestID(r.Context()))
+}
+
 func calcTieredPrice(costPrice int, marginType string, marginValue int) (sellingPrice int, tier string) {
 	if marginType == "fixed" {
 		sellingPrice = costPrice + marginValue

@@ -30,6 +30,7 @@ type TopupServiceInterface interface {
 	ProcessOrder(orderID string) error
 	FetchDigiflazzPrices(ctx context.Context) ([]DigiflazzPrice, error)
 	SyncPricesWithAutoCreate(ctx context.Context, marginType string, marginValue int) ([]SyncResult, int, int, int, error)
+	CheckBalance(ctx context.Context) (int, error)
 }
 
 type NotifyServiceInterface interface {

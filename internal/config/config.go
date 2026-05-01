@@ -8,27 +8,28 @@ import (
 )
 
 type Config struct {
-	Port                   string
-	DatabaseURL            string
-	DBMaxConns             int32
-	DBMinConns             int32
-	DBMaxConnLifetime      string
-	DBMaxConnIdleTime      string
-	MidtransServerKey      string
-	MidtransIsProd         bool
-	DigiflazzUsername      string
-	DigiflazzAPIKey        string
-	DigiflazzWebhookSecret string
-	DigiflazzAPIURL        string
-	DigiflazzTesting       bool
-	WhatsappNumber         string
-	FonnteToken            string
-	AdminPassword          string
-	AdminPath              string
-	WaBotBaseURL           string
-	WaBotToken             string
-	RequestTimeout         string
-	AllowedOrigins         string
+	Port                        string
+	DatabaseURL                 string
+	DBMaxConns                  int32
+	DBMinConns                  int32
+	DBMaxConnLifetime           string
+	DBMaxConnIdleTime           string
+	MidtransServerKey           string
+	MidtransIsProd              bool
+	DigiflazzUsername           string
+	DigiflazzAPIKey             string
+	DigiflazzWebhookSecret      string
+	DigiflazzAPIURL             string
+	DigiflazzTesting            bool
+	DigiflazzLowBalanceThreshold int
+	WhatsappNumber              string
+	FonnteToken                 string
+	AdminPassword               string
+	AdminPath                   string
+	WaBotBaseURL                string
+	WaBotToken                  string
+	RequestTimeout              string
+	AllowedOrigins              string
 }
 
 func Load() (*Config, error) {
@@ -47,8 +48,9 @@ func Load() (*Config, error) {
 		DigiflazzAPIKey:        getEnv("DIGIFLAZZ_API_KEY", ""),
 		DigiflazzWebhookSecret: getEnv("DIGIFLAZZ_WEBHOOK_SECRET", ""),
 		DigiflazzAPIURL:        getEnv("DIGIFLAZZ_API_URL", "https://api.digiflazz.com/v1/transaction"),
-		DigiflazzTesting:       getEnv("DIGIFLAZZ_TESTING", "true") == "true",
-		WhatsappNumber:         getEnv("WHATSAPP_NUMBER", ""),
+		DigiflazzTesting:             getEnv("DIGIFLAZZ_TESTING", "true") == "true",
+		DigiflazzLowBalanceThreshold: getEnvInt("DIGIFLAZZ_LOW_BALANCE_THRESHOLD", 50000),
+		WhatsappNumber:               getEnv("WHATSAPP_NUMBER", ""),
 		FonnteToken:            getEnv("FONNTE_TOKEN", ""),
 		AdminPassword:          getEnv("ADMIN_PASSWORD", ""),
 		AdminPath:              getEnv("ADMIN_PATH", "/admin"),

@@ -368,6 +368,53 @@ func (s *TopupService) FetchDigiflazzPrices(ctx context.Context) ([]DigiflazzPri
 	return prices, nil
 }
 
+func (s *TopupService) CheckBalance(ctx context.Context) (balance int, err error) {
+	sign := s.generateSign("")
+
+	payload := map[string]string{
+		"username": s.digiflazzUser,
+		"sign":     sign,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return 0, fmt.Errorf("marshal payload: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.digiflazzURL+"/../info", bytes.NewReader(body))
+	if err != nil {
+		return 0, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return 0, fmt.Errorf("digiflazz returned status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, fmt.Errorf("read response: %w", err)
+	}
+
+	var result struct {
+		Data struct {
+			Balance int `json:"balance"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return 0, fmt.Errorf("parse response: %w, body: %s", err, string(respBody))
+	}
+
+	return result.Data.Balance, nil
+}
+
 func (s *TopupService) CompleteOrder(ctx context.Context, orderID, sn string) error {
 	_, err := s.orderRepo.GetByID(ctx, orderID)
 	if err != nil {

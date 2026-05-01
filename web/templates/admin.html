@@ -12,6 +12,7 @@
         <div class="flex items-center justify-between mb-8">
             <h1 class="text-2xl font-bold">Admin Dashboard</h1>
             <div class="flex items-center gap-3">
+                <div id="balanceDisplay" class="text-sm px-3 py-1 rounded-full">Saldo: <span id="balanceValue">...</span></div>
                 <span class="text-sm text-white/40">Auto-refresh 30s</span>
                 <button id="refreshBtn" class="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-sm transition focus-ring">Refresh</button>
             </div>
@@ -92,7 +93,10 @@
         <div id="productsTab" class="hidden">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xl font-bold">Product Management</h2>
-                <button onclick="showAddProductForm()" class="bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">+ Add Product</button>
+                <div class="flex gap-2">
+                    <button onclick="syncFromDigiflazz()" id="syncBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">Sync from Digiflazz</button>
+                    <button onclick="showAddProductForm()" class="bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">+ Add Product</button>
+                </div>
             </div>
 
             <div id="productForm" class="hidden bg-white/5 border border-white/10 rounded-xl p-6 mb-6">
@@ -379,6 +383,51 @@
     document.getElementById('refreshBtn')?.addEventListener('click', () => location.reload());
     updateStats();
     setInterval(updateStats, 30000);
+
+    async function loadBalance() {
+        try {
+            const res = await fetch(ADMIN_PATH + '/balance');
+            if (!res.ok) return;
+            const json = await res.json();
+            const balance = json.data?.balance || 0;
+            const el = document.getElementById('balanceValue');
+            const display = document.getElementById('balanceDisplay');
+            el.textContent = 'Rp ' + balance.toLocaleString('id-ID');
+            if (balance >= 100000) {
+                display.className = 'text-sm px-3 py-1 rounded-full bg-green-500/20 text-green-400';
+            } else if (balance >= 50000) {
+                display.className = 'text-sm px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-400';
+            } else {
+                display.className = 'text-sm px-3 py-1 rounded-full bg-red-500/20 text-red-400';
+            }
+        } catch (e) {}
+    }
+    loadBalance();
+    setInterval(loadBalance, 5 * 60 * 1000);
+
+    async function syncFromDigiflazz() {
+        const btn = document.getElementById('syncBtn');
+        btn.disabled = true;
+        btn.textContent = 'Syncing...';
+        try {
+            const res = await fetchWithCSRF(ADMIN_PATH + '/products/sync-all', {
+                method: 'POST',
+                body: JSON.stringify({ margin_type: 'tiered', margin_value: 0 }),
+            });
+            const json = await res.json();
+            if (res.ok) {
+                showToast(`Synced: ${json.data?.updated || 0} updated, ${json.data?.created || 0} created`, 'success');
+                loadProducts();
+            } else {
+                showToast(json.error?.message || 'Sync failed', 'error');
+            }
+        } catch (e) {
+            showToast('Sync failed', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Sync from Digiflazz';
+        }
+    }
 
     function switchTab(tab) {
         document.getElementById('ordersTab').classList.toggle('hidden', tab !== 'orders');

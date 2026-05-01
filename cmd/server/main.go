@@ -151,6 +151,8 @@ func main() {
 		r.Post("/sync-all", admin.SyncPricesFromDigiflazz)
 	})
 
+	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware).Get(cfg.AdminPath+"/balance", admin.GetBalance)
+
 	fs := http.FileServer(http.Dir("web/static"))
 	r.Handle("/static/*", http.StripPrefix("/static/", fs))
 
@@ -183,7 +185,15 @@ func main() {
 		}()
 		startMidtransPoller(shutdownCtx, paymentSvc, topupSvc, notifySvc, orderRepo, logger)
 	}()
-	logger.Info("Background tickers started (expiry + digiflazz poller)")
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error("balance checker panicked", slog.Any("panic", r))
+			}
+		}()
+		startBalanceChecker(shutdownCtx, topupSvc, notifySvc, cfg.WhatsappNumber, cfg.DigiflazzLowBalanceThreshold, logger)
+	}()
+	logger.Info("Background tickers started (expiry + digiflazz poller + balance checker)")
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
@@ -435,7 +445,41 @@ func startMidtransPoller(ctx context.Context, paymentSvc services.PaymentService
 func mustParseDuration(s string) time.Duration {
 	d, err := time.ParseDuration(s)
 	if err != nil {
-		return 30 * time.Minute
+		return 30 * time.Second
 	}
 	return d
+}
+
+func startBalanceChecker(ctx context.Context, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, adminPhone string, threshold int, logger *slog.Logger) {
+	ticker := time.NewTicker(15 * time.Minute)
+	defer ticker.Stop()
+
+	lastAlertTime := time.Time{}
+	alertCooldown := 2 * time.Hour
+
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info("Balance checker stopped")
+			return
+		case <-ticker.C:
+			balance, err := topupSvc.CheckBalance(ctx)
+			if err != nil {
+				logger.Error("balance checker: failed to check balance", slog.String("error", err.Error()))
+				continue
+			}
+
+			logger.Info("balance checker: current balance", slog.Int("balance", balance), slog.Int("threshold", threshold))
+
+			if balance < threshold && time.Since(lastAlertTime) > alertCooldown {
+				msg := fmt.Sprintf("⚠️ *Saldo Digiflazz Rendah*\n\nSaldo saat ini: Rp %d\nThreshold: Rp %d\n\nSegera isi ulang saldo!", balance, threshold)
+				if err := notifySvc.SendNotification(adminPhone, msg); err != nil {
+					logger.Error("balance checker: failed to send alert", slog.String("error", err.Error()))
+				} else {
+					logger.Warn("balance checker: low balance alert sent", slog.Int("balance", balance))
+					lastAlertTime = time.Now()
+				}
+			}
+		}
+	}
 }
