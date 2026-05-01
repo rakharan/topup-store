@@ -89,6 +89,10 @@ func (m *mockOrderRepo) GetPendingOrdersOlderThan(ctx context.Context, age time.
 	return nil, nil
 }
 
+func (m *mockOrderRepo) GetRecentByPhone(ctx context.Context, phone string, limit int) ([]models.Order, error) {
+	return nil, nil
+}
+
 type mockProductRepo struct {
 	getByIDResult *models.Product
 	getByIDErr    error

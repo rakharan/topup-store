@@ -26,6 +26,7 @@ type OrderRepository interface {
 	ListProcessing(ctx context.Context) ([]models.Order, error)
 	ExpireOldPending(ctx context.Context) ([]models.Order, error)
 	GetPendingOrdersOlderThan(ctx context.Context, age time.Duration) ([]models.Order, error)
+	GetRecentByPhone(ctx context.Context, phone string, limit int) ([]models.Order, error)
 }
 
 type ProductRepository interface {

@@ -128,6 +128,7 @@ func main() {
 		r.Get("/orders", orders.ListOrders)
 		r.Get("/orders/{id}", orders.GetOrder)
 		r.Post("/orders/lookup", orders.LookupOrder)
+		r.Get("/orders/recent", orders.RecentOrders)
 		r.Get("/products", products.ListProducts)
 		r.Get("/products/{id}", products.GetProduct)
 	})

@@ -20,6 +20,7 @@ type PaymentServiceInterface interface {
 	GetOrderQRIS(ctx context.Context, orderID string) (*models.OrderQRIS, error)
 	CancelTransaction(orderID string) error
 	CheckTransactionStatus(orderID string) (string, string, error)
+	GetRecentOrdersByPhone(ctx context.Context, phone string, limit int) ([]models.Order, error)
 }
 
 type TopupServiceInterface interface {

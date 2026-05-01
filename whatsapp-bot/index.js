@@ -51,11 +51,105 @@ async function handleIncoming(msg) {
   const text = msg.text?.body?.trim();
   if (!text) return;
 
+  const upper = text.toUpperCase();
+
+  if (upper.startsWith("CEK") || upper.startsWith("CHECK")) {
+    const orderId = text.split(/\s+/)[1];
+    if (orderId) {
+      await checkOrderByID(sender, orderId);
+    } else {
+      await checkRecentOrders(sender);
+    }
+    return;
+  }
+
+  if (upper === "BANTUAN" || upper === "HELP") {
+    await sendHelpMenu(sender);
+    return;
+  }
+
+  if (upper === "RIWAYAT" || upper === "HISTORY") {
+    await checkRecentOrders(sender);
+    return;
+  }
+
   const order = parseOrderMessage(text);
   if (order) {
     await handleOrder(sender, order);
   } else {
     await sendHelpMenu(sender);
+  }
+}
+
+async function checkOrderByID(sender, orderId) {
+  try {
+    const resp = await axios.get(`${GO_BACKEND_URL}/api/orders/${orderId}`);
+    const order = resp.data?.data || resp.data;
+    if (!order) {
+      await sendText(sender, `Order *${orderId}* tidak ditemukan.`);
+      return;
+    }
+
+    const statusLabel = {
+      pending: "⏳ Pending",
+      paid: "💰 Lunas",
+      processing: "🔄 Diproses",
+      success: "✅ Berhasil",
+      failed: "❌ Gagal",
+      expired: "⌛ Kadaluarsa",
+    }[order.status] || order.status;
+
+    const gameLabel = gameToLabel(order.game_uid ? "unknown" : "unknown");
+    let message = `📋 *Status Order*\n\n`;
+    message += `ID: ${order.id}\n`;
+    message += `Status: ${statusLabel}\n`;
+    message += `Total: Rp${(order.amount_idr || 0).toLocaleString("id-ID")}\n`;
+    message += `UID: ${order.game_uid || "-"}${order.game_server ? " (" + order.game_server + ")" : ""}\n`;
+    if (order.serial_number) message += `SN: ${order.serial_number}\n`;
+    message += `\nDibuat: ${new Date(order.created_at).toLocaleString("id-ID")}`;
+
+    await sendText(sender, message);
+  } catch (err) {
+    console.error("Failed to check order:", err.message);
+    await sendText(sender, `Order *${orderId}* tidak ditemukan.`);
+  }
+}
+
+async function checkRecentOrders(sender) {
+  try {
+    const resp = await axios.get(`${GO_BACKEND_URL}/api/orders/recent`, {
+      params: { phone: sender, limit: 3 },
+    });
+    const orders = resp.data?.data || resp.data || [];
+
+    if (!orders.length) {
+      await sendText(sender, "Belum ada order ditemukan untuk nomor ini.");
+      return;
+    }
+
+    const statusLabel = {
+      pending: "⏳ Pending",
+      paid: "💰 Lunas",
+      processing: "🔄 Diproses",
+      success: "✅ Berhasil",
+      failed: "❌ Gagal",
+      expired: "⌛ Kadaluarsa",
+    };
+
+    let message = `📋 *Riwayat Order*\n\n`;
+    orders.forEach((o, i) => {
+      const status = statusLabel[o.status] || o.status;
+      message += `${i + 1}. *${o.id}*\n`;
+      message += `   Status: ${status}\n`;
+      message += `   Total: Rp${(o.amount_idr || 0).toLocaleString("id-ID")}\n`;
+      message += `   UID: ${o.game_uid || "-"}\n\n`;
+    });
+    message += `Ketik *CEK <order_id>* untuk detail.`;
+
+    await sendText(sender, message);
+  } catch (err) {
+    console.error("Failed to get recent orders:", err.message);
+    await sendText(sender, "Gagal memuat riwayat order. Silakan coba lagi.");
   }
 }
 
@@ -100,14 +194,17 @@ async function handleOrder(sender, order) {
 async function sendHelpMenu(sender) {
   const helpText =
     "🎮 *Top-Up Game*\n\n" +
-    "Kirim pesanan dengan format:\n" +
+    "📦 *Order:*\n" +
     "`FF <diamonds> UID:<uid>` — Free Fire\n" +
     "`ML <diamonds> UID:<uid>|<server>` — Mobile Legends\n" +
     "`PUBG <diamonds> UID:<uid>` — PUBG Mobile\n\n" +
+    "🔍 *Cek Status:*\n" +
+    "`CEK <order_id>` — Cek status order\n" +
+    "`RIWAYAT` — Lihat 3 order terakhir\n\n" +
     "Contoh:\n" +
     "`FF 100 UID:12345678`\n" +
     "`ML 86 UID:12345|1234`\n" +
-    "`PUBG 60 UID:12345678`\n\n" +
+    "`CEK abc-123-def`\n\n" +
     "Silakan pilih game dan jumlah diamond yang diinginkan.";
 
   await sendText(sender, helpText);

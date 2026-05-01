@@ -25,6 +25,8 @@ type mockPaymentService struct {
 	cancelTransactionErr   error
 	checkTransactionStatus string
 	checkTransactionErr    error
+	recentOrdersResult     []models.Order
+	recentOrdersErr        error
 }
 
 func (m *mockPaymentService) CreateOrder(ctx context.Context, order *models.Order) error {
@@ -77,6 +79,10 @@ func (m *mockPaymentService) CancelTransaction(orderID string) error {
 
 func (m *mockPaymentService) CheckTransactionStatus(orderID string) (string, string, error) {
 	return m.checkTransactionStatus, "", m.checkTransactionErr
+}
+
+func (m *mockPaymentService) GetRecentOrdersByPhone(ctx context.Context, phone string, limit int) ([]models.Order, error) {
+	return m.recentOrdersResult, m.recentOrdersErr
 }
 
 type mockTopupService struct {

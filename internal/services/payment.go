@@ -168,3 +168,7 @@ func (s *PaymentService) CheckTransactionStatus(orderID string) (string, string,
 	}
 	return resp.TransactionStatus, resp.FraudStatus, nil
 }
+
+func (s *PaymentService) GetRecentOrdersByPhone(ctx context.Context, phone string, limit int) ([]models.Order, error) {
+	return s.orderRepo.GetRecentByPhone(ctx, phone, limit)
+}

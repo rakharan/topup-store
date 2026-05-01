@@ -338,6 +338,36 @@ func (r *PGOrderRepository) GetStatusHistory(ctx context.Context, orderID string
 	return history, nil
 }
 
+func (r *PGOrderRepository) GetRecentByPhone(ctx context.Context, phone string, limit int) ([]models.Order, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, product_id, game_uid, game_server, user_phone, status, amount_idr,
+		       serial_number, midtrans_order_id, digiflazz_ref_id, created_at, updated_at
+		FROM orders
+		WHERE user_phone = $1
+		ORDER BY created_at DESC
+		LIMIT $2
+	`, phone, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []models.Order
+	for rows.Next() {
+		var o models.Order
+		if err := rows.Scan(&o.ID, &o.ProductID, &o.GameUID, &o.GameServer, &o.UserPhone,
+			&o.Status, &o.AmountIDR, &o.SerialNumber, &o.MidtransOrderID, &o.DigiflazzRefID,
+			&o.CreatedAt, &o.UpdatedAt); err != nil {
+			return nil, err
+		}
+		orders = append(orders, o)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return orders, nil
+}
+
 func nullIfEmpty(s string) any {
 	if s == "" {
 		return nil

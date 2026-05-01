@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -169,6 +170,29 @@ func (h *OrderHandler) LookupOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	apperrors.WriteSuccess(w, http.StatusOK, order, middleware.GetRequestID(r.Context()))
+}
+
+func (h *OrderHandler) RecentOrders(w http.ResponseWriter, r *http.Request) {
+	phone := r.URL.Query().Get("phone")
+	if phone == "" {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("phone", "phone is required"), middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	limit := 3
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if n, err := strconv.Atoi(l); err == nil && n > 0 && n <= 10 {
+			limit = n
+		}
+	}
+
+	orders, err := h.paymentSvc.GetRecentOrdersByPhone(r.Context(), phone, limit)
+	if err != nil {
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	apperrors.WriteSuccess(w, http.StatusOK, orders, middleware.GetRequestID(r.Context()))
 }
 
 var (
