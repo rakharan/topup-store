@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -10,7 +11,9 @@ func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
-		if origin != "" && containsOrigin(origin, allowedOrigins) {
+		if origin != "" && slices.ContainsFunc(allowedOrigins, func(a string) bool {
+			return strings.EqualFold(a, origin)
+		}) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Vary", "Origin")
 		}
@@ -26,13 +29,4 @@ func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
-}
-
-func containsOrigin(origin string, allowed []string) bool {
-	for _, a := range allowed {
-		if strings.EqualFold(a, origin) {
-			return true
-		}
-	}
-	return false
 }

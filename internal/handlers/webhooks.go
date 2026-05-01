@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/hmac"
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // required by Digiflazz webhook signature scheme
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"

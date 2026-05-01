@@ -19,7 +19,6 @@ import (
 	"github.com/topup-store/internal/db"
 	"github.com/topup-store/internal/handlers"
 	"github.com/topup-store/internal/middleware"
-	"github.com/topup-store/internal/models"
 	"github.com/topup-store/internal/repositories"
 	"github.com/topup-store/internal/services"
 )
@@ -271,18 +270,18 @@ func startOrderExpiryTickerWithNotify(ctx context.Context, paymentSvc services.P
 				logger.Info("order expiry ticker: expired orders", slog.Int("count", len(expiredOrders)))
 				for _, o := range expiredOrders {
 					sem <- struct{}{}
-					go func(order models.Order) {
+					go func() {
 						defer func() { <-sem }()
-						if err := paymentSvc.CancelTransaction(order.ID); err != nil {
-							logger.Error("order expiry ticker: failed to cancel in midtrans", slog.String("order_id", order.ID), slog.String("error", err.Error()))
+						if err := paymentSvc.CancelTransaction(o.ID); err != nil {
+							logger.Error("order expiry ticker: failed to cancel in midtrans", slog.String("order_id", o.ID), slog.String("error", err.Error()))
 						}
-						if order.UserPhone != "" {
-							msg := "Order " + order.ID + " telah kadaluarsa karena belum dibayar dalam 30 menit."
-							if err := notifySvc.SendNotification(order.UserPhone, msg); err != nil {
-								logger.Error("order expiry ticker: failed to notify", slog.String("order_id", order.ID), slog.String("error", err.Error()))
+						if o.UserPhone != "" {
+							msg := "Order " + o.ID + " telah kadaluarsa karena belum dibayar dalam 30 menit."
+							if err := notifySvc.SendNotification(o.UserPhone, msg); err != nil {
+								logger.Error("order expiry ticker: failed to notify", slog.String("order_id", o.ID), slog.String("error", err.Error()))
 							}
 						}
-					}(o)
+					}()
 				}
 			}
 		}
@@ -312,48 +311,48 @@ func startDigiflazzPoller(ctx context.Context, orderRepo repositories.OrderRepos
 
 			for _, order := range orders {
 				sem <- struct{}{}
-				go func(o models.Order) {
+				go func() {
 					defer func() { <-sem }()
-					status, sn, err := topupSvc.CheckTransactionStatus(o.ID)
+					status, sn, err := topupSvc.CheckTransactionStatus(order.ID)
 					if err != nil {
-						logger.Error("digiflazz poller: failed to check order", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+						logger.Error("digiflazz poller: failed to check order", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 						return
 					}
 
 					if status == "Pending" {
-						logger.Info("digiflazz poller: order still pending", slog.String("order_id", o.ID))
+						logger.Info("digiflazz poller: order still pending", slog.String("order_id", order.ID))
 						return
 					}
 
 					if status == "Sukses" {
-						if err := topupSvc.CompleteOrder(ctx, o.ID, sn); err != nil {
-							logger.Error("digiflazz poller: failed to complete order", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+						if err := topupSvc.CompleteOrder(ctx, order.ID, sn); err != nil {
+							logger.Error("digiflazz poller: failed to complete order", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 							return
 						}
-						logger.Info("digiflazz poller: order completed via polling", slog.String("order_id", o.ID), slog.String("sn", sn))
-						product, err := topupSvc.GetProduct(ctx, o.ProductID)
+						logger.Info("digiflazz poller: order completed via polling", slog.String("order_id", order.ID), slog.String("sn", sn))
+						product, err := topupSvc.GetProduct(ctx, order.ProductID)
 						if err != nil {
-							logger.Error("digiflazz poller: failed to get product for notification", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+							logger.Error("digiflazz poller: failed to get product for notification", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 							return
 						}
-						if err := notifySvc.SendTopupSuccess(ctx, &o, product, o.UserPhone, sn); err != nil {
-							logger.Error("digiflazz poller: failed to notify", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+						if err := notifySvc.SendTopupSuccess(ctx, &order, product, order.UserPhone, sn); err != nil {
+							logger.Error("digiflazz poller: failed to notify", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 						}
 					} else if status == "Gagal" || status == "Fail" {
-						if err := topupSvc.FailOrder(ctx, o.ID); err != nil {
-							logger.Error("digiflazz poller: failed to fail order", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+						if err := topupSvc.FailOrder(ctx, order.ID); err != nil {
+							logger.Error("digiflazz poller: failed to fail order", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 						}
-						logger.Info("digiflazz poller: order failed via polling", slog.String("order_id", o.ID))
-						product, err := topupSvc.GetProduct(ctx, o.ProductID)
+						logger.Info("digiflazz poller: order failed via polling", slog.String("order_id", order.ID))
+						product, err := topupSvc.GetProduct(ctx, order.ProductID)
 						if err != nil {
-							logger.Error("digiflazz poller: failed to get product for failure notification", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+							logger.Error("digiflazz poller: failed to get product for failure notification", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 							return
 						}
-						if err := notifySvc.SendTopupFailure(ctx, &o, product, o.UserPhone); err != nil {
-							logger.Error("digiflazz poller: failed to notify failure", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+						if err := notifySvc.SendTopupFailure(ctx, &order, product, order.UserPhone); err != nil {
+							logger.Error("digiflazz poller: failed to notify failure", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 						}
 					}
-				}(order)
+				}()
 			}
 		}
 	}
@@ -382,50 +381,50 @@ func startMidtransPoller(ctx context.Context, paymentSvc services.PaymentService
 
 			for _, order := range orders {
 				sem <- struct{}{}
-				go func(o models.Order) {
+				go func() {
 					defer func() { <-sem }()
-					txStatus, fraudStatus, err := paymentSvc.CheckTransactionStatus(o.ID)
+					txStatus, fraudStatus, err := paymentSvc.CheckTransactionStatus(order.ID)
 					if err != nil {
-						logger.Error("midtrans poller: failed to check status", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+						logger.Error("midtrans poller: failed to check status", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 						return
 					}
 
 					switch txStatus {
 					case "settlement", "capture":
 						if fraudStatus == "deny" && txStatus == "capture" {
-							logger.Info("midtrans poller: order captured but denied by FDS", slog.String("order_id", o.ID))
+							logger.Info("midtrans poller: order captured but denied by FDS", slog.String("order_id", order.ID))
 							return
 						}
-						if o.Status == constants.StatusPaid {
+						if order.Status == constants.StatusPaid {
 							return
 						}
-						if err := paymentSvc.UpdateOrderStatus(ctx, o.ID, constants.StatusPaid); err != nil {
-							logger.Error("midtrans poller: failed to update order to paid", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+						if err := paymentSvc.UpdateOrderStatus(ctx, order.ID, constants.StatusPaid); err != nil {
+							logger.Error("midtrans poller: failed to update order to paid", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 							return
 						}
-						paymentSvc.RecordStatusChange(ctx, o.ID, o.Status, constants.StatusPaid, "midtrans poller")
-						logger.Info("midtrans poller: order marked as paid", slog.String("order_id", o.ID))
-						if err := topupSvc.ProcessOrder(o.ID); err != nil {
-							logger.Error("midtrans poller: failed to process order", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+						paymentSvc.RecordStatusChange(ctx, order.ID, order.Status, constants.StatusPaid, "midtrans poller")
+						logger.Info("midtrans poller: order marked as paid", slog.String("order_id", order.ID))
+						if err := topupSvc.ProcessOrder(order.ID); err != nil {
+							logger.Error("midtrans poller: failed to process order", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 						}
 					case "expire", "cancel", "deny":
-						if o.Status == constants.StatusExpired || o.Status == constants.StatusFailed {
+						if order.Status == constants.StatusExpired || order.Status == constants.StatusFailed {
 							return
 						}
 						newStatus := constants.StatusFailed
 						if txStatus == "expire" || txStatus == "cancel" {
 							newStatus = constants.StatusExpired
 						}
-						if err := paymentSvc.UpdateOrderStatus(ctx, o.ID, newStatus); err != nil {
-							logger.Error("midtrans poller: failed to update order", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+						if err := paymentSvc.UpdateOrderStatus(ctx, order.ID, newStatus); err != nil {
+							logger.Error("midtrans poller: failed to update order", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 							return
 						}
-						paymentSvc.RecordStatusChange(ctx, o.ID, o.Status, newStatus, "midtrans poller")
-						logger.Info("midtrans poller: order marked as "+newStatus, slog.String("order_id", o.ID))
+						paymentSvc.RecordStatusChange(ctx, order.ID, order.Status, newStatus, "midtrans poller")
+						logger.Info("midtrans poller: order marked as "+newStatus, slog.String("order_id", order.ID))
 					case "pending":
-						logger.Info("midtrans poller: order still pending", slog.String("order_id", o.ID))
+						logger.Info("midtrans poller: order still pending", slog.String("order_id", order.ID))
 					}
-				}(order)
+				}()
 			}
 		}
 	}

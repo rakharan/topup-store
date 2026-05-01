@@ -338,7 +338,7 @@ func (r *PGOrderRepository) GetStatusHistory(ctx context.Context, orderID string
 	return history, nil
 }
 
-func nullIfEmpty(s string) interface{} {
+func nullIfEmpty(s string) any {
 	if s == "" {
 		return nil
 	}

@@ -3,7 +3,7 @@ package services
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec // required by Digiflazz API for signature generation
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
