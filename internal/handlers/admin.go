@@ -428,6 +428,46 @@ func (h *AdminHandler) ExportOrdersCSV(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *AdminHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
+	days := 30
+	if d := r.URL.Query().Get("days"); d != "" {
+		if n, err := strconv.Atoi(d); err == nil && n > 0 && n <= 365 {
+			days = n
+		}
+	}
+
+	endDate := time.Now().Truncate(24 * time.Hour).Add(24 * time.Hour)
+	startDate := endDate.AddDate(0, 0, -days)
+
+	dailyRevenue, err := h.orderRepo.GetDailyRevenue(r.Context(), startDate, endDate)
+	if err != nil {
+		h.logger.Error("analytics: daily revenue failed", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	topGames, err := h.orderRepo.GetTopGamesByRevenue(r.Context(), startDate, endDate)
+	if err != nil {
+		h.logger.Error("analytics: top games failed", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	overall, err := h.orderRepo.GetOverallStats(r.Context(), startDate, endDate)
+	if err != nil {
+		h.logger.Error("analytics: overall stats failed", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
+		"daily_revenue": dailyRevenue,
+		"top_games":     topGames,
+		"overall":       overall,
+		"period":        map[string]string{"start": startDate.Format("2006-01-02"), "end": endDate.Format("2006-01-02")},
+	}, middleware.GetRequestID(r.Context()))
+}
+
 func (h *AdminHandler) ListWebhookLogs(w http.ResponseWriter, r *http.Request) {
 	source := r.URL.Query().Get("source")
 	page := 1

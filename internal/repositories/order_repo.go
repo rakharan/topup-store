@@ -411,6 +411,105 @@ func (r *PGOrderRepository) ListAllForExport(ctx context.Context) ([]OrderExport
 	return results, nil
 }
 
+type DailyRevenue struct {
+	Date   string `json:"date"`
+	Orders int    `json:"orders"`
+	Revenue int   `json:"revenue"`
+}
+
+type GameStats struct {
+	Game    string `json:"game"`
+	Orders  int    `json:"orders"`
+	Revenue int    `json:"revenue"`
+}
+
+type OverallStats struct {
+	TotalOrders    int     `json:"total_orders"`
+	SuccessOrders  int     `json:"success_orders"`
+	ConversionRate float64 `json:"conversion_rate"`
+	TotalRevenue   int     `json:"total_revenue"`
+	AvgOrderValue  float64 `json:"avg_order_value"`
+}
+
+func (r *PGOrderRepository) GetDailyRevenue(ctx context.Context, startDate, endDate time.Time) ([]DailyRevenue, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT DATE(o.created_at)::text as date,
+		       COUNT(*) as orders,
+		       COALESCE(SUM(CASE WHEN o.status = 'success' THEN o.amount_idr ELSE 0 END), 0) as revenue
+		FROM orders o
+		WHERE o.created_at >= $1 AND o.created_at < $2
+		GROUP BY DATE(o.created_at)
+		ORDER BY date ASC
+	`, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []DailyRevenue
+	for rows.Next() {
+		var row DailyRevenue
+		if err := rows.Scan(&row.Date, &row.Orders, &row.Revenue); err != nil {
+			return nil, err
+		}
+		results = append(results, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func (r *PGOrderRepository) GetTopGamesByRevenue(ctx context.Context, startDate, endDate time.Time) ([]GameStats, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT p.game,
+		       COUNT(*) as orders,
+		       COALESCE(SUM(CASE WHEN o.status = 'success' THEN o.amount_idr ELSE 0 END), 0) as revenue
+		FROM orders o
+		JOIN products p ON o.product_id = p.id
+		WHERE o.created_at >= $1 AND o.created_at < $2
+		GROUP BY p.game
+		ORDER BY revenue DESC
+	`, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []GameStats
+	for rows.Next() {
+		var row GameStats
+		if err := rows.Scan(&row.Game, &row.Orders, &row.Revenue); err != nil {
+			return nil, err
+		}
+		results = append(results, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func (r *PGOrderRepository) GetOverallStats(ctx context.Context, startDate, endDate time.Time) (*OverallStats, error) {
+	var stats OverallStats
+	err := r.pool.QueryRow(ctx, `
+		SELECT COUNT(*) as total_orders,
+		       COALESCE(SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END), 0) as success_orders,
+		       COALESCE(SUM(CASE WHEN status = 'success' THEN amount_idr ELSE 0 END), 0) as total_revenue
+		FROM orders
+		WHERE created_at >= $1 AND created_at < $2
+	`, startDate, endDate).Scan(&stats.TotalOrders, &stats.SuccessOrders, &stats.TotalRevenue)
+	if err != nil {
+		return nil, err
+	}
+
+	if stats.TotalOrders > 0 {
+		stats.ConversionRate = float64(stats.SuccessOrders) / float64(stats.TotalOrders) * 100
+		stats.AvgOrderValue = float64(stats.TotalRevenue) / float64(stats.SuccessOrders)
+	}
+	return &stats, nil
+}
+
 func nullIfEmpty(s string) any {
 	if s == "" {
 		return nil

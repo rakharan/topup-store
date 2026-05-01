@@ -28,6 +28,9 @@ type OrderRepository interface {
 	GetPendingOrdersOlderThan(ctx context.Context, age time.Duration) ([]models.Order, error)
 	GetRecentByPhone(ctx context.Context, phone string, limit int) ([]models.Order, error)
 	ListAllForExport(ctx context.Context) ([]OrderExportRow, error)
+	GetDailyRevenue(ctx context.Context, startDate, endDate time.Time) ([]DailyRevenue, error)
+	GetTopGamesByRevenue(ctx context.Context, startDate, endDate time.Time) ([]GameStats, error)
+	GetOverallStats(ctx context.Context, startDate, endDate time.Time) (*OverallStats, error)
 }
 
 type ProductRepository interface {

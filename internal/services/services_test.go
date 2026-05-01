@@ -98,6 +98,18 @@ func (m *mockOrderRepo) ListAllForExport(ctx context.Context) ([]repositories.Or
 	return nil, nil
 }
 
+func (m *mockOrderRepo) GetDailyRevenue(ctx context.Context, startDate, endDate time.Time) ([]repositories.DailyRevenue, error) {
+	return nil, nil
+}
+
+func (m *mockOrderRepo) GetTopGamesByRevenue(ctx context.Context, startDate, endDate time.Time) ([]repositories.GameStats, error) {
+	return nil, nil
+}
+
+func (m *mockOrderRepo) GetOverallStats(ctx context.Context, startDate, endDate time.Time) (*repositories.OverallStats, error) {
+	return nil, nil
+}
+
 type mockProductRepo struct {
 	getByIDResult *models.Product
 	getByIDErr    error
