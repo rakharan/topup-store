@@ -21,6 +21,7 @@
         <div class="flex gap-4 mb-6 border-b border-white/10">
             <button id="tabOrders" onclick="switchTab('orders')" class="tab-btn px-4 py-2 text-primary border-b-2 border-primary font-medium focus-ring">Orders</button>
             <button id="tabProducts" onclick="switchTab('products')" class="tab-btn px-4 py-2 text-white/50 hover:text-white transition focus-ring">Products</button>
+            <button id="tabWebhooks" onclick="switchTab('webhooks')" class="tab-btn px-4 py-2 text-white/50 hover:text-white transition focus-ring">Webhooks</button>
         </div>
 
         <div id="ordersTab">
@@ -56,7 +57,7 @@
                     </thead>
                     <tbody id="ordersTableBody">
                         {{range .Orders}}
-                        <tr class="border-b border-white/5 hover:bg-white/5 order-row" data-status="{{.Status}}" data-search="{{.ID}} {{.UserPhone}} {{.GameUID}}">
+                        <tr class="border-b border-white/5 hover:bg-white/5 order-row cursor-pointer" data-status="{{.Status}}" data-search="{{.ID}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
                             <td class="py-3 pr-4 font-mono text-xs">{{.ID}}</td>
                             <td class="py-3 pr-4">{{.ProductID}}</td>
                             <td class="py-3 pr-4">{{.GameUID}}{{if .GameServer}} ({{.GameServer}}){{end}}</td>
@@ -186,6 +187,57 @@
                         <tr><td colspan="10" class="py-8 text-center text-white/40">Loading products...</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <div id="webhooksTab" class="hidden">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold">Webhook Logs</h2>
+                <select id="webhookSourceFilter" onchange="loadWebhooks()" class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                    <option value="">All Sources</option>
+                    <option value="midtrans">Midtrans</option>
+                    <option value="digiflazz">Digiflazz</option>
+                </select>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-white/10 text-left text-white/50">
+                            <th class="pb-3 pr-4">Time</th>
+                            <th class="pb-3 pr-4">Source</th>
+                            <th class="pb-3 pr-4">Ref ID</th>
+                            <th class="pb-3 pr-4">Status</th>
+                            <th class="pb-3 pr-4">Error</th>
+                            <th class="pb-3">Payload</th>
+                        </tr>
+                    </thead>
+                    <tbody id="webhooksTableBody">
+                        <tr><td colspan="6" class="py-8 text-center text-white/40">Loading webhook logs...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="orderDetailModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop" onclick="if(event.target===this)closeOrderDetail()">
+            <div class="bg-dark border border-white/10 rounded-xl p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold">Order Detail</h3>
+                    <button onclick="closeOrderDetail()" class="text-white/50 hover:text-white focus-ring">&times;</button>
+                </div>
+                <div id="orderDetailContent" class="space-y-3 text-sm"></div>
+                <div id="orderStatusHistory" class="mt-4 pt-4 border-t border-white/10"></div>
+                <div id="overrideSection" class="mt-4 pt-4 border-t border-white/10 hidden">
+                    <h4 class="font-semibold mb-2 text-red-400">Override Status</h4>
+                    <div class="flex gap-2">
+                        <select id="overrideStatus" class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-primary focus:outline-none">
+                            <option value="failed">Failed</option>
+                            <option value="expired">Expired</option>
+                            <option value="refunded">Refunded</option>
+                        </select>
+                        <input type="text" id="overrideReason" placeholder="Reason" class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-primary focus:outline-none">
+                        <button onclick="overrideOrderStatus()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">Apply</button>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -432,15 +484,17 @@
     function switchTab(tab) {
         document.getElementById('ordersTab').classList.toggle('hidden', tab !== 'orders');
         document.getElementById('productsTab').classList.toggle('hidden', tab !== 'products');
-        document.getElementById('tabOrders').classList.toggle('text-primary', tab === 'orders');
-        document.getElementById('tabOrders').classList.toggle('border-primary', tab === 'orders');
-        document.getElementById('tabOrders').classList.toggle('text-white/50', tab !== 'orders');
-        document.getElementById('tabOrders').classList.toggle('border-transparent', tab !== 'orders');
-        document.getElementById('tabProducts').classList.toggle('text-primary', tab === 'products');
-        document.getElementById('tabProducts').classList.toggle('border-primary', tab === 'products');
-        document.getElementById('tabProducts').classList.toggle('text-white/50', tab !== 'products');
-        document.getElementById('tabProducts').classList.toggle('border-transparent', tab !== 'products');
+        document.getElementById('webhooksTab').classList.toggle('hidden', tab !== 'webhooks');
+        ['Orders', 'Products', 'Webhooks'].forEach(t => {
+            const btn = document.getElementById('tab' + t);
+            const isActive = t.toLowerCase() === tab;
+            btn.classList.toggle('text-primary', isActive);
+            btn.classList.toggle('border-primary', isActive);
+            btn.classList.toggle('text-white/50', !isActive);
+            btn.classList.toggle('border-transparent', !isActive);
+        });
         if (tab === 'products') loadProducts();
+        if (tab === 'webhooks') loadWebhooks();
     }
 
     let products = [];
@@ -574,6 +628,115 @@
             showToast('Failed to save product', 'error');
         }
     });
+
+    async function loadWebhooks() {
+        const source = document.getElementById('webhookSourceFilter')?.value || '';
+        try {
+            const res = await fetch(ADMIN_PATH + '/webhooks?source=' + encodeURIComponent(source));
+            const json = await res.json();
+            if (res.ok) {
+                renderWebhooks(json.data?.logs || []);
+            }
+        } catch (e) {
+            showToast('Failed to load webhook logs', 'error');
+        }
+    }
+
+    function renderWebhooks(logs) {
+        const tbody = document.getElementById('webhooksTableBody');
+        if (!logs.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-white/40">No webhook logs found.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = logs.map(l => {
+            const statusColor = l.status === 'success' ? 'text-green-400' : 'text-red-400';
+            return `<tr class="border-b border-white/5 hover:bg-white/5">
+                <td class="py-3 pr-4 text-white/40 text-xs">${new Date(l.created_at).toLocaleString('id-ID')}</td>
+                <td class="py-3 pr-4 font-mono text-xs">${escapeHtml(l.source)}</td>
+                <td class="py-3 pr-4 font-mono text-xs">${escapeHtml(l.ref_id || '-')}</td>
+                <td class="py-3 pr-4 ${statusColor}">${escapeHtml(l.status)}</td>
+                <td class="py-3 pr-4 text-xs text-red-300 max-w-[200px] truncate">${escapeHtml(l.error || '-')}</td>
+                <td class="py-3"><button onclick="showPayload('${escapeHtml(l.id)}')" class="text-blue-400 hover:text-blue-300 text-xs focus-ring">View</button></td>
+            </tr>`;
+        }).join('');
+    }
+
+    function showPayload(logId) {
+        const row = document.querySelector(`tr[data-log-id="${logId}"]`);
+    }
+
+    let currentOrderId = '';
+
+    async function showOrderDetail(orderId) {
+        currentOrderId = orderId;
+        try {
+            const res = await fetch(ADMIN_PATH + '/orders/' + orderId);
+            const json = await res.json();
+            if (!res.ok) { showToast('Failed to load order detail', 'error'); return; }
+
+            const order = json.data?.order || json.data;
+            const history = json.data?.history || [];
+
+            const statusColors = { success: 'green', failed: 'red', paid: 'blue', processing: 'purple', expired: 'gray', pending: 'yellow' };
+            const color = statusColors[order.status] || 'gray';
+
+            let html = `
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="text-white/50">ID:</div><div class="font-mono text-xs">${escapeHtml(order.id)}</div>
+                    <div class="text-white/50">Status:</div><div><span class="px-2 py-1 rounded-full text-xs bg-${color}-500/20 text-${color}-400">${escapeHtml(order.status)}</span></div>
+                    <div class="text-white/50">Amount:</div><div>Rp ${(order.amount_idr || 0).toLocaleString('id-ID')}</div>
+                    <div class="text-white/50">UID:</div><div>${escapeHtml(order.game_uid || '-')}${order.game_server ? ' (' + escapeHtml(order.game_server) + ')' : ''}</div>
+                    <div class="text-white/50">Phone:</div><div>${escapeHtml(order.user_phone || '-')}</div>
+                    <div class="text-white/50">Product:</div><div>${escapeHtml(order.product_id || '-')}</div>
+                    <div class="text-white/50">SN:</div><div class="font-mono text-xs">${escapeHtml(order.serial_number || '-')}</div>
+                    <div class="text-white/50">Created:</div><div>${new Date(order.created_at).toLocaleString('id-ID')}</div>
+                </div>
+            `;
+            document.getElementById('orderDetailContent').innerHTML = html;
+
+            if (history.length) {
+                let histHtml = '<h4 class="font-semibold mb-2">Status History</h4><div class="space-y-2">';
+                history.forEach(h => {
+                    histHtml += `<div class="flex gap-2 text-xs"><span class="text-white/40">${new Date(h.created_at).toLocaleString('id-ID')}</span><span class="text-yellow-400">${escapeHtml(h.from_status || 'new')}</span> → <span class="text-green-400">${escapeHtml(h.to_status)}</span><span class="text-white/30 ml-auto">${escapeHtml(h.reason || '')}</span></div>`;
+                });
+                histHtml += '</div>';
+                document.getElementById('orderStatusHistory').innerHTML = histHtml;
+            } else {
+                document.getElementById('orderStatusHistory').innerHTML = '';
+            }
+
+            document.getElementById('overrideSection').classList.toggle('hidden', order.status === 'success');
+            document.getElementById('orderDetailModal').classList.remove('hidden');
+        } catch (e) {
+            showToast('Failed to load order detail', 'error');
+        }
+    }
+
+    function closeOrderDetail() {
+        document.getElementById('orderDetailModal').classList.add('hidden');
+    }
+
+    async function overrideOrderStatus() {
+        if (!confirm('Override order status? This cannot be undone.')) return;
+        const status = document.getElementById('overrideStatus').value;
+        const reason = document.getElementById('overrideReason').value;
+        try {
+            const res = await fetchWithCSRF(ADMIN_PATH + '/override-status', {
+                method: 'POST',
+                body: JSON.stringify({ order_id: currentOrderId, status, reason }),
+            });
+            const json = await res.json();
+            if (res.ok) {
+                showToast('Status overridden', 'success');
+                closeOrderDetail();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(json.error?.message || 'Failed', 'error');
+            }
+        } catch (e) {
+            showToast('Failed to override', 'error');
+        }
+    }
     </script>
 </body>
 </html>{{end}}

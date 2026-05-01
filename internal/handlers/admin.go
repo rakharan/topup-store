@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/topup-store/internal/apperrors"
@@ -15,20 +17,24 @@ import (
 )
 
 type AdminHandler struct {
-	paymentSvc services.PaymentServiceInterface
-	topupSvc   services.TopupServiceInterface
-	notifySvc  services.NotifyServiceInterface
+	paymentSvc  services.PaymentServiceInterface
+	topupSvc    services.TopupServiceInterface
+	notifySvc   services.NotifyServiceInterface
 	productRepo repositories.ProductRepository
-	adminPass  string
-	logger     *slog.Logger
+	webhookRepo repositories.WebhookRepository
+	orderRepo   repositories.OrderRepository
+	adminPass   string
+	logger      *slog.Logger
 }
 
-func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, productRepo repositories.ProductRepository, adminPass string, logger *slog.Logger) *AdminHandler {
+func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, productRepo repositories.ProductRepository, webhookRepo repositories.WebhookRepository, orderRepo repositories.OrderRepository, adminPass string, logger *slog.Logger) *AdminHandler {
 	return &AdminHandler{
 		paymentSvc:  paymentSvc,
 		topupSvc:    topupSvc,
 		notifySvc:   notifySvc,
 		productRepo: productRepo,
+		webhookRepo: webhookRepo,
+		orderRepo:   orderRepo,
 		adminPass:   adminPass,
 		logger:      logger,
 	}
@@ -387,6 +393,98 @@ func (h *AdminHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 
 	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
 		"balance": balance,
+	}, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) ListWebhookLogs(w http.ResponseWriter, r *http.Request) {
+	source := r.URL.Query().Get("source")
+	page := 1
+	if p := r.URL.Query().Get("page"); p != "" {
+		if n, err := strconv.Atoi(p); err == nil && n > 0 {
+			page = n
+		}
+	}
+
+	logs, total, err := h.webhookRepo.List(r.Context(), source, page, 50)
+	if err != nil {
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
+		"logs":  logs,
+		"total": total,
+		"page":  page,
+	}, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) GetOrderDetail(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	order, err := h.paymentSvc.GetOrder(r.Context(), id)
+	if err != nil {
+		apperrors.WriteError(w, http.StatusNotFound, apperrors.ErrNotFound, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	history, _ := h.paymentSvc.GetOrderStatusHistory(r.Context(), id)
+
+	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
+		"order":   order,
+		"history": history,
+	}, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) OverrideOrderStatus(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		OrderID string `json:"order_id"`
+		Status  string `json:"status"`
+		Reason  string `json:"reason"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	validStatuses := map[string]bool{"failed": true, "expired": true, "refunded": true}
+	if !validStatuses[req.Status] {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("status", "must be failed, expired, or refunded"), middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	order, err := h.paymentSvc.GetOrder(r.Context(), req.OrderID)
+	if err != nil {
+		apperrors.WriteError(w, http.StatusNotFound, apperrors.ErrNotFound, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	if order.Status == "success" {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("status", "cannot override a successful order"), middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	if err := h.paymentSvc.UpdateOrderStatus(r.Context(), req.OrderID, req.Status); err != nil {
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	reason := req.Reason
+	if reason == "" {
+		reason = "admin override"
+	}
+	h.paymentSvc.RecordStatusChange(r.Context(), req.OrderID, order.Status, req.Status, reason)
+
+	if req.OrderID != "" && order.UserPhone != "" {
+		go func() {
+			msg := fmt.Sprintf("Order %s telah diubah statusnya menjadi %s. Alasan: %s", req.OrderID, req.Status, reason)
+			if err := h.notifySvc.SendNotification(order.UserPhone, msg); err != nil {
+				h.logger.Error("failed to notify status override", slog.String("order_id", req.OrderID), slog.String("error", err.Error()))
+			}
+		}()
+	}
+
+	apperrors.WriteSuccess(w, http.StatusOK, map[string]string{
+		"status":  "ok",
+		"message": "order status overridden",
 	}, middleware.GetRequestID(r.Context()))
 }
 
