@@ -112,7 +112,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	qrisURL, qrisBase64, err := h.paymentSvc.CreateQRIS(r.Context(), order)
+	qrString, qrisURL, expiryTime, err := h.paymentSvc.CreateQRIS(r.Context(), order)
 	if err != nil {
 		h.logger.Error("create qris", slog.String("error", err.Error()))
 		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
@@ -122,6 +122,9 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	orderCopy := *order
 	productCopy := *product
 	qrisURLCopy := qrisURL
+	if qrString != "" {
+		qrisURLCopy = "QRIS QR String available"
+	}
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -139,8 +142,9 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		"order_id":     orderID,
 		"order_number": orderNumber,
 		"amount_idr":   order.AmountIDR,
+		"qr_string":    qrString,
 		"qris_url":     qrisURL,
-		"qris_base64":  qrisBase64,
+		"expiry_time":  expiryTime,
 	}, middleware.GetRequestID(r.Context()))
 }
 

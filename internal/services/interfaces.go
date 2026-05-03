@@ -13,7 +13,7 @@ type PaymentServiceInterface interface {
 	UpdateOrderStatusIf(ctx context.Context, orderID, newStatus, expectedStatus string) (bool, error)
 	UpdateOrderSerialNumber(ctx context.Context, orderID, sn string) error
 	ListOrders(ctx context.Context, page, perPage int) ([]models.Order, int, error)
-	CreateQRIS(ctx context.Context, order *models.Order) (string, string, error)
+	CreateQRIS(ctx context.Context, order *models.Order) (qrString, qrisURL, expiryTime string, err error)
 	GetOrderByUIDAndPhone(ctx context.Context, gameUID, phone string) (*models.Order, error)
 	RecordStatusChange(ctx context.Context, orderID, fromStatus, toStatus, reason string) error
 	GetOrderStatusHistory(ctx context.Context, orderID string) ([]models.OrderStatusHistory, error)

@@ -4,6 +4,7 @@
     <title>Order - TopUp Store</title>
     <meta name="description" content="Buat order top up game dengan mudah dan cepat.">
     {{template "head"}}
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body class="bg-dark text-white min-h-screen">
     {{template "nav" (dict "ActivePage" "order")}}
@@ -367,8 +368,20 @@
                 const orderNumber = escapeHtml(orderData.order_number || orderData.order_id);
                 const orderId = escapeHtml(orderData.order_id);
                 const amount = parseInt(orderData.amount_idr || 0).toLocaleString("id-ID");
+                const qrString = orderData.qr_string || '';
                 const payLink = orderData.qris_url || '';
                 const safePayLink = payLink && payLink.startsWith('https://') ? escapeHtml(payLink) : '#';
+                const expiryTime = orderData.expiry_time || '';
+
+                let qrisHTML = '';
+                if (qrString) {
+                    qrisHTML = `
+                        <div class="mb-6">
+                            <p class="text-white/60 mb-3 text-sm">Scan QR ini untuk pembayaran:</p>
+                            <div id="qrisCode" class="bg-white rounded-xl p-4 inline-block"></div>
+                        </div>
+                    `;
+                }
 
                 result.innerHTML = `
                     <div class="text-center animate-fade-in">
@@ -382,14 +395,31 @@
                             </button>
                         </div>
                         <p class="text-2xl font-bold text-primary my-4">Rp ${amount}</p>
+                        ${qrisHTML}
                         ${safePayLink !== '#' ? `
-                            <p class="text-white/60 mb-4">Klik tombol di bawah untuk melakukan pembayaran:</p>
+                            <p class="text-white/60 mb-4 text-sm">Atau bayar dengan metode lain:</p>
                             <a href="${safePayLink}" target="_blank" rel="noopener noreferrer" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-3 rounded-lg transition text-lg focus-ring">Bayar Sekarang</a>
-                        ` : '<p class="text-yellow-400 mb-4">Menunggu pembayaran...</p>'}
+                        ` : ''}
                         <div id="countdown" class="mt-4 text-sm text-white/40"></div>
                         <a href="/status?id=${orderNumber}" class="inline-block text-white/60 hover:text-primary text-sm mt-4 focus-ring">Cek Status Order &rarr;</a>
                     </div>
                 `;
+
+                if (qrString && typeof QRCode !== 'undefined') {
+                    try {
+                        new QRCode(document.getElementById("qrisCode"), {
+                            text: qrString,
+                            width: 220,
+                            height: 220,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                    } catch (e) {
+                        console.error("Failed to render QR code:", e);
+                        document.getElementById("qrisCode").innerHTML = '<p class="text-red-400 text-sm">Gagal memuat QR code. Gunakan tombol Bayar Sekarang.</p>';
+                    }
+                }
 
                 result.querySelector('.copy-btn').addEventListener('click', () => {
                     navigator.clipboard.writeText(orderNumber);
@@ -397,16 +427,22 @@
                 });
                 showToast('Order berhasil dibuat!', 'success');
 
-                let expiryTime = 30 * 60;
+                let expirySeconds = 30 * 60;
+                if (expiryTime) {
+                    const expiryDate = new Date(expiryTime);
+                    const now = new Date();
+                    expirySeconds = Math.floor((expiryDate - now) / 1000);
+                    if (expirySeconds < 0) expirySeconds = 0;
+                }
                 const countdownEl = document.getElementById('countdown');
                 pollInterval = setInterval(async () => {
-                    expiryTime--;
+                    expirySeconds--;
                     if (countdownEl) {
-                        const m = Math.floor(expiryTime / 60);
-                        const s = expiryTime % 60;
+                        const m = Math.floor(expirySeconds / 60);
+                        const s = expirySeconds % 60;
                         countdownEl.textContent = `Berlaku ${m}:${s.toString().padStart(2, '0')} lagi`;
                     }
-                    if (expiryTime <= 0) { clearInterval(pollInterval); return; }
+                    if (expirySeconds <= 0) { clearInterval(pollInterval); return; }
 
                     try {
                         const statusRes = await fetch(`/api/orders/${orderData.order_id}`);

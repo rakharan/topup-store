@@ -36,10 +36,12 @@ type Order struct {
 }
 
 type OrderQRIS struct {
-	OrderID        string    `json:"order_id"`
-	QRISURL        *string   `json:"qris_url"`
-	QRISImageBase64 *string  `json:"qris_image_base64"`
-	CreatedAt      time.Time `json:"created_at"`
+	OrderID        string     `json:"order_id"`
+	QRISURL        *string    `json:"qris_url"`
+	QRString       *string    `json:"qr_string"`
+	QRISImageBase64 *string   `json:"qris_image_base64"`
+	ExpiryTime     *time.Time `json:"expiry_time"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
 
 type OrderStatusHistory struct {

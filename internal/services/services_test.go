@@ -74,7 +74,7 @@ func (m *mockOrderRepo) GetByDigiflazzRefID(ctx context.Context, refID string) (
 	return nil, nil
 }
 
-func (m *mockOrderRepo) UpsertQRIS(ctx context.Context, orderID, qrisURL, qrisImageBase64 string) error {
+func (m *mockOrderRepo) UpsertQRIS(ctx context.Context, orderID, qrisURL, qrString, qrisImageBase64 string, expiryTime *time.Time) error {
 	return nil
 }
 

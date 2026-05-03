@@ -137,21 +137,21 @@ func (r *PGOrderRepository) UpdateWithQRIS(ctx context.Context, id, midtransOrde
 	return err
 }
 
-func (r *PGOrderRepository) UpsertQRIS(ctx context.Context, orderID, qrisURL, qrisImageBase64 string) error {
+func (r *PGOrderRepository) UpsertQRIS(ctx context.Context, orderID, qrisURL, qrString, qrisImageBase64 string, expiryTime *time.Time) error {
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO order_qris (order_id, qris_url, qris_image_base64)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (order_id) DO UPDATE SET qris_url = $2, qris_image_base64 = $3
-	`, orderID, qrisURL, qrisImageBase64)
+		INSERT INTO order_qris (order_id, qris_url, qr_string, qris_image_base64, expiry_time)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (order_id) DO UPDATE SET qris_url = $2, qr_string = $3, qris_image_base64 = $4, expiry_time = $5
+	`, orderID, qrisURL, qrString, qrisImageBase64, expiryTime)
 	return err
 }
 
 func (r *PGOrderRepository) GetQRIS(ctx context.Context, orderID string) (*models.OrderQRIS, error) {
 	var qris models.OrderQRIS
 	err := r.pool.QueryRow(ctx, `
-		SELECT order_id, qris_url, qris_image_base64, created_at
+		SELECT order_id, qris_url, qr_string, qris_image_base64, expiry_time, created_at
 		FROM order_qris WHERE order_id = $1
-	`, orderID).Scan(&qris.OrderID, &qris.QRISURL, &qris.QRISImageBase64, &qris.CreatedAt)
+	`, orderID).Scan(&qris.OrderID, &qris.QRISURL, &qris.QRString, &qris.QRISImageBase64, &qris.ExpiryTime, &qris.CreatedAt)
 	if err != nil {
 		return nil, err
 	}

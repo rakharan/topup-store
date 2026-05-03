@@ -18,7 +18,8 @@ type mockPaymentService struct {
 	listOrdersTotal        int
 	listOrdersErr          error
 	createQRISURL          string
-	createQRISBase64       string
+	createQRISString       string
+	createQRISExpiry       string
 	createQRISErr          error
 	getByUIDPhoneResult    *models.Order
 	getByUIDPhoneErr       error
@@ -49,8 +50,8 @@ func (m *mockPaymentService) ListOrders(ctx context.Context, page, perPage int) 
 	return m.listOrdersResult, m.listOrdersTotal, m.listOrdersErr
 }
 
-func (m *mockPaymentService) CreateQRIS(ctx context.Context, order *models.Order) (string, string, error) {
-	return m.createQRISURL, m.createQRISBase64, m.createQRISErr
+func (m *mockPaymentService) CreateQRIS(ctx context.Context, order *models.Order) (string, string, string, error) {
+	return m.createQRISString, m.createQRISURL, m.createQRISExpiry, m.createQRISErr
 }
 
 func (m *mockPaymentService) GetOrderByUIDAndPhone(ctx context.Context, gameUID, phone string) (*models.Order, error) {

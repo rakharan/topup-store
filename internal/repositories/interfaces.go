@@ -18,7 +18,7 @@ type OrderRepository interface {
 	UpdateStatusIf(ctx context.Context, id, newStatus, expectedStatus string) (bool, error)
 	UpdateSerialNumber(ctx context.Context, id, sn string) error
 	UpdateWithQRIS(ctx context.Context, id, midtransOrderID, qrisURL string) error
-	UpsertQRIS(ctx context.Context, orderID, qrisURL, qrisImageBase64 string) error
+	UpsertQRIS(ctx context.Context, orderID, qrisURL, qrString, qrisImageBase64 string, expiryTime *time.Time) error
 	GetQRIS(ctx context.Context, orderID string) (*models.OrderQRIS, error)
 	InsertStatusHistory(ctx context.Context, orderID, fromStatus, toStatus, reason string) error
 	GetStatusHistory(ctx context.Context, orderID string) ([]models.OrderStatusHistory, error)

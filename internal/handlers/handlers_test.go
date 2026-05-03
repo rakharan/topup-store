@@ -138,7 +138,8 @@ func TestCreateOrder_Success(t *testing.T) {
 		paymentSvc: &mockPaymentService{
 			createOrderErr:   nil,
 			createQRISURL:    "https://qris.example.com/pay",
-			createQRISBase64: "",
+			createQRISString: "",
+			createQRISExpiry: "",
 			createQRISErr:    nil,
 		},
 		topupSvc: &mockTopupService{
