@@ -47,7 +47,7 @@
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-white/10 text-left text-white/50">
-                            <th class="pb-3 pr-4">Order ID</th>
+                            <th class="pb-3 pr-4">Order Number</th>
                             <th class="pb-3 pr-4">Game</th>
                             <th class="pb-3 pr-4">UID</th>
                             <th class="pb-3 pr-4">Phone</th>
@@ -60,8 +60,8 @@
                     </thead>
                     <tbody id="ordersTableBody">
                         {{range .Orders}}
-                        <tr class="border-b border-white/5 hover:bg-white/5 order-row cursor-pointer" data-status="{{.Status}}" data-search="{{.ID}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
-                            <td class="py-3 pr-4 font-mono text-xs">{{.ID}}</td>
+                        <tr class="border-b border-white/5 hover:bg-white/5 order-row cursor-pointer" data-status="{{.Status}}" data-search="{{.OrderNumber}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
+                            <td class="py-3 pr-4 font-mono text-xs">{{.OrderNumber}}</td>
                             <td class="py-3 pr-4">{{.ProductID}}</td>
                             <td class="py-3 pr-4">{{.GameUID}}{{if .GameServer}} ({{.GameServer}}){{end}}</td>
                             <td class="py-3 pr-4">{{.UserPhone}}</td>

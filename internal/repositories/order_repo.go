@@ -19,20 +19,20 @@ func NewOrderRepository(pool *pgxpool.Pool) *PGOrderRepository {
 
 func (r *PGOrderRepository) Create(ctx context.Context, order *models.Order) error {
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO orders (id, product_id, user_phone, game_uid, game_server, amount_idr, status, channel, digiflazz_ref_id)
-		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8)
-	`, order.ID, order.ProductID, order.UserPhone, order.GameUID, order.GameServer, order.AmountIDR, order.Channel, order.DigiflazzRefID)
+		INSERT INTO orders (id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status, channel, digiflazz_ref_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9)
+	`, order.ID, order.OrderNumber, order.ProductID, order.UserPhone, order.GameUID, order.GameServer, order.AmountIDR, order.Channel, order.DigiflazzRefID)
 	return err
 }
 
 func (r *PGOrderRepository) GetByID(ctx context.Context, id string) (*models.Order, error) {
 	var order models.Order
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		SELECT id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
 		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
 		FROM orders WHERE id = $1
 	`, id).Scan(
-		&order.ID, &order.ProductID, &order.UserPhone, &order.GameUID, &order.GameServer,
+		&order.ID, &order.OrderNumber, &order.ProductID, &order.UserPhone, &order.GameUID, &order.GameServer,
 		&order.AmountIDR, &order.Status, &order.MidtransOrderID, &order.Channel,
 		&order.SerialNumber, &order.DigiflazzRefID, &order.CreatedAt, &order.UpdatedAt,
 	)
@@ -45,11 +45,11 @@ func (r *PGOrderRepository) GetByID(ctx context.Context, id string) (*models.Ord
 func (r *PGOrderRepository) GetByMidtransID(ctx context.Context, midtransID string) (*models.Order, error) {
 	var order models.Order
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		SELECT id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
 		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
 		FROM orders WHERE midtrans_order_id = $1
 	`, midtransID).Scan(
-		&order.ID, &order.ProductID, &order.UserPhone, &order.GameUID, &order.GameServer,
+		&order.ID, &order.OrderNumber, &order.ProductID, &order.UserPhone, &order.GameUID, &order.GameServer,
 		&order.AmountIDR, &order.Status, &order.MidtransOrderID, &order.Channel,
 		&order.SerialNumber, &order.DigiflazzRefID, &order.CreatedAt, &order.UpdatedAt,
 	)
@@ -62,11 +62,11 @@ func (r *PGOrderRepository) GetByMidtransID(ctx context.Context, midtransID stri
 func (r *PGOrderRepository) GetByDigiflazzRefID(ctx context.Context, refID string) (*models.Order, error) {
 	var order models.Order
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		SELECT id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
 		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
 		FROM orders WHERE digiflazz_ref_id = $1
 	`, refID).Scan(
-		&order.ID, &order.ProductID, &order.UserPhone, &order.GameUID, &order.GameServer,
+		&order.ID, &order.OrderNumber, &order.ProductID, &order.UserPhone, &order.GameUID, &order.GameServer,
 		&order.AmountIDR, &order.Status, &order.MidtransOrderID, &order.Channel,
 		&order.SerialNumber, &order.DigiflazzRefID, &order.CreatedAt, &order.UpdatedAt,
 	)
@@ -79,11 +79,28 @@ func (r *PGOrderRepository) GetByDigiflazzRefID(ctx context.Context, refID strin
 func (r *PGOrderRepository) GetByUIDAndPhone(ctx context.Context, gameUID, phone string) (*models.Order, error) {
 	var order models.Order
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		SELECT id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
 		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
 		FROM orders WHERE game_uid = $1 AND user_phone = $2 ORDER BY created_at DESC LIMIT 1
 	`, gameUID, phone).Scan(
-		&order.ID, &order.ProductID, &order.UserPhone, &order.GameUID, &order.GameServer,
+		&order.ID, &order.OrderNumber, &order.ProductID, &order.UserPhone, &order.GameUID, &order.GameServer,
+		&order.AmountIDR, &order.Status, &order.MidtransOrderID, &order.Channel,
+		&order.SerialNumber, &order.DigiflazzRefID, &order.CreatedAt, &order.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
+}
+
+func (r *PGOrderRepository) GetByOrderNumber(ctx context.Context, orderNumber string) (*models.Order, error) {
+	var order models.Order
+	err := r.pool.QueryRow(ctx, `
+		SELECT id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
+		FROM orders WHERE order_number = $1
+	`, orderNumber).Scan(
+		&order.ID, &order.OrderNumber, &order.ProductID, &order.UserPhone, &order.GameUID, &order.GameServer,
 		&order.AmountIDR, &order.Status, &order.MidtransOrderID, &order.Channel,
 		&order.SerialNumber, &order.DigiflazzRefID, &order.CreatedAt, &order.UpdatedAt,
 	)
@@ -157,7 +174,7 @@ func (r *PGOrderRepository) List(ctx context.Context, page, perPage int) ([]mode
 	}
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		SELECT id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
 		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
 		FROM orders ORDER BY created_at DESC LIMIT $1 OFFSET $2
 	`, perPage, offset)
@@ -169,7 +186,7 @@ func (r *PGOrderRepository) List(ctx context.Context, page, perPage int) ([]mode
 	var orders []models.Order
 	for rows.Next() {
 		var o models.Order
-		if err := rows.Scan(&o.ID, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
+		if err := rows.Scan(&o.ID, &o.OrderNumber, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
 			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.Channel,
 			&o.SerialNumber, &o.DigiflazzRefID, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, 0, err
@@ -198,7 +215,7 @@ func (r *PGOrderRepository) ListByStatus(ctx context.Context, status string, pag
 	}
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		SELECT id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
 		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
 		FROM orders WHERE status = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3
 	`, status, perPage, offset)
@@ -210,7 +227,7 @@ func (r *PGOrderRepository) ListByStatus(ctx context.Context, status string, pag
 	var orders []models.Order
 	for rows.Next() {
 		var o models.Order
-		if err := rows.Scan(&o.ID, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
+		if err := rows.Scan(&o.ID, &o.OrderNumber, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
 			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.Channel,
 			&o.SerialNumber, &o.DigiflazzRefID, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, 0, err
@@ -225,7 +242,7 @@ func (r *PGOrderRepository) ListByStatus(ctx context.Context, status string, pag
 
 func (r *PGOrderRepository) ListProcessing(ctx context.Context) ([]models.Order, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		SELECT id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
 		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
 		FROM orders WHERE status = 'processing' AND created_at > NOW() - INTERVAL '24 hours'
 	`)
@@ -237,7 +254,7 @@ func (r *PGOrderRepository) ListProcessing(ctx context.Context) ([]models.Order,
 	var orders []models.Order
 	for rows.Next() {
 		var o models.Order
-		if err := rows.Scan(&o.ID, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
+		if err := rows.Scan(&o.ID, &o.OrderNumber, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
 			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.Channel,
 			&o.SerialNumber, &o.DigiflazzRefID, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, err
@@ -254,7 +271,7 @@ func (r *PGOrderRepository) ExpireOldPending(ctx context.Context) ([]models.Orde
 	rows, err := r.pool.Query(ctx, `
 		UPDATE orders SET status = 'expired', updated_at = NOW()
 		WHERE status = 'pending' AND created_at < NOW() - INTERVAL '30 minutes'
-		RETURNING id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		RETURNING id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
 		          midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
 	`)
 	if err != nil {
@@ -265,7 +282,7 @@ func (r *PGOrderRepository) ExpireOldPending(ctx context.Context) ([]models.Orde
 	var orders []models.Order
 	for rows.Next() {
 		var o models.Order
-		if err := rows.Scan(&o.ID, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
+		if err := rows.Scan(&o.ID, &o.OrderNumber, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
 			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.Channel,
 			&o.SerialNumber, &o.DigiflazzRefID, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, err
@@ -280,7 +297,7 @@ func (r *PGOrderRepository) ExpireOldPending(ctx context.Context) ([]models.Orde
 
 func (r *PGOrderRepository) GetPendingOrdersOlderThan(ctx context.Context, age time.Duration) ([]models.Order, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		SELECT id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
 		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
 		FROM orders WHERE status = 'pending' AND created_at < NOW() - ($1 * INTERVAL '1 minute')
 		ORDER BY created_at ASC
@@ -293,7 +310,7 @@ func (r *PGOrderRepository) GetPendingOrdersOlderThan(ctx context.Context, age t
 	var orders []models.Order
 	for rows.Next() {
 		var o models.Order
-		if err := rows.Scan(&o.ID, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
+		if err := rows.Scan(&o.ID, &o.OrderNumber, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
 			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.Channel,
 			&o.SerialNumber, &o.DigiflazzRefID, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, err
@@ -340,7 +357,7 @@ func (r *PGOrderRepository) GetStatusHistory(ctx context.Context, orderID string
 
 func (r *PGOrderRepository) GetRecentByPhone(ctx context.Context, phone string, limit int) ([]models.Order, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, product_id, game_uid, game_server, user_phone, status, amount_idr,
+		SELECT id, order_number, product_id, game_uid, game_server, user_phone, status, amount_idr,
 		       serial_number, midtrans_order_id, digiflazz_ref_id, created_at, updated_at
 		FROM orders
 		WHERE user_phone = $1
@@ -355,7 +372,7 @@ func (r *PGOrderRepository) GetRecentByPhone(ctx context.Context, phone string, 
 	var orders []models.Order
 	for rows.Next() {
 		var o models.Order
-		if err := rows.Scan(&o.ID, &o.ProductID, &o.GameUID, &o.GameServer, &o.UserPhone,
+		if err := rows.Scan(&o.ID, &o.OrderNumber, &o.ProductID, &o.GameUID, &o.GameServer, &o.UserPhone,
 			&o.Status, &o.AmountIDR, &o.SerialNumber, &o.MidtransOrderID, &o.DigiflazzRefID,
 			&o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, err
@@ -369,6 +386,7 @@ func (r *PGOrderRepository) GetRecentByPhone(ctx context.Context, phone string, 
 }
 
 type OrderExportRow struct {
+	OrderNumber  string
 	OrderID      string
 	Game         string
 	ProductName  string
@@ -384,7 +402,7 @@ type OrderExportRow struct {
 
 func (r *PGOrderRepository) ListAllForExport(ctx context.Context) ([]OrderExportRow, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT o.id, p.game, p.name, o.game_uid, o.game_server, o.user_phone,
+		SELECT o.order_number, o.id, p.game, p.name, o.game_uid, o.game_server, o.user_phone,
 		       o.amount_idr, o.status, COALESCE(o.serial_number, ''), o.channel, o.created_at
 		FROM orders o
 		JOIN products p ON o.product_id = p.id
@@ -398,7 +416,7 @@ func (r *PGOrderRepository) ListAllForExport(ctx context.Context) ([]OrderExport
 	var results []OrderExportRow
 	for rows.Next() {
 		var row OrderExportRow
-		if err := rows.Scan(&row.OrderID, &row.Game, &row.ProductName, &row.GameUID,
+		if err := rows.Scan(&row.OrderNumber, &row.OrderID, &row.Game, &row.ProductName, &row.GameUID,
 			&row.GameServer, &row.Phone, &row.AmountIDR, &row.Status,
 			&row.SerialNumber, &row.Channel, &row.CreatedAt); err != nil {
 			return nil, err

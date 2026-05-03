@@ -418,13 +418,14 @@ func (h *AdminHandler) ExportOrdersCSV(w http.ResponseWriter, r *http.Request) {
 	cw := csv.NewWriter(w)
 	defer cw.Flush()
 
-	cw.Write([]string{"Order ID", "Game", "Product", "UID", "Server", "Phone", "Amount (IDR)", "Status", "Serial No", "Channel", "Created At"})
+	cw.Write([]string{"Order Number", "Order ID", "Game", "Product", "UID", "Server", "Phone", "Amount (IDR)", "Status", "Serial No", "Channel", "Created At"})
 	for _, row := range rows {
 		server := ""
 		if row.GameServer != "" {
 			server = row.GameServer
 		}
 		cw.Write([]string{
+			row.OrderNumber,
 			row.OrderID,
 			row.Game,
 			row.ProductName,

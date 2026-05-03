@@ -107,7 +107,7 @@ func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
 
 	if order.Status == newStatus {
 		h.logWebhook(r.Context(), "midtrans", payload.OrderID, string(rawBody), payload.SignatureKey, r.UserAgent(), "skipped", "already in status")
-		h.logger.Info("midtrans webhook: order already in status", slog.String("order_id", order.ID), slog.String("status", newStatus))
+		h.logger.Info("midtrans webhook: order already in status", slog.String("order_id", order.ID), slog.String("order_number", order.OrderNumber), slog.String("status", newStatus))
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
@@ -117,7 +117,7 @@ func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
 	oldStatus := order.Status
 	if err := h.paymentSvc.UpdateOrderStatus(r.Context(), order.ID, newStatus); err != nil {
 		h.logWebhook(r.Context(), "midtrans", payload.OrderID, string(rawBody), payload.SignatureKey, r.UserAgent(), "failed", err.Error())
-		h.logger.Error("midtrans webhook: failed to update order", slog.String("order_id", order.ID), slog.String("error", err.Error()))
+		h.logger.Error("midtrans webhook: failed to update order", slog.String("order_id", order.ID), slog.String("order_number", order.OrderNumber), slog.String("error", err.Error()))
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
@@ -132,14 +132,14 @@ func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					h.logger.Error("topup process panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", r))
+					h.logger.Error("topup process panicked", slog.String("order_id", orderCopy.ID), slog.String("order_number", orderCopy.OrderNumber), slog.Any("panic", r))
 				}
 			}()
 			if err := h.topupSvc.ProcessOrder(orderCopy.ID); err != nil {
-				h.logger.Error("topup process failed", slog.String("order_id", orderCopy.ID), slog.String("error", err.Error()))
+				h.logger.Error("topup process failed", slog.String("order_id", orderCopy.ID), slog.String("order_number", orderCopy.OrderNumber), slog.String("error", err.Error()))
 				return
 			}
-			h.logger.Info("topup processed successfully", slog.String("order_id", orderCopy.ID))
+			h.logger.Info("topup processed successfully", slog.String("order_id", orderCopy.ID), slog.String("order_number", orderCopy.OrderNumber))
 		}()
 	}
 
@@ -255,7 +255,7 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 	if status == "Sukses" {
 		if order.Status == constants.StatusSuccess {
 			h.logWebhook(r.Context(), "digiflazz", refID, string(rawBody), sigHeader, r.UserAgent(), "skipped", "already success")
-			h.logger.Info("digiflazz webhook: order already success", slog.String("order_id", order.ID))
+			h.logger.Info("digiflazz webhook: order already success", slog.String("order_id", order.ID), slog.String("order_number", order.OrderNumber))
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -265,6 +265,7 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 			h.logWebhook(r.Context(), "digiflazz", refID, string(rawBody), sigHeader, r.UserAgent(), "failed", err.Error())
 			h.logger.Error("digiflazz webhook: failed to update order",
 				slog.String("order_id", order.ID),
+				slog.String("order_number", order.OrderNumber),
 				slog.String("error", err.Error()),
 			)
 			w.WriteHeader(http.StatusOK)
@@ -277,6 +278,7 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 			if err := h.paymentSvc.UpdateOrderSerialNumber(r.Context(), order.ID, sn); err != nil {
 				h.logger.Warn("digiflazz webhook: failed to save serial number",
 					slog.String("order_id", order.ID),
+					slog.String("order_number", order.OrderNumber),
 					slog.String("error", err.Error()),
 				)
 			}
@@ -289,17 +291,18 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					h.logger.Error("digiflazz notify panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", r))
+					h.logger.Error("digiflazz notify panicked", slog.String("order_id", orderCopy.ID), slog.String("order_number", orderCopy.OrderNumber), slog.Any("panic", r))
 				}
 			}()
 			product, err := h.topupSvc.GetProduct(h.rootCtx, orderCopy.ProductID)
 			if err != nil {
-				h.logger.Error("digiflazz webhook: failed to get product for notification", slog.String("order_id", orderCopy.ID), slog.String("error", err.Error()))
+				h.logger.Error("digiflazz webhook: failed to get product for notification", slog.String("order_id", orderCopy.ID), slog.String("order_number", orderCopy.OrderNumber), slog.String("error", err.Error()))
 				return
 			}
 			if err := h.notifySvc.SendTopupSuccess(h.rootCtx, &orderCopy, product, orderCopy.UserPhone, snCopy); err != nil {
 				h.logger.Error("digiflazz webhook: failed to send notification",
 					slog.String("order_id", orderCopy.ID),
+					slog.String("order_number", orderCopy.OrderNumber),
 					slog.String("error", err.Error()),
 				)
 			}
@@ -307,6 +310,7 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 
 		h.logger.Info("digiflazz webhook: order marked as success",
 			slog.String("order_id", order.ID),
+			slog.String("order_number", order.OrderNumber),
 			slog.String("sn", sn),
 		)
 		w.WriteHeader(http.StatusOK)
@@ -316,7 +320,7 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 	if status == "Gagal" || status == "Fail" {
 		if order.Status == constants.StatusFailed {
 			h.logWebhook(r.Context(), "digiflazz", refID, string(rawBody), sigHeader, r.UserAgent(), "skipped", "already failed")
-			h.logger.Info("digiflazz webhook: order already failed", slog.String("order_id", order.ID))
+			h.logger.Info("digiflazz webhook: order already failed", slog.String("order_id", order.ID), slog.String("order_number", order.OrderNumber))
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -326,6 +330,7 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 			h.logWebhook(r.Context(), "digiflazz", refID, string(rawBody), sigHeader, r.UserAgent(), "failed", err.Error())
 			h.logger.Error("digiflazz webhook: failed to update order",
 				slog.String("order_id", order.ID),
+				slog.String("order_number", order.OrderNumber),
 				slog.String("error", err.Error()),
 			)
 			w.WriteHeader(http.StatusOK)
@@ -339,17 +344,18 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					h.logger.Error("digiflazz failure notify panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", r))
+					h.logger.Error("digiflazz failure notify panicked", slog.String("order_id", orderCopy.ID), slog.String("order_number", orderCopy.OrderNumber), slog.Any("panic", r))
 				}
 			}()
 			product, err := h.topupSvc.GetProduct(h.rootCtx, orderCopy.ProductID)
 			if err != nil {
-				h.logger.Error("digiflazz webhook: failed to get product for failure notification", slog.String("order_id", orderCopy.ID), slog.String("error", err.Error()))
+				h.logger.Error("digiflazz webhook: failed to get product for failure notification", slog.String("order_id", orderCopy.ID), slog.String("order_number", orderCopy.OrderNumber), slog.String("error", err.Error()))
 				return
 			}
 			if err := h.notifySvc.SendTopupFailure(h.rootCtx, &orderCopy, product, orderCopy.UserPhone); err != nil {
 				h.logger.Error("digiflazz webhook: failed to send failure notification",
 					slog.String("order_id", orderCopy.ID),
+					slog.String("order_number", orderCopy.OrderNumber),
 					slog.String("error", err.Error()),
 				)
 			}
@@ -357,6 +363,7 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 
 		h.logger.Info("digiflazz webhook: order marked as failed",
 			slog.String("order_id", order.ID),
+			slog.String("order_number", order.OrderNumber),
 			slog.String("status", status),
 		)
 		w.WriteHeader(http.StatusOK)

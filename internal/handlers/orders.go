@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/topup-store/internal/apperrors"
 	"github.com/topup-store/internal/constants"
 	"github.com/topup-store/internal/middleware"
@@ -21,15 +22,17 @@ type OrderHandler struct {
 	paymentSvc services.PaymentServiceInterface
 	topupSvc   services.TopupServiceInterface
 	notifySvc  services.NotifyServiceInterface
+	pool       *pgxpool.Pool
 	rootCtx    context.Context
 	logger     *slog.Logger
 }
 
-func NewOrderHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, rootCtx context.Context, logger *slog.Logger) *OrderHandler {
+func NewOrderHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, pool *pgxpool.Pool, rootCtx context.Context, logger *slog.Logger) *OrderHandler {
 	return &OrderHandler{
 		paymentSvc: paymentSvc,
 		topupSvc:   topupSvc,
 		notifySvc:  notifySvc,
+		pool:       pool,
 		rootCtx:    rootCtx,
 		logger:     logger,
 	}
@@ -79,8 +82,20 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orderID := uuid.New().String()
+	var orderNumber string
+	if h.pool != nil {
+		orderNumber, err = services.GenerateOrderNumber(r.Context(), h.pool)
+		if err != nil {
+			h.logger.Error("generate order number", slog.String("error", err.Error()))
+			apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+			return
+		}
+	} else {
+		orderNumber = "FT-TEST-0001"
+	}
 	order := &models.Order{
 		ID:             orderID,
+		OrderNumber:    orderNumber,
 		ProductID:      product.ID,
 		UserPhone:      req.Phone,
 		GameUID:        req.GameUID,
@@ -121,10 +136,11 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	apperrors.WriteSuccess(w, http.StatusCreated, map[string]any{
-		"order_id":    orderID,
-		"amount_idr":  order.AmountIDR,
-		"qris_url":    qrisURL,
-		"qris_base64": qrisBase64,
+		"order_id":     orderID,
+		"order_number": orderNumber,
+		"amount_idr":   order.AmountIDR,
+		"qris_url":     qrisURL,
+		"qris_base64":  qrisBase64,
 	}, middleware.GetRequestID(r.Context()))
 }
 

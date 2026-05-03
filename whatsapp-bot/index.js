@@ -101,7 +101,7 @@ async function checkOrderByID(sender, orderId) {
 
     const gameLabel = gameToLabel(order.game_uid ? "unknown" : "unknown");
     let message = `📋 *Status Order*\n\n`;
-    message += `ID: ${order.id}\n`;
+    message += `ID: ${order.order_number || order.id}\n`;
     message += `Status: ${statusLabel}\n`;
     message += `Total: Rp${(order.amount_idr || 0).toLocaleString("id-ID")}\n`;
     message += `UID: ${order.game_uid || "-"}${order.game_server ? " (" + order.game_server + ")" : ""}\n`;
@@ -139,12 +139,12 @@ async function checkRecentOrders(sender) {
     let message = `📋 *Riwayat Order*\n\n`;
     orders.forEach((o, i) => {
       const status = statusLabel[o.status] || o.status;
-      message += `${i + 1}. *${o.id}*\n`;
+      message += `${i + 1}. *${o.order_number || o.id}*\n`;
       message += `   Status: ${status}\n`;
       message += `   Total: Rp${(o.amount_idr || 0).toLocaleString("id-ID")}\n`;
       message += `   UID: ${o.game_uid || "-"}\n\n`;
     });
-    message += `Ketik *CEK <order_id>* untuk detail.`;
+    message += `Ketik *CEK <order_number>* untuk detail.`;
 
     await sendText(sender, message);
   } catch (err) {

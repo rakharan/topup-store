@@ -30,6 +30,10 @@ func (m *mockOrderRepo) GetByUIDAndPhone(ctx context.Context, gameUID, phone str
 	return nil, nil
 }
 
+func (m *mockOrderRepo) GetByOrderNumber(ctx context.Context, orderNumber string) (*models.Order, error) {
+	return nil, nil
+}
+
 func (m *mockOrderRepo) Create(ctx context.Context, order *models.Order) error {
 	return nil
 }

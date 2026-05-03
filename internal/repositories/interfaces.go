@@ -10,6 +10,7 @@ import (
 type OrderRepository interface {
 	Create(ctx context.Context, order *models.Order) error
 	GetByID(ctx context.Context, id string) (*models.Order, error)
+	GetByOrderNumber(ctx context.Context, orderNumber string) (*models.Order, error)
 	GetByMidtransID(ctx context.Context, midtransID string) (*models.Order, error)
 	GetByDigiflazzRefID(ctx context.Context, refID string) (*models.Order, error)
 	GetByUIDAndPhone(ctx context.Context, gameUID, phone string) (*models.Order, error)

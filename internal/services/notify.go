@@ -56,7 +56,7 @@ func (s *NotifyService) SendOrderConfirmation(ctx context.Context, order *models
 			"⏳ Proses pembayaran akan memakan waktu beberapa menit setelah pembayaran dikonfirmasi.\n"+
 			"Cek status order di: https://topup-store.com/status\n\n"+
 			"Terima kasih!",
-		order.ID, gameLabel, product.Name, uidInfo, order.AmountIDR, qrisURL,
+		order.OrderNumber, gameLabel, product.Name, uidInfo, order.AmountIDR, qrisURL,
 	)
 	return s.sendNotification(ctx, phone, message)
 }
@@ -87,7 +87,7 @@ func (s *NotifyService) SendTopupSuccess(ctx context.Context, order *models.Orde
 			"Total: Rp %d%s\n\n"+
 			"Item telah dikirim ke akun kamu. Silakan cek dalam game.\n\n"+
 			"Terima kasih telah berbelanja di TopUp Store!",
-		order.ID, gameLabel, product.Name, uidInfo, order.AmountIDR, snLine,
+		order.OrderNumber, gameLabel, product.Name, uidInfo, order.AmountIDR, snLine,
 	)
 	return s.sendNotification(ctx, phone, message)
 }
@@ -113,7 +113,7 @@ func (s *NotifyService) SendTopupFailure(ctx context.Context, order *models.Orde
 			"Total: Rp %d\n\n"+
 			"Top-up gagal diproses. Saldo kamu akan dikembalikan.\n"+
 			"Silakan hubungi admin untuk bantuan.",
-		order.ID, gameLabel, product.Name, uidInfo, order.AmountIDR,
+		order.OrderNumber, gameLabel, product.Name, uidInfo, order.AmountIDR,
 	)
 	return s.sendNotification(ctx, phone, message)
 }

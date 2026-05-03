@@ -20,6 +20,7 @@ type Product struct {
 
 type Order struct {
 	ID              string     `json:"id"`
+	OrderNumber     string     `json:"order_number"`
 	ProductID       string     `json:"product_id"`
 	UserPhone       string     `json:"user_phone"`
 	GameUID         string     `json:"game_uid"`

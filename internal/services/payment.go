@@ -123,7 +123,10 @@ func (s *PaymentService) UpdateOrderSerialNumber(ctx context.Context, orderID, s
 func (s *PaymentService) GetOrder(ctx context.Context, orderID string) (*models.Order, error) {
 	order, err := s.orderRepo.GetByID(ctx, orderID)
 	if err != nil {
-		return s.orderRepo.GetByDigiflazzRefID(ctx, orderID)
+		order, err = s.orderRepo.GetByOrderNumber(ctx, orderID)
+		if err != nil {
+			return s.orderRepo.GetByDigiflazzRefID(ctx, orderID)
+		}
 	}
 	return order, nil
 }

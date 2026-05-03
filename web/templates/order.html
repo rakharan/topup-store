@@ -265,6 +265,7 @@
 
             if (orderData.order_id) {
                 result.classList.remove("hidden");
+                const orderNumber = escapeHtml(orderData.order_number || orderData.order_id);
                 const orderId = escapeHtml(orderData.order_id);
                 const amount = parseInt(orderData.amount_idr || 0).toLocaleString("id-ID");
                 const payLink = orderData.qris_url || '';
@@ -276,7 +277,7 @@
                         <p class="text-lg font-semibold mb-2">Order berhasil dibuat!</p>
                         <div class="flex items-center justify-center gap-2 mb-4">
                             <span class="text-white/60 text-sm">ID Order:</span>
-                            <code class="bg-white/10 px-3 py-1 rounded font-mono text-sm">${orderId}</code>
+                            <code class="bg-white/10 px-3 py-1 rounded font-mono text-sm">${orderNumber}</code>
                             <button class="copy-btn text-white/40 hover:text-primary focus-ring" aria-label="Copy Order ID">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                             </button>
@@ -287,12 +288,12 @@
                             <a href="${safePayLink}" target="_blank" rel="noopener noreferrer" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-3 rounded-lg transition text-lg focus-ring">Bayar Sekarang</a>
                         ` : '<p class="text-yellow-400 mb-4">Menunggu pembayaran...</p>'}
                         <div id="countdown" class="mt-4 text-sm text-white/40"></div>
-                        <a href="/status?id=${orderId}" class="inline-block text-white/60 hover:text-primary text-sm mt-4 focus-ring">Cek Status Order &rarr;</a>
+                        <a href="/status?id=${orderNumber}" class="inline-block text-white/60 hover:text-primary text-sm mt-4 focus-ring">Cek Status Order &rarr;</a>
                     </div>
                 `;
 
                 result.querySelector('.copy-btn').addEventListener('click', () => {
-                    navigator.clipboard.writeText(orderData.order_id);
+                    navigator.clipboard.writeText(orderNumber);
                     showToast('ID Order disalin!', 'success');
                 });
                 showToast('Order berhasil dibuat!', 'success');
