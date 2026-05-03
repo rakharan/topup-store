@@ -12,7 +12,10 @@
         <h1 class="text-3xl font-bold mb-8 text-center">Cek Status Order</h1>
         <form id="statusForm" class="flex gap-3 mb-8">
             <input type="text" id="orderId" name="id" placeholder="Masukkan ID Order" required class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
-            <button type="submit" class="bg-primary hover:bg-orange-600 text-white font-semibold px-6 py-3 rounded-lg transition focus-ring">Cek</button>
+            <button type="submit" id="cekBtn" class="bg-primary hover:bg-orange-600 text-white font-semibold px-6 py-3 rounded-lg transition flex items-center gap-2 disabled:bg-white/20 disabled:cursor-not-allowed focus-ring">
+                <span id="cekText">Cek</span>
+                <svg id="cekSpinner" class="hidden animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            </button>
         </form>
         <div id="result" class="hidden bg-white/5 border border-white/10 rounded-xl p-6"></div>
         <div id="autoRefresh" class="hidden mt-4 text-center text-sm text-white/40">
@@ -168,7 +171,19 @@
         e.preventDefault();
         const orderId = document.getElementById("orderId").value.trim();
         document.getElementById("result").classList.add("hidden");
-        await fetchOrder(orderId);
+        const cekBtn = document.getElementById("cekBtn");
+        const cekText = document.getElementById("cekText");
+        const cekSpinner = document.getElementById("cekSpinner");
+        cekBtn.disabled = true;
+        cekText.textContent = 'Mencari...';
+        cekSpinner.classList.remove('hidden');
+        try {
+            await fetchOrder(orderId);
+        } finally {
+            cekBtn.disabled = false;
+            cekText.textContent = 'Cek';
+            cekSpinner.classList.add('hidden');
+        }
     });
 
     document.getElementById("stopRefresh").addEventListener("click", () => {

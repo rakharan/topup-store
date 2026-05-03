@@ -19,6 +19,7 @@
                     <option value="mobile_legends">Mobile Legends</option>
                     <option value="pubg_mobile">PUBG Mobile</option>
                 </select>
+                <span id="gameError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
             </div>
             <div id="uidGuide" class="hidden bg-white/5 border border-white/10 rounded-xl p-4">
                 <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
@@ -45,20 +46,24 @@
                 <select id="product" name="product" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring" disabled>
                     <option value="">Pilih game terlebih dahulu</option>
                 </select>
+                <span id="productError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
             </div>
             <div id="uidGroup">
                 <label class="block text-sm font-medium text-white/70 mb-1" for="gameUid">Game UID</label>
                 <input type="text" id="gameUid" name="game_uid" placeholder="Masukkan UID" inputmode="numeric" required aria-describedby="uidHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+                <span id="gameUidError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
                 <p class="text-xs text-white/40 mt-1" id="uidHint">Pilih game terlebih dahulu</p>
             </div>
             <div id="serverGroup" class="hidden">
                 <label class="block text-sm font-medium text-white/70 mb-1" for="gameServer">Server ID</label>
                 <input type="text" id="gameServer" name="game_server" placeholder="Masukkan Server ID" inputmode="numeric" aria-describedby="serverHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+                <span id="gameServerError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
                 <p class="text-xs text-white/40 mt-1" id="serverHint">Buka profil game → lihat angka di sebelah kanan UID (contoh: 1234)</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-white/70 mb-1" for="phone">Nomor WhatsApp</label>
                 <input type="text" id="phone" name="phone" placeholder="08xxxxxxxxxx atau 628xxx" inputmode="tel" required aria-describedby="phoneHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+                <span id="phoneError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
                 <p class="text-xs text-white/40 mt-1" id="phoneHint">Format: 628xxx atau 08xxx (tanpa + atau spasi)</p>
             </div>
             <button type="submit" id="submitBtn" class="w-full bg-primary hover:bg-orange-600 disabled:bg-white/20 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 focus-ring">
@@ -109,6 +114,119 @@
     const confirmModal = document.getElementById("confirmModal");
     let selectedProduct = null;
     let pollInterval = null;
+
+    function showFieldError(fieldId, message) {
+        const errorEl = document.getElementById(fieldId + 'Error');
+        const inputEl = document.getElementById(fieldId);
+        if (errorEl) {
+            errorEl.textContent = message;
+            errorEl.classList.remove('hidden');
+        }
+        if (inputEl) {
+            inputEl.classList.add('border-red-500');
+            inputEl.classList.remove('border-white/10');
+        }
+    }
+
+    function clearFieldError(fieldId) {
+        const errorEl = document.getElementById(fieldId + 'Error');
+        const inputEl = document.getElementById(fieldId);
+        if (errorEl) {
+            errorEl.textContent = '';
+            errorEl.classList.add('hidden');
+        }
+        if (inputEl) {
+            inputEl.classList.remove('border-red-500');
+            inputEl.classList.add('border-white/10');
+        }
+    }
+
+    function validateGameUid() {
+        const uid = document.getElementById("gameUid").value.trim();
+        const game = gameSelect.value;
+        if (!uid) {
+            showFieldError('gameUid', 'UID wajib diisi');
+            return false;
+        }
+        if (!/^\d+$/.test(uid)) {
+            showFieldError('gameUid', 'UID harus berupa angka');
+            return false;
+        }
+        if (uid.length < 4) {
+            showFieldError('gameUid', 'UID minimal 4 digit');
+            return false;
+        }
+        clearFieldError('gameUid');
+        return true;
+    }
+
+    function validateGameServer() {
+        if (!serverGroup.classList.contains('hidden')) {
+            const server = document.getElementById("gameServer").value.trim();
+            if (!server) {
+                showFieldError('gameServer', 'Server ID wajib diisi');
+                return false;
+            }
+            if (!/^\d+$/.test(server)) {
+                showFieldError('gameServer', 'Server ID harus berupa angka');
+                return false;
+            }
+        }
+        clearFieldError('gameServer');
+        return true;
+    }
+
+    function validatePhone() {
+        const phoneInput = document.getElementById("phone");
+        let phone = phoneInput.value.trim();
+        phone = phone.replace(/[+\s]/g, '');
+        phoneInput.value = phone;
+        if (!phone) {
+            showFieldError('phone', 'Nomor WhatsApp wajib diisi');
+            return false;
+        }
+        if (!/^\d{8,20}$/.test(phone)) {
+            showFieldError('phone', 'Nomor harus 8-20 digit angka (tanpa + atau spasi)');
+            return false;
+        }
+        clearFieldError('phone');
+        return true;
+    }
+
+    function validateGame() {
+        if (!gameSelect.value) {
+            showFieldError('game', 'Pilih game terlebih dahulu');
+            return false;
+        }
+        clearFieldError('game');
+        return true;
+    }
+
+    function validateProduct() {
+        if (!productSelect.value) {
+            showFieldError('product', 'Pilih paket terlebih dahulu');
+            return false;
+        }
+        clearFieldError('product');
+        return true;
+    }
+
+    document.getElementById("gameUid").addEventListener("blur", validateGameUid);
+    document.getElementById("gameUid").addEventListener("input", () => {
+        if (document.getElementById("gameUid").value.trim()) validateGameUid();
+    });
+    document.getElementById("gameServer").addEventListener("blur", validateGameServer);
+    document.getElementById("gameServer").addEventListener("input", () => {
+        if (document.getElementById("gameServer").value.trim()) validateGameServer();
+    });
+    document.getElementById("phone").addEventListener("blur", validatePhone);
+    document.getElementById("phone").addEventListener("input", () => {
+        const phoneInput = document.getElementById("phone");
+        phoneInput.value = phoneInput.value.replace(/[+\s]/g, '');
+        if (phoneInput.value.trim()) validatePhone();
+    });
+    gameSelect.addEventListener("blur", validateGame);
+    productSelect.addEventListener("blur", validateProduct);
 
     async function loadProductsForGame(game) {
         try {
@@ -185,6 +303,9 @@
     });
 
     function showConfirmModal() {
+        const isValid = validateGame() && validateProduct() && validateGameUid() && validateGameServer() && validatePhone();
+        if (!isValid) return;
+
         const game = gameSelect.options[gameSelect.selectedIndex]?.text;
         const uid = document.getElementById("gameUid").value.trim();
         const opt = productSelect.options[productSelect.selectedIndex];
@@ -222,36 +343,14 @@
         const gameServer = document.getElementById("gameServer").value.trim();
         const phone = document.getElementById("phone").value.trim();
 
-        if (!game || !gameUid || !phone || !productSelect.value) {
-            result.classList.remove("hidden");
-            result.innerHTML = '<p class="text-red-400">Semua field wajib diisi.</p>';
-            return;
-        }
-        if (game === "mobile_legends" && !gameServer) {
-            result.classList.remove("hidden");
-            result.innerHTML = '<p class="text-red-400">Server ID wajib diisi untuk Mobile Legends.</p>';
-            return;
-        }
-        if (game === "mobile_legends") {
-            if (!/^\d+$/.test(gameUid) || !/^\d+$/.test(gameServer)) {
-                result.classList.remove("hidden");
-                result.innerHTML = '<p class="text-red-400">UID dan Server ID harus berupa angka.</p>';
-                return;
-            }
-        } else if (!/^\d+$/.test(gameUid)) {
-            result.classList.remove("hidden");
-            result.innerHTML = '<p class="text-red-400">Game UID harus berupa angka.</p>';
-            return;
-        }
-        if (!/^\d{8,20}$/.test(phone)) {
-            result.classList.remove("hidden");
-            result.innerHTML = '<p class="text-red-400">Nomor WhatsApp harus berupa angka (8-20 digit).</p>';
-            return;
-        }
-
         submitBtn.disabled = true;
         submitText.textContent = 'Memproses...';
         submitSpinner.classList.remove('hidden');
+        gameSelect.disabled = true;
+        productSelect.disabled = true;
+        document.getElementById("gameUid").disabled = true;
+        document.getElementById("gameServer").disabled = true;
+        document.getElementById("phone").disabled = true;
 
         const body = { game, product_id: productSelect.value, game_uid: gameUid, game_server: gameServer, phone };
         try {
@@ -336,6 +435,13 @@
             submitBtn.disabled = false;
             submitText.textContent = 'Buat Order';
             submitSpinner.classList.add('hidden');
+            gameSelect.disabled = false;
+            document.getElementById("gameUid").disabled = false;
+            document.getElementById("gameServer").disabled = false;
+            document.getElementById("phone").disabled = false;
+            if (productSelect.value) {
+                productSelect.disabled = false;
+            }
         }
     }
 
