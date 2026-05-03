@@ -1,0 +1,1 @@
+-- no rollback: data deduplication cannot be reversed

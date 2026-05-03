@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS csrf_tokens CASCADE;

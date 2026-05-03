@@ -31,6 +31,7 @@ type Config struct {
 	RequestTimeout              string
 	AllowedOrigins              string
 	RedisURL                    string
+	AutoMigrate                 bool
 }
 
 func Load() (*Config, error) {
@@ -60,6 +61,7 @@ func Load() (*Config, error) {
 		RequestTimeout:         getEnv("REQUEST_TIMEOUT", "30s"),
 		AllowedOrigins:         getEnv("ALLOWED_ORIGINS", ""),
 		RedisURL:               getEnv("REDIS_URL", ""),
+		AutoMigrate:            getEnv("AUTO_MIGRATE", "false") == "true",
 	}
 
 	var missing []string

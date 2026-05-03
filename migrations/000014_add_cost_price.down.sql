@@ -1,0 +1,1 @@
+-- no rollback: hardcoded cost price data

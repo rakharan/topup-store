@@ -14,6 +14,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/topup-store/internal/cache"
 	"github.com/topup-store/internal/config"
 	"github.com/topup-store/internal/constants"
@@ -64,6 +67,22 @@ func main() {
 		os.Exit(1)
 	}
 	defer pool.Close()
+
+	if cfg.AutoMigrate {
+		logger.Info("Running auto-migrations...")
+		m, err := migrate.New("file://migrations", cfg.DatabaseURL)
+		if err != nil {
+			logger.Warn("auto-migrate: failed to initialize", slog.String("error", err.Error()))
+		} else {
+			if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+				logger.Warn("auto-migrate: some migrations failed (may be partial)", slog.String("error", err.Error()))
+			} else if err == migrate.ErrNoChange {
+				logger.Info("auto-migrate: database is already up to date")
+			} else {
+				logger.Info("auto-migrate: database is up to date")
+			}
+		}
+	}
 
 	rootCtx, rootCancel := context.WithCancel(context.Background())
 	defer rootCancel()

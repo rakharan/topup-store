@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS products CASCADE;
+DROP TYPE IF EXISTS channel_enum;
+DROP TYPE IF EXISTS order_status_enum;
+DROP TYPE IF EXISTS game_enum;

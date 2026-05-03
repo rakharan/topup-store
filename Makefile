@@ -1,4 +1,4 @@
-.PHONY: run build dev test test-coverage lint fmt vet migrate migrate-docker seed docker-up docker-down docker-logs css css-watch clean
+.PHONY: run build dev test test-coverage lint fmt vet migrate migrate-down migrate-force migrate-status migrate-docker seed docker-up docker-down docker-logs css css-watch clean install-migrate
 
 run:
 	go run ./cmd/server
@@ -25,27 +25,23 @@ fmt:
 vet:
 	go vet ./...
 
+install-migrate:
+	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
 migrate:
-	@echo "Running migrations..."
-	@psql "$$DATABASE_URL" -c "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, filename TEXT NOT NULL, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW());"
-	@for f in migrations/*.sql; do \
-		filename=$$(basename "$$f"); \
-		version=$$(echo "$$filename" | grep -oE "^[0-9]+" | sed "s/^0*//"); \
-		[ -z "$$version" ] && continue; \
-		exists=$$(psql "$$DATABASE_URL" -tAc "SELECT 1 FROM schema_migrations WHERE version=$$version"); \
-		if [ "$$exists" = "1" ]; then \
-			echo "Skipping $$filename (version $$version already applied)"; \
-		else \
-			echo "Applying $$filename (version $$version)..."; \
-			psql "$$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$$f"; \
-			psql "$$DATABASE_URL" -c "INSERT INTO schema_migrations (version, filename) VALUES ($$version, '$$filename');"; \
-			echo "Applied $$filename successfully"; \
-		fi; \
-	done
-	@echo "Migration complete"
+	migrate -path migrations -database "$$DATABASE_URL" up
+
+migrate-down:
+	migrate -path migrations -database "$$DATABASE_URL" down 1
+
+migrate-force:
+	migrate -path migrations -database "$$DATABASE_URL" force $(VERSION)
+
+migrate-status:
+	migrate -path migrations -database "$$DATABASE_URL" version
 
 migrate-docker:
-	docker compose exec postgres sh -c 'psql -U topup -d topup_store -c "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, filename TEXT NOT NULL, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW());" && for f in /migrations/*.sql; do filename=$$(basename "$$f"); version=$$(echo "$$filename" | grep -oE "^[0-9]+" | sed "s/^0*//"); [ -z "$$version" ] && continue; exists=$$(psql -U topup -d topup_store -tAc "SELECT 1 FROM schema_migrations WHERE version=$$version"); if [ "$$exists" = "1" ]; then echo "Skipping $$filename (version $$version already applied)"; else echo "Applying $$filename (version $$version)..."; psql -U topup -d topup_store -v ON_ERROR_STOP=1 -f "$$f"; psql -U topup -d topup_store -c "INSERT INTO schema_migrations (version, filename) VALUES ($$version, '\''$$filename'\'');"; echo "Applied $$filename successfully"; fi; done && echo "Migration complete"'
+	docker compose run --rm migrate
 
 seed:
 	go run ./db/seed.go
