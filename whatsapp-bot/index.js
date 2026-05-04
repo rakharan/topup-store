@@ -174,6 +174,7 @@ async function handleOrder(sender, order) {
       `Halo! Berikut QRIS untuk pembayaran ${gameLabel} ${order.diamonds} diamonds.\n` +
       `Total: Rp${amount_idr.toLocaleString("id-ID")}\n` +
       `ID Order: ${order_id}\n` +
+      `Berlaku 30 menit. Segera lakukan pembayaran.\n` +
       `Scan QRIS di bawah untuk membayar:`;
 
     if (qris_url) {
@@ -187,7 +188,21 @@ async function handleOrder(sender, order) {
     console.log(`Order created for ${sender}: ${order_id}`);
   } catch (err) {
     console.error("Failed to create order:", err.message);
-    await sendText(sender, "Maaf, terjadi kesalahan saat memproses pesanan. Silakan coba lagi.");
+    let msg = "Maaf, terjadi kesalahan saat memproses pesanan. Silakan coba lagi.";
+    if (err.response) {
+      const status = err.response.status;
+      const data = err.response.data;
+      if (status === 400) {
+        msg = data?.error?.message || "Format pesanan tidak valid. Pastikan format benar.";
+      } else if (status === 429) {
+        msg = "Terlalu banyak permintaan. Silakan tunggu 1 menit.";
+      } else if (status >= 500) {
+        msg = "Server sedang bermasalah. Silakan coba lagi nanti.";
+      }
+    } else if (err.code === "ECONNREFUSED" || err.code === "ENOTFOUND") {
+      msg = "Tidak dapat terhubung ke server. Silakan coba lagi nanti.";
+    }
+    await sendText(sender, msg);
   }
 }
 
@@ -257,9 +272,9 @@ function gameToLabel(game) {
 
 function parseOrderMessage(text) {
   const patterns = [
-    /^(FF|Free\s*Fire)\s+(\d+)\s+UID[:\s]+(\d+)$/i,
-    /^(ML|Mobile\s*Legends)\s+(\d+)\s+UID[:\s]+(\d+)\|(\d+)$/i,
-    /^(PUBG|PUBG\s*Mobile)\s+(\d+)\s+UID[:\s]+(\d+)$/i,
+    /^(FF|Free\s*Fire)\s+(\d+)\s+(?:UID[:\s]+)?(\d+)$/i,
+    /^(ML|Mobile\s*Legends)\s+(\d+)\s+(?:UID[:\s]+)?(\d+)\|(\d+)$/i,
+    /^(PUBG|PUBG\s*Mobile)\s+(\d+)\s+(?:UID[:\s]+)?(\d+)$/i,
   ];
 
   for (const pattern of patterns) {

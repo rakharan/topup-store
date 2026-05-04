@@ -495,8 +495,12 @@
             }
         } catch (e) {
             result.classList.remove("hidden");
-            result.innerHTML = '<p class="text-red-400">Terjadi kesalahan. Coba lagi.</p>';
-            showToast('Terjadi kesalahan', 'error');
+            const isNetworkError = e.name === 'TypeError' || !navigator.onLine;
+            const msg = isNetworkError
+                ? 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.'
+                : 'Terjadi kesalahan. Silakan coba lagi.';
+            result.innerHTML = `<p class="text-red-400">${msg}</p>`;
+            showToast(isNetworkError ? 'Koneksi bermasalah' : 'Terjadi kesalahan', 'error');
         } finally {
             submitBtn.disabled = false;
             submitText.textContent = 'Buat Order';

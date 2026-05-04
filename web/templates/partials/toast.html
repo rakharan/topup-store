@@ -1,13 +1,28 @@
 {{define "toast"}}
-<div id="toast" class="fixed bottom-4 right-4 hidden z-50" role="alert" aria-live="polite" aria-atomic="true"></div>
+<div id="toast" class="fixed bottom-4 right-4 hidden z-50 cursor-pointer" role="alert" aria-live="polite" aria-atomic="true" title="Klik untuk menutup">
+    <span id="toastMessage"></span>
+    <span class="ml-2 text-white/60 text-xs" aria-hidden="true">(tap to close)</span>
+</div>
 <script>
-function showToast(message, type = 'info') {
+(function() {
     const toast = document.getElementById('toast');
-    const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
-    toast.className = `fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg text-white text-sm ${colors[type] || colors.info}`;
-    toast.textContent = message;
-    toast.classList.remove('hidden');
-    setTimeout(() => toast.classList.add('hidden'), 3000);
-}
+    const toastMessage = document.getElementById('toastMessage');
+    let toastTimer = null;
+
+    toast.addEventListener('click', () => {
+        toast.classList.add('hidden');
+        if (toastTimer) clearTimeout(toastTimer);
+    });
+
+    window.showToast = function(message, type = 'info') {
+        const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
+        toast.className = `fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg text-white text-sm cursor-pointer ${colors[type] || colors.info}`;
+        toastMessage.textContent = message;
+        toast.classList.remove('hidden');
+        if (toastTimer) clearTimeout(toastTimer);
+        const duration = type === 'error' ? 8000 : 3000;
+        toastTimer = setTimeout(() => toast.classList.add('hidden'), duration);
+    };
+})();
 </script>
 {{end}}
