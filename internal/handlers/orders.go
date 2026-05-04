@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -49,6 +50,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		drainBody(r)
 		h.logger.Error("create order: decode error", slog.String("error", err.Error()), slog.String("request_id", middleware.GetRequestID(r.Context())))
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
 		return
@@ -174,11 +176,13 @@ func (h *OrderHandler) LookupOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		drainBody(r)
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
 		return
 	}
 
 	if req.GameUID == "" || req.Phone == "" {
+		drainBody(r)
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("input", "game_uid and phone are required"), middleware.GetRequestID(r.Context()))
 		return
 	}
@@ -308,4 +312,9 @@ type validationError struct {
 
 func (e *validationError) Error() string {
 	return e.field + ": " + e.message
+}
+
+func drainBody(r *http.Request) {
+	io.Copy(io.Discard, r.Body)
+	r.Body.Close()
 }

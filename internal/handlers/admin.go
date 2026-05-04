@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -52,6 +53,8 @@ func (h *AdminHandler) ProcessOrder(w http.ResponseWriter, r *http.Request) {
 		OrderID string `json:"order_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		io.Copy(io.Discard, r.Body)
+		r.Body.Close()
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
 		return
 	}
@@ -102,6 +105,8 @@ func (h *AdminHandler) RetryOrder(w http.ResponseWriter, r *http.Request) {
 		OrderID string `json:"order_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		io.Copy(io.Discard, r.Body)
+		r.Body.Close()
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
 		return
 	}
@@ -164,6 +169,8 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		IsActive     bool   `json:"is_active"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		io.Copy(io.Discard, r.Body)
+		r.Body.Close()
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
 		return
 	}
@@ -240,6 +247,8 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		IsActive     bool   `json:"is_active"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		io.Copy(io.Discard, r.Body)
+		r.Body.Close()
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
 		return
 	}
@@ -316,6 +325,8 @@ func (h *AdminHandler) SyncPrices(w http.ResponseWriter, r *http.Request) {
 		MarginValue int    `json:"margin_value"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		io.Copy(io.Discard, r.Body)
+		r.Body.Close()
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
 		return
 	}
@@ -375,6 +386,8 @@ func (h *AdminHandler) SyncPricesFromDigiflazz(w http.ResponseWriter, r *http.Re
 		MarginValue int    `json:"margin_value"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		io.Copy(io.Discard, r.Body)
+		r.Body.Close()
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
 		return
 	}
@@ -572,6 +585,8 @@ func (h *AdminHandler) OverrideOrderStatus(w http.ResponseWriter, r *http.Reques
 		Reason  string `json:"reason"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		io.Copy(io.Discard, r.Body)
+		r.Body.Close()
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
 		return
 	}
