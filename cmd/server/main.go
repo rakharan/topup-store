@@ -159,14 +159,15 @@ func main() {
 		r.Get("/orders", orders.ListOrders)
 		r.Get("/orders/{id}", orders.GetOrder)
 		r.Post("/orders/lookup", orders.LookupOrder)
-		r.Get("/orders/recent", orders.RecentOrders)
+		r.With(middleware.AdminAuth(cfg.AdminPassword)).Get("/orders/recent", orders.RecentOrders)
 		r.With(csrfMW).Post("/orders/{id}/cancel", orders.CancelOrder)
 		r.Get("/products", products.ListProducts)
 		r.Get("/products/{id}", products.GetProduct)
 	})
 
-	r.Post("/webhook/midtrans", webhook.Midtrans)
-	r.Post("/webhook/digiflazz", webhook.Digiflazz)
+	webhookRateLimiter := middleware.NewRateLimiter(20, time.Minute)
+	r.With(webhookRateLimiter.Middleware).Post("/webhook/midtrans", webhook.Midtrans)
+	r.With(webhookRateLimiter.Middleware).Post("/webhook/digiflazz", webhook.Digiflazz)
 
 	adminRateLimiter := middleware.NewRateLimiter(30, time.Minute)
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post(cfg.AdminPath+"/process-order", admin.ProcessOrder)
