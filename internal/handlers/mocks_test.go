@@ -114,7 +114,7 @@ func (m *mockTopupService) ListAllProducts(ctx context.Context) ([]models.Produc
 	return m.listAllProductsResult, m.listAllProductsErr
 }
 
-func (m *mockTopupService) ProcessOrder(orderID string) error {
+func (m *mockTopupService) ProcessOrder(ctx context.Context, orderID string) error {
 	return m.processOrderErr
 }
 

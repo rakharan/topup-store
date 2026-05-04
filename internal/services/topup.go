@@ -49,8 +49,7 @@ func NewTopupService(orderRepo repositories.OrderRepository, productRepo reposit
 	}
 }
 
-func (s *TopupService) ProcessOrder(orderID string) error {
-	ctx := context.Background()
+func (s *TopupService) ProcessOrder(ctx context.Context, orderID string) error {
 
 	updated, err := s.orderRepo.UpdateStatusIf(ctx, orderID, constants.StatusProcessing, constants.StatusPaid)
 	if err != nil {

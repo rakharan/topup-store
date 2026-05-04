@@ -28,7 +28,7 @@ type TopupServiceInterface interface {
 	GetProductByGameAndDiamonds(ctx context.Context, game string, diamonds int) (*models.Product, error)
 	ListProducts(ctx context.Context, game string) ([]models.Product, error)
 	ListAllProducts(ctx context.Context) ([]models.Product, error)
-	ProcessOrder(orderID string) error
+	ProcessOrder(ctx context.Context, orderID string) error
 	FetchDigiflazzPrices(ctx context.Context) ([]DigiflazzPrice, error)
 	SyncPricesWithAutoCreate(ctx context.Context, marginType string, marginValue int) ([]SyncResult, int, int, int, error)
 	GetBalance() int

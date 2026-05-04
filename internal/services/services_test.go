@@ -170,7 +170,7 @@ func TestTopupService_ProcessOrder_NotPaid(t *testing.T) {
 	productRepo := &mockProductRepo{}
 	svc := NewTopupService(orderRepo, productRepo, "user", "key", "https://api.example.com", true, nil)
 
-	err := svc.ProcessOrder("order-1")
+	err := svc.ProcessOrder(context.Background(), "order-1")
 	if err == nil {
 		t.Error("expected error for non-paid order")
 	}
@@ -184,7 +184,7 @@ func TestTopupService_ProcessOrder_GetOrderFails(t *testing.T) {
 	productRepo := &mockProductRepo{}
 	svc := NewTopupService(orderRepo, productRepo, "user", "key", "https://api.example.com", true, nil)
 
-	err := svc.ProcessOrder("order-1")
+	err := svc.ProcessOrder(context.Background(), "order-1")
 	if err == nil {
 		t.Error("expected error when GetByID fails")
 	}

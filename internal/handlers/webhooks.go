@@ -140,7 +140,7 @@ func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
 					h.logger.Error("topup process panicked", slog.String("order_id", orderCopy.ID), slog.String("order_number", orderCopy.OrderNumber), slog.Any("panic", r))
 				}
 			}()
-			if err := h.topupSvc.ProcessOrder(orderCopy.ID); err != nil {
+			if err := h.topupSvc.ProcessOrder(r.Context(), orderCopy.ID); err != nil {
 				h.logger.Error("topup process failed", slog.String("order_id", orderCopy.ID), slog.String("order_number", orderCopy.OrderNumber), slog.String("error", err.Error()))
 				return
 			}

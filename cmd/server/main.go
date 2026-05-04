@@ -460,7 +460,7 @@ func startMidtransPoller(ctx context.Context, paymentSvc services.PaymentService
 						}
 						paymentSvc.RecordStatusChange(ctx, order.ID, order.Status, constants.StatusPaid, "midtrans poller")
 						logger.Info("midtrans poller: order marked as paid", slog.String("order_id", order.ID))
-						if err := topupSvc.ProcessOrder(order.ID); err != nil {
+						if err := topupSvc.ProcessOrder(ctx, order.ID); err != nil {
 							logger.Error("midtrans poller: failed to process order", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 						}
 					case "expire", "cancel", "deny":
