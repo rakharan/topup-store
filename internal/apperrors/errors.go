@@ -2,6 +2,7 @@ package apperrors
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 )
 
@@ -34,21 +35,25 @@ type APIResponse struct {
 func WriteError(w http.ResponseWriter, status int, appErr *AppError, requestID string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(APIResponse{
+	if err := json.NewEncoder(w).Encode(APIResponse{
 		Success:   false,
 		Error:     appErr,
 		RequestID: requestID,
-	})
+	}); err != nil {
+		slog.Error("WriteError: failed to encode response", slog.String("error", err.Error()))
+	}
 }
 
 func WriteSuccess(w http.ResponseWriter, status int, data any, requestID string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(APIResponse{
+	if err := json.NewEncoder(w).Encode(APIResponse{
 		Success:   true,
 		Data:      data,
 		RequestID: requestID,
-	})
+	}); err != nil {
+		slog.Error("WriteSuccess: failed to encode response", slog.String("error", err.Error()))
+	}
 }
 
 func FieldError(field, message string) *AppError {

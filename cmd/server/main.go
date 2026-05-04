@@ -292,12 +292,14 @@ func healthHandler(pool interface{ Ping(context.Context) error }) http.HandlerFu
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		if err := json.NewEncoder(w).Encode(map[string]any{
 			"status":   status,
 			"version":  "1.0.0",
 			"database": dbStatus,
 			"uptime":   time.Since(startTime).String(),
-		})
+		}); err != nil {
+			slog.Error("healthHandler: failed to encode response", slog.String("error", err.Error()))
+		}
 	}
 }
 
