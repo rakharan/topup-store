@@ -3,7 +3,6 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/topup-store/internal/apperrors"
@@ -25,15 +24,6 @@ func NewProductHandler(topupSvc services.TopupServiceInterface, cache *cache.Cac
 
 func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	game := r.URL.Query().Get("game")
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	perPage, _ := strconv.Atoi(r.URL.Query().Get("per_page"))
-
-	if page < 1 {
-		page = 1
-	}
-	if perPage < 1 {
-		perPage = 50
-	}
 
 	cacheKey := "products:" + game
 	var products []models.Product
