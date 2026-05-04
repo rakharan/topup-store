@@ -3,12 +3,13 @@
 <head>
     <title>Admin - TopUp Store</title>
     {{template "head"}}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
 </head>
 <body class="bg-dark text-white min-h-screen">
     {{template "nav" (dict "ActivePage" "admin")}}
 
     {{if .Authenticated}}
-    <section id="main-content" class="max-w-6xl mx-auto px-4 py-8">
+    <main id="main-content" class="max-w-6xl mx-auto px-4 py-8">
         <div class="flex items-center justify-between mb-8">
             <h1 class="text-2xl font-bold">Admin Dashboard</h1>
             <div class="flex items-center gap-3">
@@ -20,9 +21,9 @@
 
         <div class="flex gap-4 mb-6 border-b border-white/10">
             <button id="tabOrders" onclick="switchTab('orders')" class="tab-btn px-4 py-2 text-primary border-b-2 border-primary font-medium focus-ring">Orders</button>
-            <button id="tabProducts" onclick="switchTab('products')" class="tab-btn px-4 py-2 text-white/50 hover:text-white transition focus-ring">Products</button>
-            <button id="tabAnalytics" onclick="switchTab('analytics')" class="tab-btn px-4 py-2 text-white/50 hover:text-white transition focus-ring">Analytics</button>
-            <button id="tabWebhooks" onclick="switchTab('webhooks')" class="tab-btn px-4 py-2 text-white/50 hover:text-white transition focus-ring">Webhooks</button>
+            <button id="tabProducts" onclick="switchTab('products')" class="tab-btn px-4 py-2 text-white/70 hover:text-white transition focus-ring">Products</button>
+            <button id="tabAnalytics" onclick="switchTab('analytics')" class="tab-btn px-4 py-2 text-white/70 hover:text-white transition focus-ring">Analytics</button>
+            <button id="tabWebhooks" onclick="switchTab('webhooks')" class="tab-btn px-4 py-2 text-white/70 hover:text-white transition focus-ring">Webhooks</button>
         </div>
 
         <div id="ordersTab">
@@ -46,7 +47,7 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-white/10 text-left text-white/50">
+                        <tr class="border-b border-white/10 text-left text-white/70">
                             <th scope="col" class="pb-3 pr-4">Order Number</th>
                             <th scope="col" class="pb-3 pr-4">Game</th>
                             <th scope="col" class="pb-3 pr-4">UID</th>
@@ -174,7 +175,7 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-white/10 text-left text-white/50">
+                        <tr class="border-b border-white/10 text-left text-white/70">
                             <th scope="col" class="pb-3 pr-4">ID</th>
                             <th scope="col" class="pb-3 pr-4">Game</th>
                             <th scope="col" class="pb-3 pr-4">Name</th>
@@ -206,11 +207,11 @@
             <div id="analyticsStats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div class="bg-white/5 border border-white/10 rounded-xl p-4">
-                    <h3 class="text-sm font-medium text-white/50 mb-3">Revenue & Orders (Daily)</h3>
+                    <h3 class="text-sm font-medium text-white/70 mb-3">Revenue & Orders (Daily)</h3>
                     <canvas id="revenueChart"></canvas>
                 </div>
                 <div class="bg-white/5 border border-white/10 rounded-xl p-4">
-                    <h3 class="text-sm font-medium text-white/50 mb-3">Revenue by Game</h3>
+                    <h3 class="text-sm font-medium text-white/70 mb-3">Revenue by Game</h3>
                     <canvas id="gameChart"></canvas>
                 </div>
             </div>
@@ -228,7 +229,7 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-white/10 text-left text-white/50">
+                        <tr class="border-b border-white/10 text-left text-white/70">
                             <th scope="col" class="pb-3 pr-4">Time</th>
                             <th scope="col" class="pb-3 pr-4">Source</th>
                             <th scope="col" class="pb-3 pr-4">Ref ID</th>
@@ -248,7 +249,7 @@
             <div class="bg-dark border border-white/10 rounded-xl p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-bold">Order Detail</h3>
-                    <button onclick="closeOrderDetail()" class="text-white/50 hover:text-white focus-ring">&times;</button>
+                    <button onclick="closeOrderDetail()" class="text-white/70 hover:text-white focus-ring">&times;</button>
                 </div>
                 <div id="orderDetailContent" class="space-y-3 text-sm"></div>
                 <div id="orderStatusHistory" class="mt-4 pt-4 border-t border-white/10"></div>
@@ -269,7 +270,7 @@
                 </div>
             </div>
         </div>
-    </section>
+    </main>
     {{else}}
     <section class="max-w-sm mx-auto px-4 py-24">
         <h1 class="text-3xl font-bold mb-8 text-center">Admin Login</h1>
@@ -449,10 +450,10 @@
         const statsEl = document.getElementById('stats');
         if (statsEl) {
             statsEl.innerHTML = `
-                <div class="bg-white/5 rounded-xl p-4 border border-white/10"><div class="text-2xl font-bold">${stats.total}</div><div class="text-sm text-white/50">Total Orders</div></div>
-                <div class="bg-yellow-500/10 rounded-xl p-4 border border-yellow-500/20"><div class="text-2xl font-bold text-yellow-400">${stats.pending}</div><div class="text-sm text-white/50">Pending</div></div>
-                <div class="bg-green-500/10 rounded-xl p-4 border border-green-500/20"><div class="text-2xl font-bold text-green-400">${stats.success}</div><div class="text-sm text-white/50">Success</div></div>
-                <div class="bg-primary/10 rounded-xl p-4 border border-primary/20"><div class="text-2xl font-bold text-primary">Rp ${stats.revenue.toLocaleString('id-ID')}</div><div class="text-sm text-white/50">Revenue</div></div>
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10"><div class="text-2xl font-bold">${stats.total}</div><div class="text-sm text-white/70">Total Orders</div></div>
+                <div class="bg-yellow-500/10 rounded-xl p-4 border border-yellow-500/20"><div class="text-2xl font-bold text-yellow-400">${stats.pending}</div><div class="text-sm text-white/70">Pending</div></div>
+                <div class="bg-green-500/10 rounded-xl p-4 border border-green-500/20"><div class="text-2xl font-bold text-green-400">${stats.success}</div><div class="text-sm text-white/70">Success</div></div>
+                <div class="bg-primary/10 rounded-xl p-4 border border-primary/20"><div class="text-2xl font-bold text-primary">Rp ${stats.revenue.toLocaleString('id-ID')}</div><div class="text-sm text-white/70">Revenue</div></div>
             `;
         }
     }
@@ -516,7 +517,7 @@
             const isActive = t.toLowerCase() === tab;
             btn.classList.toggle('text-primary', isActive);
             btn.classList.toggle('border-primary', isActive);
-            btn.classList.toggle('text-white/50', !isActive);
+            btn.classList.toggle('text-white/70', !isActive);
             btn.classList.toggle('border-transparent', !isActive);
         });
         if (tab === 'products') loadProducts();
@@ -692,10 +693,10 @@
             const topGames = data.top_games || [];
 
             document.getElementById('analyticsStats').innerHTML = `
-                <div class="bg-white/5 rounded-xl p-4 border border-white/10"><div class="text-2xl font-bold">${overall.total_orders || 0}</div><div class="text-sm text-white/50">Total Orders</div></div>
-                <div class="bg-green-500/10 rounded-xl p-4 border border-green-500/20"><div class="text-2xl font-bold text-green-400">${overall.success_orders || 0}</div><div class="text-sm text-white/50">Success</div></div>
-                <div class="bg-primary/10 rounded-xl p-4 border border-primary/20"><div class="text-2xl font-bold text-primary">${(overall.conversion_rate || 0).toFixed(1)}%</div><div class="text-sm text-white/50">Conversion</div></div>
-                <div class="bg-blue-500/10 rounded-xl p-4 border border-blue-500/20"><div class="text-2xl font-bold text-blue-400">Rp ${(overall.total_revenue || 0).toLocaleString('id-ID')}</div><div class="text-sm text-white/50">Revenue</div></div>
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10"><div class="text-2xl font-bold">${overall.total_orders || 0}</div><div class="text-sm text-white/70">Total Orders</div></div>
+                <div class="bg-green-500/10 rounded-xl p-4 border border-green-500/20"><div class="text-2xl font-bold text-green-400">${overall.success_orders || 0}</div><div class="text-sm text-white/70">Success</div></div>
+                <div class="bg-primary/10 rounded-xl p-4 border border-primary/20"><div class="text-2xl font-bold text-primary">${(overall.conversion_rate || 0).toFixed(1)}%</div><div class="text-sm text-white/70">Conversion</div></div>
+                <div class="bg-blue-500/10 rounded-xl p-4 border border-blue-500/20"><div class="text-2xl font-bold text-blue-400">Rp ${(overall.total_revenue || 0).toLocaleString('id-ID')}</div><div class="text-sm text-white/70">Revenue</div></div>
             `;
 
             if (revenueChartInstance) revenueChartInstance.destroy();
@@ -786,14 +787,14 @@
 
             let html = `
                 <div class="grid grid-cols-2 gap-2">
-                    <div class="text-white/50">ID:</div><div class="font-mono text-xs">${escapeHtml(order.id)}</div>
-                    <div class="text-white/50">Status:</div><div><span class="px-2 py-1 rounded-full text-xs bg-${color}-500/20 text-${color}-400">${escapeHtml(order.status)}</span></div>
-                    <div class="text-white/50">Amount:</div><div>Rp ${(order.amount_idr || 0).toLocaleString('id-ID')}</div>
-                    <div class="text-white/50">UID:</div><div>${escapeHtml(order.game_uid || '-')}${order.game_server ? ' (' + escapeHtml(order.game_server) + ')' : ''}</div>
-                    <div class="text-white/50">Phone:</div><div>${escapeHtml(order.user_phone || '-')}</div>
-                    <div class="text-white/50">Product:</div><div>${escapeHtml(order.product_id || '-')}</div>
-                    <div class="text-white/50">SN:</div><div class="font-mono text-xs">${escapeHtml(order.serial_number || '-')}</div>
-                    <div class="text-white/50">Created:</div><div>${new Date(order.created_at).toLocaleString('id-ID')}</div>
+                    <div class="text-white/70">ID:</div><div class="font-mono text-xs">${escapeHtml(order.id)}</div>
+                    <div class="text-white/70">Status:</div><div><span class="px-2 py-1 rounded-full text-xs bg-${color}-500/20 text-${color}-400">${escapeHtml(order.status)}</span></div>
+                    <div class="text-white/70">Amount:</div><div>Rp ${(order.amount_idr || 0).toLocaleString('id-ID')}</div>
+                    <div class="text-white/70">UID:</div><div>${escapeHtml(order.game_uid || '-')}${order.game_server ? ' (' + escapeHtml(order.game_server) + ')' : ''}</div>
+                    <div class="text-white/70">Phone:</div><div>${escapeHtml(order.user_phone || '-')}</div>
+                    <div class="text-white/70">Product:</div><div>${escapeHtml(order.product_id || '-')}</div>
+                    <div class="text-white/70">SN:</div><div class="font-mono text-xs">${escapeHtml(order.serial_number || '-')}</div>
+                    <div class="text-white/70">Created:</div><div>${new Date(order.created_at).toLocaleString('id-ID')}</div>
                 </div>
             `;
             document.getElementById('orderDetailContent').innerHTML = html;

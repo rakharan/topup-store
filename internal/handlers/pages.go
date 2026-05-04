@@ -112,7 +112,9 @@ func (h *PageHandler) OrderForm(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PageHandler) Status(w http.ResponseWriter, r *http.Request) {
-	if err := h.templates.ExecuteTemplate(w, "status.html", nil); err != nil {
+	if err := h.templates.ExecuteTemplate(w, "status.html", map[string]any{
+		"CSRFToken": middleware.GetCSRFToken(r.Context()),
+	}); err != nil {
 		h.logger.Error("template error (status.html)", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}

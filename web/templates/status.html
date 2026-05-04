@@ -8,7 +8,7 @@
 <body class="bg-dark text-white min-h-screen">
     {{template "nav" (dict "ActivePage" "status")}}
 
-    <section id="main-content" class="max-w-lg mx-auto px-4 py-12">
+    <main id="main-content" class="max-w-lg mx-auto px-4 py-12">
         <h1 class="text-3xl font-bold mb-8 text-center">Cek Status Order</h1>
         <form id="statusForm" class="flex gap-3 mb-8">
             <input type="text" id="orderId" name="id" placeholder="Masukkan ID Order" required class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
@@ -22,12 +22,15 @@
             <span>Auto-refresh setiap 10 detik</span>
             <button id="stopRefresh" class="text-primary ml-2 hover:underline focus-ring">Stop</button>
         </div>
-    </section>
+    </main>
 
     {{template "footer"}}
     {{template "toast"}}
 
     <script src="/static/js/shared.js"></script>
+    <script>
+    const csrfToken = "{{.CSRFToken}}";
+    </script>
     <script>
     const statusColors = {
         pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
@@ -106,10 +109,10 @@
                         ${renderTimeline(order.status)}
                     </div>
                     <div class="space-y-2 text-sm border-t border-white/10 pt-4">
-                        <div class="flex justify-between"><span class="text-white/50">Game UID</span><span>${gameUid}${gameServer ? ' (' + gameServer + ')' : ''}</span></div>
-                        <div class="flex justify-between"><span class="text-white/50">Total</span><span>Rp ${amount}</span></div>
-                        <div class="flex justify-between"><span class="text-white/50">Dibuat</span><span>${escapeHtml(createdAt)}</span></div>
-                        ${serialNumber ? `<div class="flex justify-between"><span class="text-white/50">Serial Number</span><span class="font-mono">${serialNumber}</span></div>` : ''}
+                        <div class="flex justify-between"><span class="text-white/70">Game UID</span><span>${gameUid}${gameServer ? ' (' + gameServer + ')' : ''}</span></div>
+                        <div class="flex justify-between"><span class="text-white/70">Total</span><span>Rp ${amount}</span></div>
+                        <div class="flex justify-between"><span class="text-white/70">Dibuat</span><span>${escapeHtml(createdAt)}</span></div>
+                        ${serialNumber ? `<div class="flex justify-between"><span class="text-white/70">Serial Number</span><span class="font-mono">${serialNumber}</span></div>` : ''}
                     </div>
                     ${order.status === 'pending' && qrisUrl ? `
                         <div class="mt-4 pt-4 border-t border-white/10 text-center flex flex-col sm:flex-row gap-3 justify-center">
@@ -146,7 +149,7 @@
     async function cancelOrder(orderId) {
         if (!confirm("Yakin ingin membatalkan order ini?")) return;
         try {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            // csrfToken is declared above from template data
             const res = await fetch(`/api/orders/${orderId}/cancel`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },

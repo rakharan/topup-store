@@ -9,7 +9,7 @@
 <body class="bg-dark text-white min-h-screen">
     {{template "nav" (dict "ActivePage" "order")}}
 
-    <section id="main-content" class="max-w-lg mx-auto px-4 py-12">
+    <main id="main-content" class="max-w-lg mx-auto px-4 py-12">
         <h1 class="text-3xl font-bold mb-8 text-center">Buat Order</h1>
         <form id="orderForm" class="space-y-5">
             <div>
@@ -77,10 +77,10 @@
             <div class="bg-dark rounded-xl p-6 max-w-sm mx-4 border border-white/10 animate-fade-in">
                 <h3 id="confirmTitle" class="text-xl font-bold mb-4">Konfirmasi Order</h3>
                 <div class="space-y-2 text-sm mb-6">
-                    <div class="flex justify-between"><span class="text-white/50">Game</span><span id="confirmGame"></span></div>
-                    <div class="flex justify-between"><span class="text-white/50">Paket</span><span id="confirmProduct"></span></div>
-                    <div class="flex justify-between"><span class="text-white/50">UID</span><span id="confirmUid"></span></div>
-                    <div class="flex justify-between"><span class="text-white/50">Total</span><span id="confirmPrice" class="text-primary font-bold"></span></div>
+                    <div class="flex justify-between"><span class="text-white/70">Game</span><span id="confirmGame"></span></div>
+                    <div class="flex justify-between"><span class="text-white/70">Paket</span><span id="confirmProduct"></span></div>
+                    <div class="flex justify-between"><span class="text-white/70">UID</span><span id="confirmUid"></span></div>
+                    <div class="flex justify-between"><span class="text-white/70">Total</span><span id="confirmPrice" class="text-primary font-bold"></span></div>
                 </div>
                 <div class="flex gap-3">
                     <button type="button" onclick="closeConfirmModal()" class="flex-1 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition focus-ring">Edit</button>
@@ -90,7 +90,7 @@
         </div>
 
         <div id="result" class="hidden mt-8 bg-white/5 border border-white/10 rounded-xl p-6"></div>
-    </section>
+    </main>
 
     {{template "footer"}}
     {{template "toast"}}
