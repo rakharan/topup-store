@@ -99,7 +99,7 @@ async function checkOrderByID(sender, orderId) {
       expired: "⌛ Kadaluarsa",
     }[order.status] || order.status;
 
-    const gameLabel = gameToLabel(order.game_uid ? "unknown" : "unknown");
+    const gameLabel = gameToLabel(order.channel || "unknown");
     let message = `📋 *Status Order*\n\n`;
     message += `ID: ${order.order_number || order.id}\n`;
     message += `Status: ${statusLabel}\n`;
