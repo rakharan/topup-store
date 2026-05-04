@@ -51,7 +51,12 @@ func NewWebhookHandler(paymentSvc services.PaymentServiceInterface, topupSvc ser
 }
 
 func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
-	rawBody, _ := io.ReadAll(r.Body)
+	rawBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.logger.Error("midtrans webhook: failed to read body", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("body", "failed to read request body"), middleware.GetRequestID(r.Context()))
+		return
+	}
 	r.Body = io.NopCloser(bytes.NewReader(rawBody))
 
 	var payload struct {

@@ -354,7 +354,7 @@ func (h *AdminHandler) SyncPrices(w http.ResponseWriter, r *http.Request) {
 		}
 
 		costPrice := p.Price
-		sellingPrice, tier := calcTieredPrice(costPrice, req.MarginType, req.MarginValue)
+		sellingPrice, tier := services.CalcTieredPrice(costPrice, req.MarginType, req.MarginValue)
 
 		if err := h.productRepo.SyncPrice(r.Context(), p.SKU, costPrice, sellingPrice); err != nil {
 			h.logger.Warn("sync prices: failed to update", slog.String("sku", p.SKU), slog.String("error", err.Error()))
@@ -634,35 +634,4 @@ func (h *AdminHandler) OverrideOrderStatus(w http.ResponseWriter, r *http.Reques
 	}, middleware.GetRequestID(r.Context()))
 }
 
-func calcTieredPrice(costPrice int, marginType string, marginValue int) (sellingPrice int, tier string) {
-	if marginType == "fixed" {
-		sellingPrice = costPrice + marginValue
-		tier = "fixed"
-	} else if marginType == "percent" {
-		sellingPrice = int(float64(costPrice) * (1 + float64(marginValue)/100))
-		tier = "flat_percent"
-	} else {
-		switch {
-		case costPrice < 5000:
-			sellingPrice = int(float64(costPrice) * 1.15)
-			minPrice := costPrice + 200
-			if sellingPrice < minPrice {
-				sellingPrice = minPrice
-			}
-			tier = "low (<5k, 15% min 200)"
-		case costPrice <= 50000:
-			sellingPrice = int(float64(costPrice) * 1.10)
-			tier = "mid (5k-50k, 10%)"
-		default:
-			sellingPrice = int(float64(costPrice) * 1.05)
-			maxPrice := costPrice + 5000
-			if sellingPrice > maxPrice {
-				sellingPrice = maxPrice
-			}
-			tier = "high (>50k, 5% max 5k)"
-		}
-	}
 
-	sellingPrice = (sellingPrice + 50) / 100 * 100
-	return
-}

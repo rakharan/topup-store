@@ -434,7 +434,7 @@ func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType 
 		}
 
 		costPrice := p.Price
-		sellingPrice, tier := calcTieredPrice(costPrice, marginType, marginValue)
+		sellingPrice, tier := CalcTieredPrice(costPrice, marginType, marginValue)
 
 		exists, err := s.productRepo.ExistsBySKU(ctx, p.SKU, "")
 		if err != nil {
@@ -496,7 +496,7 @@ func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType 
 	return results, updated, created, skipped, nil
 }
 
-func calcTieredPrice(costPrice int, marginType string, marginValue int) (sellingPrice int, tier string) {
+func CalcTieredPrice(costPrice int, marginType string, marginValue int) (sellingPrice int, tier string) {
 	if marginType == "fixed" {
 		sellingPrice = costPrice + marginValue
 		tier = "fixed"
