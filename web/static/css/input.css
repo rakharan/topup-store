@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.skip-link:focus {
+    top: 8px;
+}
+

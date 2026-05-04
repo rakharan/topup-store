@@ -8,7 +8,7 @@
 <body class="bg-dark text-white min-h-screen">
     {{template "nav" (dict "ActivePage" "status")}}
 
-    <section class="max-w-lg mx-auto px-4 py-12">
+    <section id="main-content" class="max-w-lg mx-auto px-4 py-12">
         <h1 class="text-3xl font-bold mb-8 text-center">Cek Status Order</h1>
         <form id="statusForm" class="flex gap-3 mb-8">
             <input type="text" id="orderId" name="id" placeholder="Masukkan ID Order" required class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
