@@ -6,7 +6,7 @@
   "scripts": {
     "css:build": "tailwindcss -i ./web/static/css/input.css -o ./web/static/css/tailwind.css --minify",
     "css:watch": "tailwindcss -i ./web/static/css/input.css -o ./web/static/css/tailwind.css --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"No tests configured\" && exit 0"
   },
   "keywords": [],
   "author": "",

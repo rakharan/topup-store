@@ -47,15 +47,15 @@
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-white/10 text-left text-white/50">
-                            <th class="pb-3 pr-4">Order Number</th>
-                            <th class="pb-3 pr-4">Game</th>
-                            <th class="pb-3 pr-4">UID</th>
-                            <th class="pb-3 pr-4">Phone</th>
-                            <th class="pb-3 pr-4">Amount</th>
-                            <th class="pb-3 pr-4">Status</th>
-                            <th class="pb-3 pr-4">Serial No.</th>
-                            <th class="pb-3 pr-4">Created</th>
-                            <th class="pb-3">Action</th>
+                            <th scope="col" class="pb-3 pr-4">Order Number</th>
+                            <th scope="col" class="pb-3 pr-4">Game</th>
+                            <th scope="col" class="pb-3 pr-4">UID</th>
+                            <th scope="col" class="pb-3 pr-4">Phone</th>
+                            <th scope="col" class="pb-3 pr-4">Amount</th>
+                            <th scope="col" class="pb-3 pr-4">Status</th>
+                            <th scope="col" class="pb-3 pr-4">Serial No.</th>
+                            <th scope="col" class="pb-3 pr-4">Created</th>
+                            <th scope="col" class="pb-3">Action</th>
                         </tr>
                     </thead>
                     <tbody id="ordersTableBody">
@@ -175,16 +175,16 @@
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-white/10 text-left text-white/50">
-                            <th class="pb-3 pr-4">ID</th>
-                            <th class="pb-3 pr-4">Game</th>
-                            <th class="pb-3 pr-4">Name</th>
-                            <th class="pb-3 pr-4">SKU</th>
-                            <th class="pb-3 pr-4">Cost</th>
-                            <th class="pb-3 pr-4">Price</th>
-                            <th class="pb-3 pr-4">Diamonds</th>
-                            <th class="pb-3 pr-4">Type</th>
-                            <th class="pb-3 pr-4">Status</th>
-                            <th class="pb-3">Action</th>
+                            <th scope="col" class="pb-3 pr-4">ID</th>
+                            <th scope="col" class="pb-3 pr-4">Game</th>
+                            <th scope="col" class="pb-3 pr-4">Name</th>
+                            <th scope="col" class="pb-3 pr-4">SKU</th>
+                            <th scope="col" class="pb-3 pr-4">Cost</th>
+                            <th scope="col" class="pb-3 pr-4">Price</th>
+                            <th scope="col" class="pb-3 pr-4">Diamonds</th>
+                            <th scope="col" class="pb-3 pr-4">Type</th>
+                            <th scope="col" class="pb-3 pr-4">Status</th>
+                            <th scope="col" class="pb-3">Action</th>
                         </tr>
                     </thead>
                     <tbody id="productsTableBody">
@@ -229,12 +229,12 @@
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-white/10 text-left text-white/50">
-                            <th class="pb-3 pr-4">Time</th>
-                            <th class="pb-3 pr-4">Source</th>
-                            <th class="pb-3 pr-4">Ref ID</th>
-                            <th class="pb-3 pr-4">Status</th>
-                            <th class="pb-3 pr-4">Error</th>
-                            <th class="pb-3">Payload</th>
+                            <th scope="col" class="pb-3 pr-4">Time</th>
+                            <th scope="col" class="pb-3 pr-4">Source</th>
+                            <th scope="col" class="pb-3 pr-4">Ref ID</th>
+                            <th scope="col" class="pb-3 pr-4">Status</th>
+                            <th scope="col" class="pb-3 pr-4">Error</th>
+                            <th scope="col" class="pb-3">Payload</th>
                         </tr>
                     </thead>
                     <tbody id="webhooksTableBody">
@@ -290,13 +290,9 @@
     {{template "footer"}}
     {{template "toast"}}
 
+    <script src="/static/js/shared.js"></script>
     <script>
     const ADMIN_PATH = '{{.AdminPath}}';
-    function escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
     let csrfToken = '';
 
     async function fetchWithCSRF(url, options = {}) {

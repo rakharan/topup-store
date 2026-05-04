@@ -27,12 +27,8 @@
     {{template "footer"}}
     {{template "toast"}}
 
+    <script src="/static/js/shared.js"></script>
     <script>
-    function escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
     const statusColors = {
         pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
         paid: "bg-blue-500/20 text-blue-400 border-blue-500/30",
