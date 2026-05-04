@@ -1,5 +1,5 @@
 {{define "toast"}}
-<div id="toast" class="fixed bottom-4 right-4 hidden z-50" role="alert" aria-live="polite"></div>
+<div id="toast" class="fixed bottom-4 right-4 hidden z-50" role="alert" aria-live="polite" aria-atomic="true"></div>
 <script>
 function showToast(message, type = 'info') {
     const toast = document.getElementById('toast');

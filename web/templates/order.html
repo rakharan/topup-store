@@ -51,19 +51,19 @@
             </div>
             <div id="uidGroup">
                 <label class="block text-sm font-medium text-white/70 mb-1" for="gameUid">Game UID</label>
-                <input type="text" id="gameUid" name="game_uid" placeholder="Masukkan UID" inputmode="numeric" required aria-describedby="uidHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+                <input type="text" id="gameUid" name="game_uid" placeholder="Masukkan UID" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" required aria-describedby="uidHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
                 <span id="gameUidError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
                 <p class="text-xs text-white/40 mt-1" id="uidHint">Pilih game terlebih dahulu</p>
             </div>
             <div id="serverGroup" class="hidden">
                 <label class="block text-sm font-medium text-white/70 mb-1" for="gameServer">Server ID</label>
-                <input type="text" id="gameServer" name="game_server" placeholder="Masukkan Server ID" inputmode="numeric" aria-describedby="serverHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+                <input type="text" id="gameServer" name="game_server" placeholder="Masukkan Server ID" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" aria-describedby="serverHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
                 <span id="gameServerError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
                 <p class="text-xs text-white/40 mt-1" id="serverHint">Buka profil game → lihat angka di sebelah kanan UID (contoh: 1234)</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-white/70 mb-1" for="phone">Nomor WhatsApp</label>
-                <input type="text" id="phone" name="phone" placeholder="08xxxxxxxxxx atau 628xxx" inputmode="tel" required aria-describedby="phoneHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+                <input type="text" id="phone" name="phone" placeholder="08xxxxxxxxxx atau 628xxx" inputmode="tel" autocomplete="tel" required aria-describedby="phoneHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
                 <span id="phoneError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
                 <p class="text-xs text-white/40 mt-1" id="phoneHint">Format: 628xxx atau 08xxx (tanpa + atau spasi)</p>
             </div>
@@ -122,6 +122,7 @@
         if (inputEl) {
             inputEl.classList.add('border-red-500');
             inputEl.classList.remove('border-white/10');
+            inputEl.setAttribute('aria-invalid', 'true');
         }
     }
 
@@ -135,6 +136,7 @@
         if (inputEl) {
             inputEl.classList.remove('border-red-500');
             inputEl.classList.add('border-white/10');
+            inputEl.setAttribute('aria-invalid', 'false');
         }
     }
 
@@ -299,6 +301,34 @@
         }
     });
 
+    let modalTriggerEl = null;
+
+    function trapFocus(container) {
+        const focusable = container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        first.focus();
+        container._trapHandler = (e) => {
+            if (e.key !== 'Tab') return;
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        };
+        container.addEventListener('keydown', container._trapHandler);
+    }
+
+    function untrapFocus(container) {
+        if (container._trapHandler) {
+            container.removeEventListener('keydown', container._trapHandler);
+            delete container._trapHandler;
+        }
+    }
+
     function showConfirmModal() {
         const isValid = validateGame() && validateProduct() && validateGameUid() && validateGameServer() && validatePhone();
         if (!isValid) return;
@@ -312,11 +342,15 @@
         document.getElementById("confirmProduct").textContent = productName;
         document.getElementById("confirmUid").textContent = uid + (serverGroup.classList.contains('hidden') ? '' : ' (' + document.getElementById("gameServer").value.trim() + ')');
         document.getElementById("confirmPrice").textContent = 'Rp ' + (productPrice ? parseInt(productPrice).toLocaleString("id-ID") : '0');
+        modalTriggerEl = document.activeElement;
         confirmModal.classList.remove('hidden');
+        trapFocus(confirmModal);
     }
 
     function closeConfirmModal() {
+        untrapFocus(confirmModal);
         confirmModal.classList.add('hidden');
+        if (modalTriggerEl) modalTriggerEl.focus();
     }
 
     document.addEventListener('keydown', (e) => {
