@@ -60,6 +60,14 @@
                         </tr>
                     </thead>
                     <tbody id="ordersTableBody">
+                        {{if not .Orders}}
+                        <tr>
+                            <td colspan="9" class="py-12 text-center text-white/40">
+                                <div class="text-4xl mb-3" aria-hidden="true">&#128230;</div>
+                                <p class="text-sm">Belum ada order.</p>
+                            </td>
+                        </tr>
+                        {{end}}
                         {{range .Orders}}
                         <tr class="border-b border-white/5 hover:bg-white/5 order-row cursor-pointer" data-status="{{.Status}}" data-search="{{.OrderNumber}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
                             <td class="py-3 pr-4 font-mono text-xs">{{.OrderNumber}}</td>
@@ -80,11 +88,11 @@
                             <td class="py-3 text-white/40">{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
                             <td class="py-3">
                                 {{if eq .Status "pending"}}
-                                <button onclick="processOrder('{{.ID}}')" class="text-primary hover:text-orange-400 text-sm focus-ring">Process</button>
+                                <button onclick="processOrder('{{.ID}}')" class="text-primary hover:text-orange-400 text-sm focus-ring px-2 py-1 rounded">Process</button>
                                 {{else if eq .Status "processing"}}
-                                <button onclick="retryOrder('{{.ID}}')" class="text-blue-400 hover:text-blue-300 text-sm focus-ring">Retry</button>
+                                <button onclick="retryOrder('{{.ID}}')" class="text-blue-400 hover:text-blue-300 text-sm focus-ring px-2 py-1 rounded">Retry</button>
                                 {{else if eq .Status "paid"}}
-                                <button onclick="retryOrder('{{.ID}}')" class="text-blue-400 hover:text-blue-300 text-sm focus-ring">Retry</button>
+                                <button onclick="retryOrder('{{.ID}}')" class="text-blue-400 hover:text-blue-300 text-sm focus-ring px-2 py-1 rounded">Retry</button>
                                 {{end}}
                             </td>
                         </tr>

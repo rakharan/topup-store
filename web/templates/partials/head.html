@@ -13,5 +13,14 @@
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .modal-backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
     .focus-ring:focus-visible { outline: 2px solid #F97316; outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+        .skeleton { animation: none !important; background: rgba(255,255,255,0.05); }
+    }
 </style>
 {{end}}
