@@ -195,7 +195,7 @@ func main() {
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post(cfg.AdminPath+"/override-status", admin.OverrideOrderStatus)
 
 	fs := http.FileServer(http.Dir("web/static"))
-	r.Handle("/static/*", http.StripPrefix("/static/", fs))
+	r.Handle("/static/*", http.StripPrefix("/static/", newStaticFileHandler(fs)))
 
 	r.NotFound(pages.NotFound)
 
@@ -489,4 +489,23 @@ func mustParseDuration(s string) time.Duration {
 		return 30 * time.Second
 	}
 	return d
+}
+
+var allowedStaticExts = map[string]bool{
+	".css": true, ".js": true, ".svg": true, ".ico": true,
+	".png": true, ".jpg": true, ".jpeg": true, ".gif": true,
+	".woff": true, ".woff2": true, ".ttf": true,
+}
+
+func newStaticFileHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		for ext := range allowedStaticExts {
+			if strings.HasSuffix(path, ext) {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+		http.NotFound(w, r)
+	})
 }
