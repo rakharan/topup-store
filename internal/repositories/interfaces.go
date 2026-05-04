@@ -23,7 +23,6 @@ type OrderRepository interface {
 	InsertStatusHistory(ctx context.Context, orderID, fromStatus, toStatus, reason string) error
 	GetStatusHistory(ctx context.Context, orderID string) ([]models.OrderStatusHistory, error)
 	List(ctx context.Context, page, perPage int) ([]models.Order, int, error)
-	ListByStatus(ctx context.Context, status string, page, perPage int) ([]models.Order, int, error)
 	ListProcessing(ctx context.Context) ([]models.Order, error)
 	ExpireOldPending(ctx context.Context) ([]models.Order, error)
 	GetPendingOrdersOlderThan(ctx context.Context, age time.Duration) ([]models.Order, error)

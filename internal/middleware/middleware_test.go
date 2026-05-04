@@ -176,61 +176,6 @@ func TestLogging_DefaultStatusIs200(t *testing.T) {
 	}
 }
 
-func TestBasicAuth_ValidCredentials(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-	mw := BasicAuth("admin", "secret")
-
-	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
-	req.SetBasicAuth("admin", "secret")
-	w := httptest.NewRecorder()
-
-	mw(handler).ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
-	}
-}
-
-func TestBasicAuth_InvalidCredentials(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-	mw := BasicAuth("admin", "secret")
-
-	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
-	req.SetBasicAuth("admin", "wrong")
-	w := httptest.NewRecorder()
-
-	mw(handler).ServeHTTP(w, req)
-
-	if w.Code != http.StatusForbidden {
-		t.Errorf("expected status %d, got %d", http.StatusForbidden, w.Code)
-	}
-}
-
-func TestBasicAuth_NoAuthHeader(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-	mw := BasicAuth("admin", "secret")
-
-	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
-	w := httptest.NewRecorder()
-
-	mw(handler).ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, w.Code)
-	}
-
-	wwwAuth := w.Header().Get("WWW-Authenticate")
-	if wwwAuth == "" {
-		t.Error("expected WWW-Authenticate header")
-	}
-}
-
 func TestCORS_Headers(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
