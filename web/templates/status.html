@@ -18,11 +18,27 @@
                 <svg id="cekSpinner" class="hidden animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
             </button>
         </form>
-        <div id="result" class="hidden bg-white/5 border border-white/10 rounded-xl p-6"></div>
-        <div id="autoRefresh" class="hidden mt-4 text-center text-sm text-white/40">
-            <span>Auto-refresh setiap 10 detik</span>
-            <button id="stopRefresh" class="text-primary ml-2 hover:underline focus-ring">Stop</button>
+    <div id="result" class="hidden bg-white/5 border border-white/10 rounded-xl p-6"></div>
+    <div id="autoRefresh" class="hidden mt-4 text-center text-sm text-white/40">
+        <span>Auto-refresh setiap 10 detik</span>
+        <button id="stopRefresh" class="text-primary ml-2 hover:underline focus-ring">Stop</button>
+    </div>
+
+    <div id="confirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onclick="if(event.target===this)closeConfirmModal()">
+        <div class="bg-dark border border-white/10 rounded-xl p-6 max-w-md w-full mx-4">
+            <div class="flex items-start gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center text-lg shrink-0" aria-hidden="true">✕</div>
+                <div>
+                    <h3 class="text-lg font-bold mb-1">Batalkan Order</h3>
+                    <p id="confirmMessage" class="text-white/70 text-sm">Yakin ingin membatalkan order ini?</p>
+                </div>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button onclick="closeConfirmModal()" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">Batal</button>
+                <button id="confirmCancelBtn" onclick="confirmCancelAction()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition focus-ring font-medium">Batalkan</button>
+            </div>
         </div>
+    </div>
     </main>
 
     {{template "footer"}}
@@ -118,7 +134,7 @@
                     ${order.status === 'pending' && qrisUrl ? `
                         <div class="mt-4 pt-4 border-t border-white/10 text-center flex flex-col sm:flex-row gap-3 justify-center">
                             <a href="${qrisUrl}" target="_blank" rel="noopener noreferrer" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg transition focus-ring">Bayar Sekarang</a>
-                            <button onclick="cancelOrder('${orderId}')" class="inline-block bg-red-600/20 hover:bg-red-600/40 text-red-400 font-semibold px-6 py-2 rounded-lg transition focus-ring border border-red-500/30">Batalkan</button>
+                            <button onclick="cancelOrder('${orderId}')" class="inline-block bg-red-600/20 hover:bg-red-600/40 text-red-400 font-semibold px-6 py-2 rounded-lg transition focus-ring border border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed">Batalkan</button>
                         </div>
                     ` : ''}
                     ${order.status === 'cancelled' ? `
@@ -151,10 +167,29 @@
         }
     }
 
-    async function cancelOrder(orderId) {
-        if (!confirm("Yakin ingin membatalkan order ini?")) return;
+    let pendingCancelOrderId = null;
+
+    function openCancelModal(orderId) {
+        pendingCancelOrderId = orderId;
+        document.getElementById('confirmModal').classList.remove('hidden');
+        document.getElementById('confirmCancelBtn').focus();
+    }
+
+    function closeConfirmModal() {
+        document.getElementById('confirmModal').classList.add('hidden');
+        pendingCancelOrderId = null;
+    }
+
+    async function confirmCancelAction() {
+        if (!pendingCancelOrderId) return;
+        const orderId = pendingCancelOrderId;
+        closeConfirmModal();
+        const btn = document.querySelector('#result button[onclick^="openCancelModal"]');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin mr-2"></span>Membatalkan...';
+        }
         try {
-            // csrfToken is declared above from template data
             const res = await fetch(`/api/orders/${orderId}/cancel`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
@@ -165,10 +200,22 @@
                 fetchOrder(orderId);
             } else {
                 showToast(json.error || "Gagal membatalkan order", "error");
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Batalkan';
+                }
             }
         } catch (e) {
             showToast("Terjadi kesalahan. Coba lagi.", "error");
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Batalkan';
+            }
         }
+    }
+
+    async function cancelOrder(orderId) {
+        openCancelModal(orderId);
     }
 
     document.getElementById("statusForm").addEventListener("submit", async (e) => {

@@ -278,6 +278,22 @@
                 </div>
             </div>
         </div>
+
+        <div id="confirmModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center modal-backdrop" onclick="if(event.target===this)closeConfirmModal()">
+            <div class="bg-dark border border-white/10 rounded-xl p-6 max-w-md w-full mx-4">
+                <div class="flex items-start gap-3 mb-4">
+                    <div id="confirmIcon" class="w-10 h-10 rounded-full bg-yellow-500/20 text-yellow-400 flex items-center justify-center text-lg shrink-0" aria-hidden="true">!</div>
+                    <div>
+                        <h3 id="confirmTitle" class="text-lg font-bold mb-1">Konfirmasi</h3>
+                        <p id="confirmMessage" class="text-white/70 text-sm"></p>
+                    </div>
+                </div>
+                <div class="flex gap-3 justify-end">
+                    <button onclick="closeConfirmModal()" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">Batal</button>
+                    <button id="confirmActionBtn" class="px-4 py-2 rounded-lg text-sm transition focus-ring font-medium">Lanjutkan</button>
+                </div>
+            </div>
+        </div>
     </main>
     {{else}}
     <section class="max-w-sm mx-auto px-4 py-24">
@@ -391,8 +407,32 @@
         }
     });
 
+    let confirmResolve = null;
+
+    function showConfirmModal({ title, message, actionText = 'Lanjutkan', actionClass = 'bg-primary hover:bg-orange-600', icon = '!' }) {
+        return new Promise((resolve) => {
+            confirmResolve = resolve;
+            const modal = document.getElementById('confirmModal');
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmMessage').textContent = message;
+            const btn = document.getElementById('confirmActionBtn');
+            btn.textContent = actionText;
+            btn.className = 'px-4 py-2 rounded-lg text-sm transition focus-ring font-medium text-white ' + actionClass;
+            btn.onclick = () => { closeConfirmModal(); resolve(true); };
+            document.getElementById('confirmIcon').textContent = icon;
+            modal.classList.remove('hidden');
+            btn.focus();
+        });
+    }
+
+    function closeConfirmModal() {
+        document.getElementById('confirmModal').classList.add('hidden');
+        if (confirmResolve) { confirmResolve(false); confirmResolve = null; }
+    }
+
     async function processOrder(orderId) {
-        if (!confirm('Proses order ini?')) return;
+        const ok = await showConfirmModal({ title: 'Proses Order', message: 'Yakin ingin memproses order ini?', actionText: 'Proses' });
+        if (!ok) return;
         try {
             const res = await fetchWithCSRF(ADMIN_PATH + '/process-order', {
                 method: 'POST',
@@ -411,7 +451,8 @@
     }
 
     async function retryOrder(orderId) {
-        if (!confirm('Retry order ini?')) return;
+        const ok = await showConfirmModal({ title: 'Retry Order', message: 'Yakin ingin retry order ini?', actionText: 'Retry' });
+        if (!ok) return;
         try {
             const res = await fetchWithCSRF(ADMIN_PATH + '/retry-order', {
                 method: 'POST',
@@ -618,7 +659,8 @@
     }
 
     async function deleteProduct(id) {
-        if (!confirm('Delete this product?')) return;
+        const ok = await showConfirmModal({ title: 'Hapus Produk', message: 'Yakin ingin menghapus produk ini? Tindakan ini tidak dapat dibatalkan.', actionText: 'Hapus', actionClass: 'bg-red-600 hover:bg-red-700', icon: '✕' });
+        if (!ok) return;
         try {
             const res = await fetchWithCSRF(`${ADMIN_PATH}/products/${id}`, { method: 'DELETE' });
             if (res.ok) {
@@ -830,8 +872,13 @@
         document.getElementById('orderDetailModal').classList.add('hidden');
     }
 
+    async function confirmOverrideStatus() {
+        const ok = await showConfirmModal({ title: 'Override Status', message: 'Override status order ini? Tindakan ini tidak dapat dibatalkan.', actionText: 'Override', actionClass: 'bg-red-600 hover:bg-red-700', icon: '✕' });
+        if (!ok) return;
+        await overrideOrderStatus();
+    }
+
     async function overrideOrderStatus() {
-        if (!confirm('Override order status? This cannot be undone.')) return;
         const status = document.getElementById('overrideStatus').value;
         const reason = document.getElementById('overrideReason').value;
         try {
@@ -852,8 +899,13 @@
         }
     }
 
+    async function confirmCancelOrder() {
+        const ok = await showConfirmModal({ title: 'Batalkan Order', message: 'Batalkan order ini? Ini akan membatalkan di Midtrans dan menandai sebagai dibatalkan.', actionText: 'Batalkan', actionClass: 'bg-red-600 hover:bg-red-700', icon: '✕' });
+        if (!ok) return;
+        await cancelOrderAdmin();
+    }
+
     async function cancelOrderAdmin() {
-        if (!confirm('Cancel this order? This will cancel in Midtrans and mark as cancelled.')) return;
         try {
             const res = await fetchWithCSRF('/api/orders/' + currentOrderId + '/cancel', {
                 method: 'POST',
