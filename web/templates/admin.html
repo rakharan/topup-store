@@ -322,6 +322,16 @@
                 </div>
             </div>
         </div>
+
+        <div id="payloadModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center modal-backdrop" onclick="if(event.target===this)closePayloadModal()">
+            <div class="bg-dark border border-white/10 rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold">Webhook Payload</h3>
+                    <button onclick="closePayloadModal()" class="text-white/70 hover:text-white focus-ring">&times;</button>
+                </div>
+                <pre id="payloadContent" class="bg-black/50 rounded-lg p-4 text-xs font-mono text-green-400 overflow-auto flex-1"></pre>
+            </div>
+        </div>
     </main>
     {{else}}
     <section class="max-w-sm mx-auto px-4 py-24">
@@ -900,7 +910,7 @@
         }
         tbody.innerHTML = logs.map(l => {
             const statusColor = l.status === 'success' ? 'text-green-400' : 'text-red-400';
-            return `<tr class="border-b border-white/5 hover:bg-white/5">
+            return `<tr class="border-b border-white/5 hover:bg-white/5" data-log-id="${escapeHtml(l.id)}" data-payload="${escapeHtml(l.payload || '{}')}">
                 <td class="py-3 pr-4 text-white/40 text-xs">${new Date(l.created_at).toLocaleString('id-ID')}</td>
                 <td class="py-3 pr-4 font-mono text-xs">${escapeHtml(l.source)}</td>
                 <td class="py-3 pr-4 font-mono text-xs">${escapeHtml(l.ref_id || '-')}</td>
@@ -913,6 +923,15 @@
 
     function showPayload(logId) {
         const row = document.querySelector(`tr[data-log-id="${logId}"]`);
+        if (!row) return;
+        const payload = row.dataset.payload || '{}';
+        const modal = document.getElementById('payloadModal');
+        document.getElementById('payloadContent').textContent = JSON.stringify(JSON.parse(payload), null, 2);
+        modal.classList.remove('hidden');
+    }
+
+    function closePayloadModal() {
+        document.getElementById('payloadModal').classList.add('hidden');
     }
 
     let currentOrderId = '';
