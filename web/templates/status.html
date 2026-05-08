@@ -10,6 +10,12 @@
 
     <main id="main-content" class="max-w-lg mx-auto px-4 py-12">
         <h1 class="text-3xl font-bold mb-8 text-center">Cek Status Order</h1>
+
+        <div class="flex gap-4 mb-6 border-b border-white/10">
+            <button id="tabOrderId" onclick="switchTab('orderId')" class="tab-btn px-4 py-2 text-primary border-b-2 border-primary font-medium focus-ring">Cek ID Order</button>
+            <button id="tabPhone" onclick="switchTab('phone')" class="tab-btn px-4 py-2 text-white/70 hover:text-white transition focus-ring">Cek via Nomor HP</button>
+        </div>
+
         <form id="statusForm" class="flex gap-3 mb-8">
             <label for="orderId" class="sr-only">ID Order</label>
             <input type="text" id="orderId" name="id" placeholder="Masukkan ID Order" inputmode="text" autocomplete="off" required class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
@@ -18,6 +24,23 @@
                 <svg id="cekSpinner" class="hidden animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
             </button>
         </form>
+
+        <form id="phoneForm" class="hidden flex gap-3 mb-8">
+            <label for="phoneInput" class="sr-only">Nomor WhatsApp</label>
+            <input type="text" id="phoneInput" name="phone" placeholder="Masukkan nomor WhatsApp (628xxx)" inputmode="tel" autocomplete="tel" required class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+            <button type="submit" id="cekPhoneBtn" class="bg-primary hover:bg-orange-600 text-white font-semibold px-6 py-3 rounded-lg transition flex items-center gap-2 disabled:bg-white/20 disabled:cursor-not-allowed focus-ring">
+                <span id="cekPhoneText">Cek</span>
+                <svg id="cekPhoneSpinner" class="hidden animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            </button>
+        </form>
+
+        <div id="loadingSkeleton" class="hidden mb-8">
+            <div class="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4 animate-pulse">
+                <div class="flex justify-between"><div class="h-4 bg-white/10 rounded w-1/3"></div><div class="h-4 bg-white/10 rounded w-1/4"></div></div>
+                <div class="space-y-2"><div class="h-3 bg-white/10 rounded w-full"></div><div class="h-3 bg-white/10 rounded w-5/6"></div><div class="h-3 bg-white/10 rounded w-4/6"></div></div>
+            </div>
+        </div>
+
     <div id="result" class="hidden bg-white/5 border border-white/10 rounded-xl p-6"></div>
     <div id="autoRefresh" class="hidden mt-4 text-center text-sm text-white/40">
         <span>Auto-refresh setiap 10 detik</span>
@@ -70,6 +93,65 @@
     const statusSteps = ['pending', 'paid', 'processing', 'success'];
 
     let refreshInterval = null;
+
+    function switchTab(tab) {
+        document.getElementById('statusForm').classList.toggle('hidden', tab !== 'orderId');
+        document.getElementById('phoneForm').classList.toggle('hidden', tab !== 'phone');
+        document.getElementById('tabOrderId').classList.toggle('text-primary', tab === 'orderId');
+        document.getElementById('tabOrderId').classList.toggle('border-b-2', tab === 'orderId');
+        document.getElementById('tabOrderId').classList.toggle('border-primary', tab === 'orderId');
+        document.getElementById('tabOrderId').classList.toggle('text-white/70', tab !== 'orderId');
+        document.getElementById('tabPhone').classList.toggle('text-primary', tab === 'phone');
+        document.getElementById('tabPhone').classList.toggle('border-b-2', tab === 'phone');
+        document.getElementById('tabPhone').classList.toggle('border-primary', tab === 'phone');
+        document.getElementById('tabPhone').classList.toggle('text-white/70', tab !== 'phone');
+        document.getElementById('result').classList.add('hidden');
+        document.getElementById('autoRefresh').classList.add('hidden');
+        if (refreshInterval) clearInterval(refreshInterval);
+    }
+
+    async function fetchRecentOrders(phone) {
+        const result = document.getElementById("result");
+        const autoRefresh = document.getElementById("autoRefresh");
+        if (refreshInterval) clearInterval(refreshInterval);
+        autoRefresh.classList.add("hidden");
+
+        try {
+            const res = await fetch(`/api/orders/recent?phone=${encodeURIComponent(phone)}&limit=10`);
+            if (!res.ok) {
+                result.classList.remove("hidden");
+                result.innerHTML = '<p class="text-red-400">Gagal mengambil data order.</p>';
+                return;
+            }
+            const json = await res.json();
+            const orders = json.data || [];
+            result.classList.remove("hidden");
+            if (!orders.length) {
+                result.innerHTML = '<p class="text-white/60 text-center">Tidak ada order ditemukan untuk nomor ini.</p>';
+                return;
+            }
+            let html = '<div class="space-y-4">';
+            orders.forEach(order => {
+                const badgeClass = statusColors[order.status] || "bg-white/10 text-white";
+                const label = statusLabels[order.status] || order.status;
+                html += `
+                    <a href="/status?id=${escapeHtml(order.id)}" class="block bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-mono text-sm text-white/60">${escapeHtml(order.order_number || order.id.substring(0, 8))}</span>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium border ${badgeClass}">${escapeHtml(label)}</span>
+                        </div>
+                        <div class="text-sm text-white/70">Rp ${parseInt(order.amount_idr || 0).toLocaleString('id-ID')}</div>
+                        <div class="text-xs text-white/40 mt-1">${new Date(order.created_at).toLocaleString('id-ID')}</div>
+                    </a>
+                `;
+            });
+            html += '</div>';
+            result.innerHTML = html;
+        } catch (e) {
+            result.classList.remove("hidden");
+            result.innerHTML = '<p class="text-red-400">Terjadi kesalahan. Silakan coba lagi.</p>';
+        }
+    }
 
     function renderTimeline(status) {
         const currentIdx = statusSteps.indexOf(status);
@@ -132,9 +214,13 @@
                         ${serialNumber ? `<div class="flex justify-between"><span class="text-white/70">Serial Number</span><span class="font-mono">${serialNumber}</span></div>` : ''}
                     </div>
                     ${order.status === 'pending' && qrisUrl ? `
-                        <div class="mt-4 pt-4 border-t border-white/10 text-center flex flex-col sm:flex-row gap-3 justify-center">
-                            <a href="${qrisUrl}" target="_blank" rel="noopener noreferrer" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg transition focus-ring">Bayar Sekarang</a>
-                            <button onclick="cancelOrder('${orderId}')" class="inline-block bg-red-600/20 hover:bg-red-600/40 text-red-400 font-semibold px-6 py-2 rounded-lg transition focus-ring border border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed">Batalkan</button>
+                        <div class="mt-4 pt-4 border-t border-white/10 text-center">
+                            <p class="text-sm text-white/60 mb-3">Scan QRIS untuk membayar</p>
+                            <a href="${qrisUrl}" target="_blank" rel="noopener noreferrer" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg transition focus-ring mb-3">Bayar Sekarang</a>
+                            <div class="flex justify-center gap-3">
+                                <button onclick="copyLink('${orderId}')" class="text-sm text-primary hover:underline focus-ring">Salin Link</button>
+                                <button onclick="cancelOrder('${orderId}')" class="text-sm text-red-400 hover:underline focus-ring">Batalkan</button>
+                            </div>
                         </div>
                     ` : ''}
                     ${order.status === 'cancelled' ? `
@@ -152,6 +238,11 @@
 
             if (['pending', 'paid', 'processing'].includes(order.status)) {
                 autoRefresh.classList.remove("hidden");
+                autoRefresh.innerHTML = '<span class="inline-flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>Auto-refresh setiap 10 detik</span><button id="stopRefresh" class="text-primary ml-2 hover:underline focus-ring">Stop</button>';
+                document.getElementById('stopRefresh').addEventListener('click', () => {
+                    if (refreshInterval) clearInterval(refreshInterval);
+                    document.getElementById('autoRefresh').classList.add('hidden');
+                });
                 refreshInterval = setInterval(() => fetchOrder(orderId), 10000);
             } else {
                 autoRefresh.classList.add("hidden");
@@ -218,10 +309,20 @@
         openCancelModal(orderId);
     }
 
+    function copyLink(orderId) {
+        const url = window.location.origin + '/status?id=' + encodeURIComponent(orderId);
+        navigator.clipboard.writeText(url).then(() => {
+            showToast('Link berhasil disalin!', 'success');
+        }).catch(() => {
+            showToast('Gagal menyalin link', 'error');
+        });
+    }
+
     document.getElementById("statusForm").addEventListener("submit", async (e) => {
         e.preventDefault();
         const orderId = document.getElementById("orderId").value.trim();
         document.getElementById("result").classList.add("hidden");
+        document.getElementById("loadingSkeleton").classList.add("hidden");
         const cekBtn = document.getElementById("cekBtn");
         const cekText = document.getElementById("cekText");
         const cekSpinner = document.getElementById("cekSpinner");
@@ -237,14 +338,29 @@
         }
     });
 
-    document.getElementById("stopRefresh").addEventListener("click", () => {
-        if (refreshInterval) clearInterval(refreshInterval);
-        document.getElementById("autoRefresh").classList.add("hidden");
+    document.getElementById("phoneForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const phone = document.getElementById("phoneInput").value.trim();
+        document.getElementById("result").classList.add("hidden");
+        const cekBtn = document.getElementById("cekPhoneBtn");
+        const cekText = document.getElementById("cekPhoneText");
+        const cekSpinner = document.getElementById("cekPhoneSpinner");
+        cekBtn.disabled = true;
+        cekText.textContent = 'Mencari...';
+        cekSpinner.classList.remove('hidden');
+        try {
+            await fetchRecentOrders(phone);
+        } finally {
+            cekBtn.disabled = false;
+            cekText.textContent = 'Cek';
+            cekSpinner.classList.add('hidden');
+        }
     });
 
     const params = new URLSearchParams(window.location.search);
     if (params.get("id")) {
         document.getElementById("orderId").value = params.get("id");
+        document.getElementById("loadingSkeleton").classList.remove("hidden");
         document.getElementById("statusForm").dispatchEvent(new Event("submit"));
     }
     </script>
