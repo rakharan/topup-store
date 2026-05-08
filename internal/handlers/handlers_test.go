@@ -132,6 +132,7 @@ func TestCreateOrder_Success(t *testing.T) {
 		Name:     "70 Diamonds",
 		PriceIDR: 10000,
 		SKU:      "ff-70",
+		Stock:    -1,
 	}
 
 	h := &OrderHandler{

@@ -1,0 +1,2 @@
+ALTER TABLE products DROP COLUMN IF EXISTS stock;
+ALTER TABLE orders DROP COLUMN IF EXISTS stock_reserved;

@@ -47,6 +47,8 @@ type ProductRepository interface {
 	UpdateCostPrice(ctx context.Context, sku string, costPrice int) error
 	SyncPrice(ctx context.Context, sku string, costPrice, sellingPrice int) error
 	CreateFromDigiflazz(ctx context.Context, sku, name, game, productType string, priceIDR, costPriceIDR, diamonds int, description string) error
+	DecrementStock(ctx context.Context, id string) (bool, error)
+	IncrementStock(ctx context.Context, id string) error
 }
 
 type WebhookRepository interface {

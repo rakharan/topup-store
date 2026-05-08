@@ -171,6 +171,14 @@ func (m *mockProductRepo) CreateFromDigiflazz(ctx context.Context, sku, name, ga
 	return nil
 }
 
+func (m *mockProductRepo) DecrementStock(ctx context.Context, id string) (bool, error) {
+	return true, nil
+}
+
+func (m *mockProductRepo) IncrementStock(ctx context.Context, id string) error {
+	return nil
+}
+
 func TestTopupService_ProcessOrder_NotPaid(t *testing.T) {
 	orderRepo := &mockOrderRepo{
 		getByIDResult: &models.Order{ID: "order-1", Status: "pending"},

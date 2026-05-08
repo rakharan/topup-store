@@ -289,6 +289,14 @@ func (s *TopupService) ListAllProducts(ctx context.Context) ([]models.Product, e
 	return s.productRepo.ListAll(ctx)
 }
 
+func (s *TopupService) DecrementProductStock(ctx context.Context, productID string) (bool, error) {
+	return s.productRepo.DecrementStock(ctx, productID)
+}
+
+func (s *TopupService) IncrementProductStock(ctx context.Context, productID string) error {
+	return s.productRepo.IncrementStock(ctx, productID)
+}
+
 type DigiflazzPrice struct {
 	SKU         string
 	Name        string

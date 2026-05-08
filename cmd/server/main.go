@@ -229,7 +229,7 @@ func main() {
 				logger.Error("order expiry ticker panicked", slog.Any("panic", r))
 			}
 		}()
-		startOrderExpiryTickerWithNotify(shutdownCtx, paymentSvc, orderRepo, notifySvc, logger)
+		startOrderExpiryTickerWithNotify(shutdownCtx, paymentSvc, orderRepo, topupSvc, notifySvc, logger)
 	}()
 	go func() {
 		defer func() {
@@ -353,7 +353,7 @@ func readyHandler(pool readinessChecker, cache cacheChecker) http.HandlerFunc {
 	}
 }
 
-func startOrderExpiryTickerWithNotify(ctx context.Context, paymentSvc services.PaymentServiceInterface, orderRepo repositories.OrderRepository, notifySvc services.NotifyServiceInterface, logger *slog.Logger) {
+func startOrderExpiryTickerWithNotify(ctx context.Context, paymentSvc services.PaymentServiceInterface, orderRepo repositories.OrderRepository, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, logger *slog.Logger) {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
@@ -375,18 +375,23 @@ func startOrderExpiryTickerWithNotify(ctx context.Context, paymentSvc services.P
 				logger.Info("order expiry ticker: expired orders", slog.Int("count", len(expiredOrders)))
 				for _, o := range expiredOrders {
 					sem <- struct{}{}
-					go func() {
+					go func(order models.Order) {
 						defer func() { <-sem }()
-						if err := paymentSvc.CancelTransaction(o.ID); err != nil {
-							logger.Error("order expiry ticker: failed to cancel in midtrans", slog.String("order_id", o.ID), slog.String("error", err.Error()))
-						}
-						if o.UserPhone != "" {
-							msg := "Order " + o.ID + " telah kadaluarsa karena belum dibayar dalam 30 menit."
-							if err := notifySvc.SendNotification(o.UserPhone, msg); err != nil {
-								logger.Error("order expiry ticker: failed to notify", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+						if order.StockReserved {
+							if err := topupSvc.IncrementProductStock(ctx, order.ProductID); err != nil {
+								logger.Warn("order expiry ticker: failed to restore stock", slog.String("order_id", order.ID), slog.String("product_id", order.ProductID), slog.String("error", err.Error()))
 							}
 						}
-					}()
+						if err := paymentSvc.CancelTransaction(order.ID); err != nil {
+							logger.Error("order expiry ticker: failed to cancel in midtrans", slog.String("order_id", order.ID), slog.String("error", err.Error()))
+						}
+						if order.UserPhone != "" {
+							msg := "Order " + order.ID + " telah kadaluarsa karena belum dibayar dalam 30 menit."
+							if err := notifySvc.SendNotification(order.UserPhone, msg); err != nil {
+								logger.Error("order expiry ticker: failed to notify", slog.String("order_id", order.ID), slog.String("error", err.Error()))
+							}
+						}
+					}(o)
 				}
 			}
 		}

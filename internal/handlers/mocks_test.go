@@ -130,6 +130,14 @@ func (m *mockTopupService) GetBalance() int {
 	return 100000
 }
 
+func (m *mockTopupService) DecrementProductStock(ctx context.Context, productID string) (bool, error) {
+	return true, nil
+}
+
+func (m *mockTopupService) IncrementProductStock(ctx context.Context, productID string) error {
+	return nil
+}
+
 type mockNotifyService struct {
 	sendOrderConfirmationErr error
 	sendTopupSuccessErr      error
@@ -227,5 +235,13 @@ func (m *mockProductRepo) SyncPrice(ctx context.Context, sku string, costPrice, 
 }
 
 func (m *mockProductRepo) CreateFromDigiflazz(ctx context.Context, sku, name, game, productType string, priceIDR, costPriceIDR, diamonds int, description string) error {
+	return nil
+}
+
+func (m *mockProductRepo) DecrementStock(ctx context.Context, id string) (bool, error) {
+	return true, nil
+}
+
+func (m *mockProductRepo) IncrementStock(ctx context.Context, id string) error {
 	return nil
 }

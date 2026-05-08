@@ -19,9 +19,9 @@ func NewOrderRepository(pool *pgxpool.Pool) *PGOrderRepository {
 
 func (r *PGOrderRepository) Create(ctx context.Context, order *models.Order) error {
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO orders (id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status, channel, digiflazz_ref_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9)
-	`, order.ID, order.OrderNumber, order.ProductID, order.UserPhone, order.GameUID, order.GameServer, order.AmountIDR, order.Channel, order.DigiflazzRefID)
+		INSERT INTO orders (id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status, channel, digiflazz_ref_id, stock_reserved)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10)
+	`, order.ID, order.OrderNumber, order.ProductID, order.UserPhone, order.GameUID, order.GameServer, order.AmountIDR, order.Channel, order.DigiflazzRefID, order.StockReserved)
 	return err
 }
 
@@ -29,12 +29,12 @@ func (r *PGOrderRepository) GetByID(ctx context.Context, id string) (*models.Ord
 	var order models.Order
 	err := r.pool.QueryRow(ctx, `
 		SELECT id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
-		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
+		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, stock_reserved, created_at, updated_at
 		FROM orders WHERE id = $1
 	`, id).Scan(
 		&order.ID, &order.OrderNumber, &order.ProductID, &order.UserPhone, &order.GameUID, &order.GameServer,
 		&order.AmountIDR, &order.Status, &order.MidtransOrderID, &order.Channel,
-		&order.SerialNumber, &order.DigiflazzRefID, &order.CreatedAt, &order.UpdatedAt,
+		&order.SerialNumber, &order.DigiflazzRefID, &order.StockReserved, &order.CreatedAt, &order.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -188,7 +188,7 @@ func (r *PGOrderRepository) List(ctx context.Context, page, perPage int) ([]mode
 		var o models.Order
 		if err := rows.Scan(&o.ID, &o.OrderNumber, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
 			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.Channel,
-			&o.SerialNumber, &o.DigiflazzRefID, &o.CreatedAt, &o.UpdatedAt); err != nil {
+			&o.SerialNumber, &o.DigiflazzRefID, &o.StockReserved, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
 		orders = append(orders, o)
@@ -231,7 +231,7 @@ func (r *PGOrderRepository) ExpireOldPending(ctx context.Context) ([]models.Orde
 		UPDATE orders SET status = 'expired', updated_at = NOW()
 		WHERE status = 'pending' AND created_at < NOW() - INTERVAL '30 minutes'
 		RETURNING id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
-		          midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
+		          midtrans_order_id, channel, serial_number, digiflazz_ref_id, stock_reserved, created_at, updated_at
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("expire old pending: %w", err)

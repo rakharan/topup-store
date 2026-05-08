@@ -83,6 +83,12 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if product.Stock == 0 {
+		h.logger.Warn("create order: product out of stock", slog.String("product_id", product.ID))
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product", "product is out of stock"), middleware.GetRequestID(r.Context()))
+		return
+	}
+
 	orderID := uuid.New().String()
 	var orderNumber string
 	if h.pool != nil {
@@ -95,6 +101,22 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	} else {
 		orderNumber = "FT-TEST-0001"
 	}
+	stockReserved := false
+	if product.Stock > 0 {
+		ok, err := h.topupSvc.DecrementProductStock(r.Context(), product.ID)
+		if err != nil {
+			h.logger.Error("create order: failed to decrement stock", slog.String("product_id", product.ID), slog.String("error", err.Error()))
+			apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+			return
+		}
+		if !ok {
+			h.logger.Warn("create order: product out of stock (race)", slog.String("product_id", product.ID))
+			apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product", "product is out of stock"), middleware.GetRequestID(r.Context()))
+			return
+		}
+		stockReserved = true
+	}
+
 	order := &models.Order{
 		ID:             orderID,
 		OrderNumber:    orderNumber,
@@ -106,6 +128,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		Status:         constants.StatusPending,
 		Channel:        constants.ChannelWeb,
 		DigiflazzRefID: orderID,
+		StockReserved:  stockReserved,
 	}
 
 	if err := h.paymentSvc.CreateOrder(r.Context(), order); err != nil {
@@ -240,6 +263,12 @@ func (h *OrderHandler) CancelOrder(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error("cancel order: update status failed", slog.String("order_id", id), slog.String("error", err.Error()))
 		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
 		return
+	}
+
+	if order.StockReserved {
+		if err := h.topupSvc.IncrementProductStock(r.Context(), order.ProductID); err != nil {
+			h.logger.Warn("cancel order: failed to restore stock", slog.String("order_id", id), slog.String("product_id", order.ProductID), slog.String("error", err.Error()))
+		}
 	}
 
 	h.paymentSvc.RecordStatusChange(r.Context(), id, order.Status, constants.StatusCancelled, "user cancelled")

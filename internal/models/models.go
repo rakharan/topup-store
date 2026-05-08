@@ -13,6 +13,7 @@ type Product struct {
 	ProductType  string     `json:"product_type"`
 	SKU          string     `json:"sku"`
 	IsActive     bool       `json:"is_active"`
+	Stock        int        `json:"stock"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 	DeletedAt    *time.Time `json:"deleted_at,omitempty"`
@@ -31,6 +32,7 @@ type Order struct {
 	Channel         string     `json:"channel"`
 	SerialNumber    *string    `json:"serial_number"`
 	DigiflazzRefID  string     `json:"digiflazz_ref_id"`
+	StockReserved   bool       `json:"stock_reserved"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
 }
