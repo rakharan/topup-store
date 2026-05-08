@@ -32,6 +32,7 @@ type Config struct {
 	AllowedOrigins              string
 	RedisURL                    string
 	AutoMigrate                 bool
+	LogFormat                   string
 }
 
 func Load() (*Config, error) {
@@ -62,6 +63,7 @@ func Load() (*Config, error) {
 		AllowedOrigins:         getEnv("ALLOWED_ORIGINS", ""),
 		RedisURL:               getEnv("REDIS_URL", ""),
 		AutoMigrate:            getEnv("AUTO_MIGRATE", "false") == "true",
+		LogFormat:              getEnv("LOG_FORMAT", "text"),
 	}
 
 	var missing []string

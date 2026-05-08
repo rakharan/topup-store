@@ -264,9 +264,9 @@ func (h *OrderHandler) CancelOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 var (
-	reNumeric     = regexp.MustCompile(`^\d+$`)
+	reNumeric     = regexp.MustCompile(`^\d{4,20}$`)
 	reNumericPair = regexp.MustCompile(`^\d+\|\d+$`)
-	rePhone       = regexp.MustCompile(`^\d{8,20}$`)
+	rePhone       = regexp.MustCompile(`^(0|62)\d{8,13}$`)
 )
 
 func validateOrderInput(req struct {
@@ -297,7 +297,7 @@ func validateOrderInput(req struct {
 		}
 	}
 	if !rePhone.MatchString(req.Phone) {
-		return &validationError{field: "phone", message: "must be numeric (min 8 digits)"}
+		return &validationError{field: "phone", message: "must be valid Indonesian number (08xxx or 628xxx, 10-15 digits)"}
 	}
 	if req.ProductID == "" && req.Diamonds <= 0 {
 		return &validationError{field: "product_id", message: "either product_id or diamonds is required"}

@@ -48,9 +48,14 @@ func main() {
 		}
 	}
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: logLevel,
-	}))
+	var handler slog.Handler
+	opts := &slog.HandlerOptions{Level: logLevel}
+	if cfg.LogFormat == "json" {
+		handler = slog.NewJSONHandler(os.Stdout, opts)
+	} else {
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	}
+	logger := slog.New(handler)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -131,6 +136,7 @@ func main() {
 	r.Use(middleware.SecurityHeaders)
 
 	r.Get("/health", healthHandler(pool))
+	r.Get("/ready", readyHandler(pool, cacheStore))
 	r.Get("/metrics", metricsMW.Handler())
 
 	r.Get("/", pages.Home)
@@ -281,25 +287,46 @@ func main() {
 
 func healthHandler(pool interface{ Ping(context.Context) error }) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		status := "ok"
-		dbStatus := "connected"
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(map[string]any{
+			"status":  "ok",
+			"version": "1.0.0",
+			"uptime":  time.Since(startTime).String(),
+		}); err != nil {
+			slog.Error("healthHandler: failed to encode response", slog.String("error", err.Error()))
+		}
+	}
+}
 
+type readinessChecker interface {
+	Ping(context.Context) error
+}
+
+type cacheChecker interface {
+	IsEnabled() bool
+}
+
+func readyHandler(pool readinessChecker, cache cacheChecker) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 		defer cancel()
 
 		if err := pool.Ping(ctx); err != nil {
-			status = "degraded"
-			dbStatus = "error"
+			w.WriteHeader(http.StatusServiceUnavailable)
+			json.NewEncoder(w).Encode(map[string]any{
+				"status":   "not ready",
+				"database": "error",
+			})
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(map[string]any{
-			"status":   status,
-			"version":  "1.0.0",
-			"database": dbStatus,
-			"uptime":   time.Since(startTime).String(),
+			"status":   "ready",
+			"database": "connected",
+			"cache":    cache.IsEnabled(),
 		}); err != nil {
-			slog.Error("healthHandler: failed to encode response", slog.String("error", err.Error()))
+			slog.Error("readyHandler: failed to encode response", slog.String("error", err.Error()))
 		}
 	}
 }
