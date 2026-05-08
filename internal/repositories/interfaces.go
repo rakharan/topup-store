@@ -31,6 +31,8 @@ type OrderRepository interface {
 	GetDailyRevenue(ctx context.Context, startDate, endDate time.Time) ([]DailyRevenue, error)
 	GetTopGamesByRevenue(ctx context.Context, startDate, endDate time.Time) ([]GameStats, error)
 	GetOverallStats(ctx context.Context, startDate, endDate time.Time) (*OverallStats, error)
+	ListFailedForRetry(ctx context.Context, maxRetries int) ([]models.Order, error)
+	IncrementRetryCount(ctx context.Context, id string) error
 }
 
 type ProductRepository interface {

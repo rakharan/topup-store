@@ -114,6 +114,14 @@ func (m *mockOrderRepo) GetOverallStats(ctx context.Context, startDate, endDate 
 	return nil, nil
 }
 
+func (m *mockOrderRepo) ListFailedForRetry(ctx context.Context, maxRetries int) ([]models.Order, error) {
+	return nil, nil
+}
+
+func (m *mockOrderRepo) IncrementRetryCount(ctx context.Context, id string) error {
+	return nil
+}
+
 type mockProductRepo struct {
 	getByIDResult *models.Product
 	getByIDErr    error

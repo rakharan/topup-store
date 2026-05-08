@@ -23,6 +23,7 @@ import (
 	"github.com/topup-store/internal/db"
 	"github.com/topup-store/internal/handlers"
 	"github.com/topup-store/internal/middleware"
+	"github.com/topup-store/internal/models"
 	"github.com/topup-store/internal/repositories"
 	"github.com/topup-store/internal/services"
 )
@@ -237,6 +238,14 @@ func main() {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
+				logger.Error("failed order retry ticker panicked", slog.Any("panic", r))
+			}
+		}()
+		startFailedOrderRetryTicker(shutdownCtx, orderRepo, topupSvc, logger)
+	}()
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
 				logger.Error("webhook retry worker panicked", slog.Any("panic", r))
 			}
 		}()
@@ -367,6 +376,52 @@ func startOrderExpiryTickerWithNotify(ctx context.Context, paymentSvc services.P
 						}
 					}()
 				}
+			}
+		}
+	}
+}
+
+func startFailedOrderRetryTicker(ctx context.Context, orderRepo repositories.OrderRepository, topupSvc services.TopupServiceInterface, logger *slog.Logger) {
+	ticker := time.NewTicker(10 * time.Minute)
+	defer ticker.Stop()
+
+	sem := make(chan struct{}, 3)
+
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info("Failed order retry ticker stopped")
+			return
+		case <-ticker.C:
+			orders, err := orderRepo.ListFailedForRetry(ctx, 3)
+			if err != nil {
+				logger.Error("failed order retry: failed to list", slog.String("error", err.Error()))
+				continue
+			}
+			if len(orders) == 0 {
+				continue
+			}
+
+			logger.Info("failed order retry: retrying orders", slog.Int("count", len(orders)))
+			for _, order := range orders {
+				sem <- struct{}{}
+				go func(o models.Order) {
+					defer func() { <-sem }()
+					defer func() {
+						if r := recover(); r != nil {
+							logger.Error("failed order retry panicked", slog.String("order_id", o.ID), slog.Any("panic", r))
+						}
+					}()
+
+					if err := orderRepo.IncrementRetryCount(ctx, o.ID); err != nil {
+						logger.Error("failed order retry: failed to increment count", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+					}
+					if err := topupSvc.ProcessOrder(ctx, o.ID); err != nil {
+						logger.Error("failed order retry: process failed", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+						return
+					}
+					logger.Info("failed order retry: success", slog.String("order_id", o.ID))
+				}(order)
 			}
 		}
 	}

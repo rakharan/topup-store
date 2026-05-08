@@ -487,6 +487,38 @@ func (r *PGOrderRepository) GetOverallStats(ctx context.Context, startDate, endD
 	return &stats, nil
 }
 
+func (r *PGOrderRepository) ListFailedForRetry(ctx context.Context, maxRetries int) ([]models.Order, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
+		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
+		FROM orders
+		WHERE status = 'failed' AND retry_count < $1
+		ORDER BY created_at DESC
+		LIMIT 50
+	`, maxRetries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []models.Order
+	for rows.Next() {
+		var o models.Order
+		if err := rows.Scan(&o.ID, &o.OrderNumber, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
+			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.Channel,
+			&o.SerialNumber, &o.DigiflazzRefID, &o.CreatedAt, &o.UpdatedAt); err != nil {
+			return nil, err
+		}
+		orders = append(orders, o)
+	}
+	return orders, rows.Err()
+}
+
+func (r *PGOrderRepository) IncrementRetryCount(ctx context.Context, id string) error {
+	_, err := r.pool.Exec(ctx, `UPDATE orders SET retry_count = retry_count + 1 WHERE id = $1`, id)
+	return err
+}
+
 func nullIfEmpty(s string) any {
 	if s == "" {
 		return nil
