@@ -53,3 +53,17 @@ type WebhookRepository interface {
 	IsWebhookProcessed(ctx context.Context, source, signature string) (bool, error)
 	MarkWebhookProcessed(ctx context.Context, source, signature string) error
 }
+
+type AuditLogEntry struct {
+	Action       string
+	EntityType   string
+	EntityID     string
+	OldValue     string
+	NewValue     string
+	AdminIP      string
+	AdminUA      string
+}
+
+type AuditLogRepository interface {
+	Log(ctx context.Context, entry *AuditLogEntry) error
+}

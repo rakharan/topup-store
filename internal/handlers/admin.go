@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -27,13 +28,14 @@ type AdminHandler struct {
 	productRepo repositories.ProductRepository
 	webhookRepo repositories.WebhookRepository
 	orderRepo   repositories.OrderRepository
+	auditRepo   repositories.AuditLogRepository
 	cache       *cache.Cache
 	retrySvc    *services.WebhookRetryService
 	adminPass   string
 	logger      *slog.Logger
 }
 
-func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, productRepo repositories.ProductRepository, webhookRepo repositories.WebhookRepository, orderRepo repositories.OrderRepository, cache *cache.Cache, retrySvc *services.WebhookRetryService, adminPass string, logger *slog.Logger) *AdminHandler {
+func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, productRepo repositories.ProductRepository, webhookRepo repositories.WebhookRepository, orderRepo repositories.OrderRepository, auditRepo repositories.AuditLogRepository, cache *cache.Cache, retrySvc *services.WebhookRetryService, adminPass string, logger *slog.Logger) *AdminHandler {
 	return &AdminHandler{
 		paymentSvc:  paymentSvc,
 		topupSvc:    topupSvc,
@@ -41,10 +43,32 @@ func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc servi
 		productRepo: productRepo,
 		webhookRepo: webhookRepo,
 		orderRepo:   orderRepo,
+		auditRepo:   auditRepo,
 		cache:       cache,
 		retrySvc:    retrySvc,
 		adminPass:   adminPass,
 		logger:      logger,
+	}
+}
+
+func (h *AdminHandler) logAudit(ctx context.Context, r *http.Request, action, entityType, entityID, oldValue, newValue string) {
+	if h.auditRepo == nil {
+		return
+	}
+	ip := r.Header.Get("X-Forwarded-For")
+	if ip == "" {
+		ip = r.RemoteAddr
+	}
+	if err := h.auditRepo.Log(ctx, &repositories.AuditLogEntry{
+		Action:     action,
+		EntityType: entityType,
+		EntityID:   entityID,
+		OldValue:   oldValue,
+		NewValue:   newValue,
+		AdminIP:    ip,
+		AdminUA:    r.UserAgent(),
+	}); err != nil {
+		h.logger.Error("audit log failed", slog.String("error", err.Error()))
 	}
 }
 
@@ -79,6 +103,8 @@ func (h *AdminHandler) ProcessOrder(w http.ResponseWriter, r *http.Request) {
 		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
 		return
 	}
+
+	h.logAudit(r.Context(), r, "process_order", "order", order.ID, order.Status, constants.StatusPaid)
 
 	orderCopy := *order
 	go func() {
@@ -126,6 +152,8 @@ func (h *AdminHandler) RetryOrder(w http.ResponseWriter, r *http.Request) {
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("status", "order must be in paid status, current: "+order.Status), middleware.GetRequestID(r.Context()))
 		return
 	}
+
+	h.logAudit(r.Context(), r, "retry_order", "order", order.ID, order.Status, constants.StatusProcessing)
 
 	orderCopy := *order
 	go func() {
@@ -617,6 +645,7 @@ func (h *AdminHandler) OverrideOrderStatus(w http.ResponseWriter, r *http.Reques
 	if reason == "" {
 		reason = "admin override"
 	}
+	h.logAudit(r.Context(), r, "override_status", "order", order.ID, order.Status, req.Status)
 	h.paymentSvc.RecordStatusChange(r.Context(), req.OrderID, order.Status, req.Status, reason)
 
 	if req.OrderID != "" && order.UserPhone != "" {
