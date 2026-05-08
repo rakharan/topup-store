@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net"
@@ -9,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type RateLimiter struct {
@@ -19,6 +22,7 @@ type RateLimiter struct {
 	trustForwarded bool
 	allowedIPs     map[string]bool
 	logger         *slog.Logger
+	redis          *redis.Client
 }
 
 type visitor struct {
@@ -37,6 +41,11 @@ func NewRateLimiter(rate int, window time.Duration) *RateLimiter {
 	return rl
 }
 
+func (rl *RateLimiter) WithRedis(client *redis.Client) *RateLimiter {
+	rl.redis = client
+	return rl
+}
+
 func (rl *RateLimiter) WithAllowedIPs(ips []string) *RateLimiter {
 	for _, ip := range ips {
 		rl.allowedIPs[strings.TrimSpace(ip)] = true
@@ -47,6 +56,62 @@ func (rl *RateLimiter) WithAllowedIPs(ips []string) *RateLimiter {
 func (rl *RateLimiter) WithLogger(logger *slog.Logger) *RateLimiter {
 	rl.logger = logger
 	return rl
+}
+
+func (rl *RateLimiter) isRedisEnabled() bool {
+	return rl.redis != nil
+}
+
+func (rl *RateLimiter) allow(ip string) (bool, int, error) {
+	if !rl.isRedisEnabled() {
+		return rl.allowInMemory(ip)
+	}
+
+	key := "ratelimit:" + ip
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	pipe := rl.redis.Pipeline()
+	incr := pipe.Incr(ctx, key)
+	pipe.Expire(ctx, key, rl.window)
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return false, 0, err
+	}
+
+	count := int(incr.Val())
+	remaining := rl.rate - count
+	if remaining < 0 {
+		remaining = 0
+	}
+
+	if count > rl.rate {
+		return false, remaining, nil
+	}
+	return true, remaining, nil
+}
+
+func (rl *RateLimiter) allowInMemory(ip string) (bool, int, error) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	v, exists := rl.visitors[ip]
+	if !exists || time.Since(v.lastSeen) > rl.window {
+		rl.visitors[ip] = &visitor{count: 1, lastSeen: time.Now()}
+		return true, rl.rate - 1, nil
+	}
+
+	v.count++
+	v.lastSeen = time.Now()
+	remaining := rl.rate - v.count
+	if remaining < 0 {
+		remaining = 0
+	}
+
+	if v.count > rl.rate {
+		return false, remaining, nil
+	}
+	return true, remaining, nil
 }
 
 func (rl *RateLimiter) Cleanup() {
@@ -69,7 +134,7 @@ func (rl *RateLimiter) cleanup() {
 
 func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/health" || r.URL.Path == "/metrics" {
+		if r.URL.Path == "/health" || r.URL.Path == "/metrics" || r.URL.Path == "/ready" {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -81,31 +146,22 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		rl.mu.Lock()
-		v, exists := rl.visitors[ip]
-		if !exists || time.Since(v.lastSeen) > rl.window {
-			rl.visitors[ip] = &visitor{count: 1, lastSeen: time.Now()}
-			remaining := rl.rate - 1
-			rl.mu.Unlock()
-			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(rl.rate))
-			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
+		allowed, remaining, err := rl.allow(ip)
+		if err != nil {
+			if rl.logger != nil {
+				rl.logger.Error("rate limiter error", slog.String("ip", ip), slog.String("error", err.Error()))
+			}
+			// On Redis error, allow the request (fail open)
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		v.count++
-		v.lastSeen = time.Now()
-		remaining := rl.rate - v.count
-		if remaining < 0 {
-			remaining = 0
-		}
 		w.Header().Set("X-RateLimit-Limit", strconv.Itoa(rl.rate))
 		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
 
-		if v.count > rl.rate {
+		if !allowed {
 			retryAfter := int(rl.window.Seconds())
 			w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
-			rl.mu.Unlock()
 			if rl.logger != nil {
 				rl.logger.Warn("rate limit exceeded", slog.String("ip", ip), slog.String("path", r.URL.Path))
 			}
@@ -120,7 +176,6 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 			})
 			return
 		}
-		rl.mu.Unlock()
 
 		next.ServeHTTP(w, r)
 	})

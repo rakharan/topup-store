@@ -118,3 +118,7 @@ func (c *Cache) Close() error {
 	}
 	return nil
 }
+
+func (c *Cache) Client() *redis.Client {
+	return c.client
+}
