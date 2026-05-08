@@ -79,6 +79,7 @@
                 <div class="space-y-2 text-sm mb-6">
                     <div class="flex justify-between"><span class="text-white/70">Game</span><span id="confirmGame"></span></div>
                     <div class="flex justify-between"><span class="text-white/70">Paket</span><span id="confirmProduct"></span></div>
+                    <div class="flex justify-between"><span class="text-white/70">Stok</span><span id="confirmStock"></span></div>
                     <div class="flex justify-between"><span class="text-white/70">UID</span><span id="confirmUid"></span></div>
                     <div class="flex justify-between"><span class="text-white/70">Total</span><span id="confirmPrice" class="text-primary font-bold"></span></div>
                 </div>
@@ -206,6 +207,11 @@
             showFieldError('product', 'Pilih paket terlebih dahulu');
             return false;
         }
+        const selected = productSelect.options[productSelect.selectedIndex];
+        if (selected.dataset.stock === '0') {
+            showFieldError('product', 'Produk ini stok habis, silakan pilih produk lain');
+            return false;
+        }
         clearFieldError('product');
         return true;
     }
@@ -236,10 +242,16 @@
             products.forEach(p => {
                 const opt = document.createElement("option");
                 opt.value = p.id;
-                opt.textContent = `${p.name} (${p.diamonds} Diamonds) - Rp ${p.price_idr.toLocaleString("id-ID")}`;
+                const stockLabel = p.stock === 0 ? ' (Stok Habis)' : (p.stock > 0 ? ` (Stok: ${p.stock})` : '');
+                opt.textContent = `${p.name} (${p.diamonds} Diamonds) - Rp ${p.price_idr.toLocaleString("id-ID")}${stockLabel}`;
                 opt.dataset.amount = p.price_idr;
                 opt.dataset.name = p.name;
                 opt.dataset.diamonds = p.diamonds;
+                opt.dataset.stock = p.stock;
+                if (p.stock === 0) {
+                    opt.disabled = true;
+                    opt.classList.add('text-white/30');
+                }
                 productSelect.appendChild(opt);
             });
             productSelect.disabled = false;
@@ -340,6 +352,11 @@
         const productPrice = selectedProduct?.price || (opt && opt.dataset.amount) || '0';
         document.getElementById("confirmGame").textContent = game;
         document.getElementById("confirmProduct").textContent = productName;
+        const stock = parseInt(opt?.dataset.stock || '-1');
+        const stockText = stock === 0 ? 'Stok Habis' : (stock > 0 ? `${stock} tersedia` : 'Tersedia');
+        const stockEl = document.getElementById("confirmStock");
+        stockEl.textContent = stockText;
+        stockEl.className = stock === 0 ? 'text-red-400 font-medium' : 'text-green-400';
         document.getElementById("confirmUid").textContent = uid + (serverGroup.classList.contains('hidden') ? '' : ' (' + document.getElementById("gameServer").value.trim() + ')');
         document.getElementById("confirmPrice").textContent = 'Rp ' + (productPrice ? parseInt(productPrice).toLocaleString("id-ID") : '0');
         modalTriggerEl = document.activeElement;
