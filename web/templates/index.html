@@ -112,19 +112,41 @@
         }
     }
 
-    document.querySelectorAll(".game-tab").forEach(btn => {
-        btn.addEventListener("click", () => {
-            document.querySelectorAll(".game-tab").forEach(b => {
-                b.classList.remove("bg-primary", "text-white");
-                b.classList.add("bg-white/10");
-                b.setAttribute('aria-selected', 'false');
-            });
-            btn.classList.add("bg-primary", "text-white");
-            btn.classList.remove("bg-white/10");
-            btn.setAttribute('aria-selected', 'true');
-            document.getElementById('productGrid').setAttribute('aria-labelledby', btn.id);
-            activeGame = btn.dataset.game;
-            loadProducts(activeGame);
+    const gameTabs = Array.from(document.querySelectorAll(".game-tab"));
+
+    function activateTab(index) {
+        const btn = gameTabs[index];
+        if (!btn) return;
+        gameTabs.forEach(b => {
+            b.classList.remove("bg-primary", "text-white");
+            b.classList.add("bg-white/10");
+            b.setAttribute('aria-selected', 'false');
+        });
+        btn.classList.add("bg-primary", "text-white");
+        btn.classList.remove("bg-white/10");
+        btn.setAttribute('aria-selected', 'true');
+        document.getElementById('productGrid').setAttribute('aria-labelledby', btn.id);
+        activeGame = btn.dataset.game;
+        loadProducts(activeGame);
+        btn.focus();
+    }
+
+    gameTabs.forEach((btn, idx) => {
+        btn.addEventListener("click", () => activateTab(idx));
+        btn.addEventListener("keydown", (e) => {
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                activateTab((idx + 1) % gameTabs.length);
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                activateTab((idx - 1 + gameTabs.length) % gameTabs.length);
+            } else if (e.key === 'Home') {
+                e.preventDefault();
+                activateTab(0);
+            } else if (e.key === 'End') {
+                e.preventDefault();
+                activateTab(gameTabs.length - 1);
+            }
         });
     });
 

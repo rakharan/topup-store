@@ -63,7 +63,10 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-white/70 mb-1" for="phone">Nomor WhatsApp</label>
-                <input type="text" id="phone" name="phone" placeholder="08xxxxxxxxxx atau 628xxx" inputmode="tel" autocomplete="tel" required aria-describedby="phoneHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+                <div class="relative">
+                    <input type="text" id="phone" name="phone" placeholder="08xxxxxxxxxx atau 628xxx" inputmode="tel" autocomplete="tel" required aria-describedby="phoneHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring pr-10">
+                    <span id="phoneCheck" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-green-400" aria-hidden="true">&#10003;</span>
+                </div>
                 <span id="phoneError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
                 <p class="text-xs text-white/40 mt-1" id="phoneHint">Format: 628xxx atau 08xxx (tanpa + atau spasi)</p>
             </div>
@@ -180,16 +183,22 @@
         const phoneInput = document.getElementById("phone");
         let phone = phoneInput.value.trim();
         phone = phone.replace(/[+\s]/g, '');
-        phoneInput.value = phone;
+        if (phone.startsWith('08')) {
+            phone = '62' + phone.substring(1);
+            phoneInput.value = phone;
+        }
         if (!phone) {
             showFieldError('phone', 'Nomor WhatsApp wajib diisi');
+            document.getElementById('phoneCheck').classList.add('hidden');
             return false;
         }
         if (!/^\d{8,20}$/.test(phone)) {
             showFieldError('phone', 'Nomor harus 8-20 digit angka (tanpa + atau spasi)');
+            document.getElementById('phoneCheck').classList.add('hidden');
             return false;
         }
         clearFieldError('phone');
+        document.getElementById('phoneCheck').classList.remove('hidden');
         return true;
     }
 
