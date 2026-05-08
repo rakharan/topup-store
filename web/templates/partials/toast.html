@@ -1,27 +1,51 @@
 {{define "toast"}}
-<div id="toast" class="fixed bottom-4 right-4 hidden z-50 cursor-pointer" role="alert" aria-live="polite" aria-atomic="true" title="Klik untuk menutup">
-    <span id="toastMessage"></span>
-    <span class="ml-2 text-white/60 text-xs" aria-hidden="true">(tap to close)</span>
+<style>
+#toast {
+    transform: translateY(20px);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+#toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+</style>
+<div id="toast" class="fixed bottom-4 right-4 hidden z-50 cursor-pointer max-w-sm" role="alert" aria-live="polite" aria-atomic="true" title="Klik untuk menutup">
+    <div class="flex items-start gap-3">
+        <span id="toastIcon" class="text-lg shrink-0 mt-0.5" aria-hidden="true"></span>
+        <div class="flex-1">
+            <span id="toastMessage" class="text-sm"></span>
+            <span class="block text-white/60 text-xs mt-1" aria-hidden="true">(tap to close)</span>
+        </div>
+    </div>
 </div>
 <script>
 (function() {
     const toast = document.getElementById('toast');
     const toastMessage = document.getElementById('toastMessage');
+    const toastIcon = document.getElementById('toastIcon');
     let toastTimer = null;
 
     toast.addEventListener('click', () => {
-        toast.classList.add('hidden');
+        toast.classList.remove('show');
+        setTimeout(() => toast.classList.add('hidden'), 300);
         if (toastTimer) clearTimeout(toastTimer);
     });
 
     window.showToast = function(message, type = 'info') {
         const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
-        toast.className = `fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg text-white text-sm cursor-pointer ${colors[type] || colors.info}`;
+        const icons = { success: '✓', error: '✕', info: 'ℹ' };
+        toast.className = `fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg text-white cursor-pointer max-w-sm ${colors[type] || colors.info}`;
         toastMessage.textContent = message;
+        toastIcon.textContent = icons[type] || icons.info;
         toast.classList.remove('hidden');
+        requestAnimationFrame(() => toast.classList.add('show'));
         if (toastTimer) clearTimeout(toastTimer);
         const duration = type === 'error' ? 8000 : 3000;
-        toastTimer = setTimeout(() => toast.classList.add('hidden'), duration);
+        toastTimer = setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.classList.add('hidden'), 300);
+        }, duration);
     };
 })();
 </script>
