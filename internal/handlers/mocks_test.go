@@ -153,6 +153,27 @@ func (m *mockNotifyService) SendNotification(phone, message string) error {
 	return m.sendNotificationErr
 }
 
+type mockWebhookRepo struct {
+	isProcessed   bool
+	isProcessedErr error
+}
+
+func (m *mockWebhookRepo) Log(ctx context.Context, log *models.WebhookLog) error {
+	return nil
+}
+
+func (m *mockWebhookRepo) List(ctx context.Context, source string, page, perPage int) ([]models.WebhookLog, int, error) {
+	return nil, 0, nil
+}
+
+func (m *mockWebhookRepo) IsWebhookProcessed(ctx context.Context, source, signature string) (bool, error) {
+	return m.isProcessed, m.isProcessedErr
+}
+
+func (m *mockWebhookRepo) MarkWebhookProcessed(ctx context.Context, source, signature string) error {
+	return nil
+}
+
 type mockProductRepo struct {
 	getByIDResult    *models.Product
 	getByIDErr       error

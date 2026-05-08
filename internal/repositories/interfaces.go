@@ -50,4 +50,6 @@ type ProductRepository interface {
 type WebhookRepository interface {
 	Log(ctx context.Context, log *models.WebhookLog) error
 	List(ctx context.Context, source string, page, perPage int) ([]models.WebhookLog, int, error)
+	IsWebhookProcessed(ctx context.Context, source, signature string) (bool, error)
+	MarkWebhookProcessed(ctx context.Context, source, signature string) error
 }

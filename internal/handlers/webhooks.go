@@ -81,6 +81,16 @@ func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if processed, err := h.webhookRepo.IsWebhookProcessed(r.Context(), "midtrans", payload.SignatureKey); err != nil {
+		h.logger.Error("midtrans webhook: idempotency check failed", slog.String("error", err.Error()))
+	} else if processed {
+		h.logger.Info("midtrans webhook: duplicate signature, skipping", slog.String("order_id", payload.OrderID))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
+		return
+	}
+
 	if strings.HasPrefix(payload.OrderID, "payment_notif_test") {
 		h.logger.Info("midtrans webhook: test notification received, ignoring")
 		h.logWebhook(r.Context(), "midtrans", payload.OrderID, string(rawBody), payload.SignatureKey, r.UserAgent(), "skipped", "test notification")
@@ -131,6 +141,10 @@ func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
 
 	h.paymentSvc.RecordStatusChange(r.Context(), order.ID, oldStatus, newStatus, "midtrans webhook")
 	h.logWebhook(r.Context(), "midtrans", payload.OrderID, string(rawBody), payload.SignatureKey, r.UserAgent(), "processed", "")
+
+	if err := h.webhookRepo.MarkWebhookProcessed(r.Context(), "midtrans", payload.SignatureKey); err != nil {
+		h.logger.Error("midtrans webhook: failed to mark processed", slog.String("error", err.Error()))
+	}
 
 	if newStatus == constants.StatusPaid {
 		orderCopy := *order
@@ -240,6 +254,18 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 	status, _ := data["status"].(string)
 	sn, _ := data["sn"].(string)
 
+	idempotencyKey := sigHeader
+	if idempotencyKey == "" {
+		idempotencyKey = refID + "|" + status
+	}
+	if processed, err := h.webhookRepo.IsWebhookProcessed(r.Context(), "digiflazz", idempotencyKey); err != nil {
+		h.logger.Error("digiflazz webhook: idempotency check failed", slog.String("error", err.Error()))
+	} else if processed {
+		h.logger.Info("digiflazz webhook: duplicate, skipping", slog.String("ref_id", refID))
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if refID == "" {
 		h.logWebhook(r.Context(), "digiflazz", "", string(rawBody), sigHeader, r.UserAgent(), "skipped", "missing ref_id")
 		h.logger.Warn("digiflazz webhook: missing ref_id")
@@ -290,6 +316,9 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 		}
 
 		h.logWebhook(r.Context(), "digiflazz", refID, string(rawBody), sigHeader, r.UserAgent(), "processed", "")
+		if err := h.webhookRepo.MarkWebhookProcessed(r.Context(), "digiflazz", idempotencyKey); err != nil {
+			h.logger.Error("digiflazz webhook: failed to mark processed", slog.String("error", err.Error()))
+		}
 
 		orderCopy := *order
 		snCopy := sn
@@ -344,6 +373,9 @@ func (h *WebhookHandler) Digiflazz(w http.ResponseWriter, r *http.Request) {
 
 		h.paymentSvc.RecordStatusChange(r.Context(), order.ID, oldStatus, constants.StatusFailed, "digiflazz webhook")
 		h.logWebhook(r.Context(), "digiflazz", refID, string(rawBody), sigHeader, r.UserAgent(), "processed", "")
+		if err := h.webhookRepo.MarkWebhookProcessed(r.Context(), "digiflazz", idempotencyKey); err != nil {
+			h.logger.Error("digiflazz webhook: failed to mark processed", slog.String("error", err.Error()))
+		}
 
 		orderCopy := *order
 		go func() {

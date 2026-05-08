@@ -442,7 +442,7 @@ func TestProductHandler_ListProducts_All(t *testing.T) {
 }
 
 func TestWebhookHandler_Midtrans_InvalidPayload(t *testing.T) {
-	wh := &WebhookHandler{midtransKey: "test-key", logger: testLogger}
+	wh := &WebhookHandler{midtransKey: "test-key", webhookRepo: &mockWebhookRepo{}, logger: testLogger}
 	req := httptest.NewRequest(http.MethodPost, "/webhook/midtrans", strings.NewReader("not json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -455,7 +455,7 @@ func TestWebhookHandler_Midtrans_InvalidPayload(t *testing.T) {
 }
 
 func TestWebhookHandler_Midtrans_InvalidSignature(t *testing.T) {
-	wh := &WebhookHandler{midtransKey: "test-key", logger: testLogger}
+	wh := &WebhookHandler{midtransKey: "test-key", webhookRepo: &mockWebhookRepo{}, logger: testLogger}
 	body := `{
 		"order_id": "order-123",
 		"status_code": "200",
@@ -516,7 +516,7 @@ func TestWebhookHandler_VerifySignature(t *testing.T) {
 }
 
 func TestWebhookHandler_Digiflazz_InvalidPayload(t *testing.T) {
-	wh := &WebhookHandler{digiflazzUser: "user", digiflazzAPIKey: "key", logger: testLogger}
+	wh := &WebhookHandler{digiflazzUser: "user", digiflazzAPIKey: "key", webhookRepo: &mockWebhookRepo{}, logger: testLogger}
 	req := httptest.NewRequest(http.MethodPost, "/webhook/digiflazz", strings.NewReader("not json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -529,7 +529,7 @@ func TestWebhookHandler_Digiflazz_InvalidPayload(t *testing.T) {
 }
 
 func TestWebhookHandler_Digiflazz_PingEvent(t *testing.T) {
-	wh := &WebhookHandler{digiflazzUser: "user", digiflazzAPIKey: "key", logger: testLogger}
+	wh := &WebhookHandler{digiflazzUser: "user", digiflazzAPIKey: "key", webhookRepo: &mockWebhookRepo{}, logger: testLogger}
 	body := `{"sed":"AgXXtVAHp","hook_id":"11aaabbb","hook":{"url":"https://example.com/webhook","secret":"test","type":"application/json","status":1}}`
 	req := httptest.NewRequest(http.MethodPost, "/webhook/digiflazz", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -548,6 +548,7 @@ func TestWebhookHandler_Digiflazz_NonSuccessStatus(t *testing.T) {
 		digiflazzAPIKey: "key",
 		paymentSvc:      &mockPaymentService{getOrderResult: &models.Order{ID: "test-123", Status: "processing"}},
 		notifySvc:       &mockNotifyService{},
+		webhookRepo:     &mockWebhookRepo{},
 		logger:          testLogger,
 	}
 	body := `{"data":{"ref_id":"test-123","status":"Gagal","sn":"","message":"Gagal"}}`
@@ -567,6 +568,7 @@ func TestWebhookHandler_Digiflazz_OrderNotFound(t *testing.T) {
 		digiflazzUser:   "user",
 		digiflazzAPIKey: "key",
 		paymentSvc:      &mockPaymentService{getOrderErr: errors.New("not found")},
+		webhookRepo:     &mockWebhookRepo{},
 		logger:          testLogger,
 	}
 	body := `{"data":{"ref_id":"test-123","status":"Sukses","sn":"SN123","message":"Sukses"}}`

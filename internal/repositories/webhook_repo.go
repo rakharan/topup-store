@@ -24,6 +24,22 @@ func (r *PGWebhookRepository) Log(ctx context.Context, log *models.WebhookLog) e
 	return err
 }
 
+func (r *PGWebhookRepository) IsWebhookProcessed(ctx context.Context, source, signature string) (bool, error) {
+	var exists bool
+	err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM webhook_idempotency WHERE source = $1 AND signature = $2)
+	`, source, signature).Scan(&exists)
+	return exists, err
+}
+
+func (r *PGWebhookRepository) MarkWebhookProcessed(ctx context.Context, source, signature string) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO webhook_idempotency (source, signature) VALUES ($1, $2)
+		ON CONFLICT (source, signature) DO NOTHING
+	`, source, signature)
+	return err
+}
+
 func (r *PGWebhookRepository) List(ctx context.Context, source string, page, perPage int) ([]models.WebhookLog, int, error) {
 	if page < 1 {
 		page = 1
