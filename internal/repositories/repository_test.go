@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/topup-store/internal/db"
 	"github.com/topup-store/internal/models"
@@ -41,30 +40,22 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func withTx(t *testing.T, fn func(ctx context.Context, tx pgx.Tx)) {
+func withCleanTables(t *testing.T, fn func(ctx context.Context)) {
 	t.Helper()
 	ctx := context.Background()
-	tx, err := testPool.Begin(ctx)
-	if err != nil {
-		t.Fatalf("begin tx: %v", err)
-	}
-	defer tx.Rollback(ctx)
-	fn(ctx, tx)
+	cleanTables(t, ctx)
+	fn(ctx)
 }
 
-func orderRepoWithTx(tx pgx.Tx) *PGOrderRepository {
-	// Wrap tx in a minimal pool-like interface for the repository
-	// Since PGOrderRepository takes *pgxpool.Pool, we use a workaround
-	// by creating a temporary wrapper. For simplicity, we use the pool
-	// directly in these tests (non-parallel) and clean up manually.
+func orderRepo() *PGOrderRepository {
 	return &PGOrderRepository{pool: testPool}
 }
 
-func productRepoWithTx(tx pgx.Tx) *PGProductRepository {
+func productRepo() *PGProductRepository {
 	return &PGProductRepository{pool: testPool}
 }
 
-func webhookRepoWithTx(tx pgx.Tx) *PGWebhookRepository {
+func webhookRepo() *PGWebhookRepository {
 	return &PGWebhookRepository{pool: testPool}
 }
 
@@ -78,7 +69,7 @@ func cleanTables(t *testing.T, ctx context.Context) {
 		"webhooks_log",
 	}
 	for _, table := range tables {
-		if _, err := testPool.Exec(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
+		if _, err := testPool.Exec(ctx, fmt.Sprintf("TRUNCATE TABLE %s CASCADE", table)); err != nil {
 			t.Fatalf("clean table %s: %v", table, err)
 		}
 	}
@@ -99,17 +90,25 @@ func createTestProduct(t *testing.T, ctx context.Context, game string, diamonds 
 		ProductType:  "diamond",
 		SKU:          fmt.Sprintf("test_%s_%d", game, diamonds),
 		IsActive:     true,
+		Stock:        -1,
 	}
 	if err := repo.Create(ctx, product); err != nil {
 		t.Fatalf("create test product: %v", err)
+	}
+	// Verify product was actually created
+	var count int
+	if err := testPool.QueryRow(ctx, "SELECT COUNT(*) FROM products WHERE id = $1", id).Scan(&count); err != nil {
+		t.Fatalf("verify test product: %v", err)
+	}
+	if count == 0 {
+		t.Fatalf("test product was not found in database after creation")
 	}
 	return id
 }
 
 func TestOrderRepository_CreateAndGet(t *testing.T) {
-	withTx(t, func(ctx context.Context, tx pgx.Tx) {
-		cleanTables(t, ctx)
-		repo := orderRepoWithTx(tx)
+	withCleanTables(t, func(ctx context.Context) {
+		repo := orderRepo()
 
 		productID := createTestProduct(t, ctx, "free_fire", 100)
 		order := &models.Order{
@@ -143,9 +142,8 @@ func TestOrderRepository_CreateAndGet(t *testing.T) {
 }
 
 func TestOrderRepository_GetByOrderNumber(t *testing.T) {
-	withTx(t, func(ctx context.Context, tx pgx.Tx) {
-		cleanTables(t, ctx)
-		repo := orderRepoWithTx(tx)
+	withCleanTables(t, func(ctx context.Context) {
+		repo := orderRepo()
 
 		productID := createTestProduct(t, ctx, "free_fire", 50)
 		order := &models.Order{
@@ -172,9 +170,8 @@ func TestOrderRepository_GetByOrderNumber(t *testing.T) {
 }
 
 func TestOrderRepository_UpdateStatus(t *testing.T) {
-	withTx(t, func(ctx context.Context, tx pgx.Tx) {
-		cleanTables(t, ctx)
-		repo := orderRepoWithTx(tx)
+	withCleanTables(t, func(ctx context.Context) {
+		repo := orderRepo()
 
 		productID := createTestProduct(t, ctx, "free_fire", 50)
 		order := &models.Order{
@@ -205,9 +202,8 @@ func TestOrderRepository_UpdateStatus(t *testing.T) {
 }
 
 func TestOrderRepository_UpdateStatusIf(t *testing.T) {
-	withTx(t, func(ctx context.Context, tx pgx.Tx) {
-		cleanTables(t, ctx)
-		repo := orderRepoWithTx(tx)
+	withCleanTables(t, func(ctx context.Context) {
+		repo := orderRepo()
 
 		productID := createTestProduct(t, ctx, "free_fire", 50)
 		order := &models.Order{
@@ -244,9 +240,8 @@ func TestOrderRepository_UpdateStatusIf(t *testing.T) {
 }
 
 func TestOrderRepository_StatusHistory(t *testing.T) {
-	withTx(t, func(ctx context.Context, tx pgx.Tx) {
-		cleanTables(t, ctx)
-		repo := orderRepoWithTx(tx)
+	withCleanTables(t, func(ctx context.Context) {
+		repo := orderRepo()
 
 		productID := createTestProduct(t, ctx, "free_fire", 50)
 		order := &models.Order{
@@ -288,9 +283,8 @@ func TestOrderRepository_StatusHistory(t *testing.T) {
 }
 
 func TestProductRepository_CreateAndGet(t *testing.T) {
-	withTx(t, func(ctx context.Context, tx pgx.Tx) {
-		cleanTables(t, ctx)
-		repo := productRepoWithTx(tx)
+	withCleanTables(t, func(ctx context.Context) {
+		repo := productRepo()
 
 		product := &models.Product{
 			ID:           uuid.New().String(),
@@ -303,6 +297,7 @@ func TestProductRepository_CreateAndGet(t *testing.T) {
 			ProductType:  "diamond",
 			SKU:          "ff_100",
 			IsActive:     true,
+			Stock:        -1,
 		}
 
 		if err := repo.Create(ctx, product); err != nil {
@@ -323,9 +318,8 @@ func TestProductRepository_CreateAndGet(t *testing.T) {
 }
 
 func TestProductRepository_GetByGameAndDiamonds(t *testing.T) {
-	withTx(t, func(ctx context.Context, tx pgx.Tx) {
-		cleanTables(t, ctx)
-		repo := productRepoWithTx(tx)
+	withCleanTables(t, func(ctx context.Context) {
+		repo := productRepo()
 
 		product := &models.Product{
 			ID:           uuid.New().String(),
@@ -337,6 +331,7 @@ func TestProductRepository_GetByGameAndDiamonds(t *testing.T) {
 			ProductType:  "diamond",
 			SKU:          "ml_86",
 			IsActive:     true,
+			Stock:        -1,
 		}
 		if err := repo.Create(ctx, product); err != nil {
 			t.Fatalf("create: %v", err)
@@ -353,9 +348,8 @@ func TestProductRepository_GetByGameAndDiamonds(t *testing.T) {
 }
 
 func TestProductRepository_ListByGame(t *testing.T) {
-	withTx(t, func(ctx context.Context, tx pgx.Tx) {
-		cleanTables(t, ctx)
-		repo := productRepoWithTx(tx)
+	withCleanTables(t, func(ctx context.Context) {
+		repo := productRepo()
 
 		for i := 0; i < 3; i++ {
 			product := &models.Product{
@@ -367,6 +361,7 @@ func TestProductRepository_ListByGame(t *testing.T) {
 				ProductType: "diamond",
 				SKU:         fmt.Sprintf("pubg_%d", i),
 				IsActive:    true,
+				Stock:       -1,
 			}
 			if err := repo.Create(ctx, product); err != nil {
 				t.Fatalf("create product %d: %v", i, err)
@@ -384,9 +379,8 @@ func TestProductRepository_ListByGame(t *testing.T) {
 }
 
 func TestWebhookRepository_LogAndList(t *testing.T) {
-	withTx(t, func(ctx context.Context, tx pgx.Tx) {
-		cleanTables(t, ctx)
-		repo := webhookRepoWithTx(tx)
+	withCleanTables(t, func(ctx context.Context) {
+		repo := webhookRepo()
 
 		log := &models.WebhookLog{
 			Source:    "midtrans",

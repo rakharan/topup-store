@@ -12,6 +12,9 @@
             <a href="/status" class="{{if eq .ActivePage "status"}}text-primary font-medium{{else}}hover:text-primary transition{{end}} focus-ring">Cek Order</a>
             <a href="/terms" class="{{if eq .ActivePage "terms"}}text-primary font-medium{{else}}hover:text-primary transition{{end}} focus-ring">Syarat</a>
             <a href="/refund" class="{{if eq .ActivePage "refund"}}text-primary font-medium{{else}}hover:text-primary transition{{end}} focus-ring">Refund</a>
+            <button id="themeToggle" class="p-2 hover:bg-white/10 rounded-lg focus-ring" aria-label="Toggle theme" title="Toggle theme">
+                <svg id="themeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+            </button>
         </div>
         <button id="mobileMenuBtn" class="md:hidden p-2 hover:bg-white/10 rounded-lg focus-ring" aria-label="Toggle mobile menu" aria-expanded="false" aria-controls="mobileMenu">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -55,6 +58,28 @@
     document.addEventListener('click', () => {
         if (open) setOpen(false);
     });
+
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    if (themeToggle) {
+        const moon = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>';
+        const sun = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>';
+
+        function setTheme(dark) {
+            document.documentElement.classList.toggle('dark', dark);
+            themeIcon.innerHTML = dark ? moon : sun;
+            localStorage.setItem('theme', dark ? 'dark' : 'light');
+        }
+
+        const saved = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = saved ? saved === 'dark' : prefersDark;
+        setTheme(isDark);
+
+        themeToggle.addEventListener('click', () => {
+            setTheme(!document.documentElement.classList.contains('dark'));
+        });
+    }
 })();
 </script>
 {{end}}
