@@ -9,7 +9,7 @@
     <meta property="og:url" content="https://sagameda.com/order">
     <meta property="og:image" content="https://sagameda.com/static/og-image.jpg">
     {{template "head"}}
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" onerror="window.qrcodeLoadFailed=true"></script>
 </head>
 <body class="bg-dark text-white min-h-screen">
     {{template "nav" (dict "ActivePage" "order")}}
@@ -476,7 +476,7 @@
                     </div>
                 `;
 
-                if (qrString && typeof QRCode !== 'undefined') {
+                if (qrString && typeof QRCode !== 'undefined' && !window.qrcodeLoadFailed) {
                     try {
                         new QRCode(document.getElementById("qrisCode"), {
                             text: qrString,
@@ -490,6 +490,8 @@
                         console.error("Failed to render QR code:", e);
                         document.getElementById("qrisCode").innerHTML = '<p class="text-red-400 text-sm">Gagal memuat QR code. Gunakan tombol Bayar Sekarang.</p>';
                     }
+                } else if (qrString) {
+                    document.getElementById("qrisCode").innerHTML = '<p class="text-white/60 text-sm">QR code tidak dapat dimuat.<br>Gunakan tombol <strong>Bayar Sekarang</strong> di bawah.</p>';
                 }
 
                 result.querySelector('.copy-btn').addEventListener('click', () => {

@@ -41,11 +41,12 @@
         toast.classList.remove('hidden');
         requestAnimationFrame(() => toast.classList.add('show'));
         if (toastTimer) clearTimeout(toastTimer);
-        const duration = type === 'error' ? 8000 : 3000;
-        toastTimer = setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.classList.add('hidden'), 300);
-        }, duration);
+        if (type !== 'error') {
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.classList.add('hidden'), 300);
+            }, 3000);
+        }
     };
 })();
 </script>
