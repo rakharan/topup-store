@@ -264,7 +264,9 @@
                         </tr>
                     </thead>
                     <tbody id="productsTableBody">
-                        <tr><td colspan="10" class="py-8 text-center text-white/40">Loading products...</td></tr>
+                        <tr><td colspan="10" class="py-4"><div class="skeleton rounded h-8"></div></td></tr>
+                        <tr><td colspan="10" class="py-4"><div class="skeleton rounded h-8"></div></td></tr>
+                        <tr><td colspan="10" class="py-4"><div class="skeleton rounded h-8"></div></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -280,15 +282,22 @@
                     <button onclick="loadAnalytics(90)" class="analytics-period bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-sm transition focus-ring" data-days="90">90D</button>
                 </div>
             </div>
-            <div id="analyticsStats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
+            <div id="analyticsStats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 animate-pulse"><div class="h-8 bg-white/10 rounded w-1/2 mb-2"></div><div class="h-4 bg-white/10 rounded w-2/3"></div></div>
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 animate-pulse"><div class="h-8 bg-white/10 rounded w-1/2 mb-2"></div><div class="h-4 bg-white/10 rounded w-2/3"></div></div>
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 animate-pulse"><div class="h-8 bg-white/10 rounded w-1/2 mb-2"></div><div class="h-4 bg-white/10 rounded w-2/3"></div></div>
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 animate-pulse"><div class="h-8 bg-white/10 rounded w-1/2 mb-2"></div><div class="h-4 bg-white/10 rounded w-2/3"></div></div>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div class="bg-white/5 border border-white/10 rounded-xl p-4">
                     <h3 class="text-sm font-medium text-white/70 mb-3">Revenue & Orders (Daily)</h3>
-                    <canvas id="revenueChart"></canvas>
+                    <div id="revenueChartSkeleton" class="skeleton rounded h-64"></div>
+                    <canvas id="revenueChart" class="hidden"></canvas>
                 </div>
                 <div class="bg-white/5 border border-white/10 rounded-xl p-4">
                     <h3 class="text-sm font-medium text-white/70 mb-3">Revenue by Game</h3>
-                    <canvas id="gameChart"></canvas>
+                    <div id="gameChartSkeleton" class="skeleton rounded h-64"></div>
+                    <canvas id="gameChart" class="hidden"></canvas>
                 </div>
             </div>
         </div>
@@ -949,6 +958,11 @@
             const res = await fetch(ADMIN_PATH + '/analytics?days=' + days);
             const json = await res.json();
             if (!res.ok) { showToast('Failed to load analytics', 'error'); return; }
+
+            document.getElementById('revenueChartSkeleton')?.classList.add('hidden');
+            document.getElementById('revenueChart')?.classList.remove('hidden');
+            document.getElementById('gameChartSkeleton')?.classList.add('hidden');
+            document.getElementById('gameChart')?.classList.remove('hidden');
 
             const data = json.data || {};
             const overall = data.overall || {};

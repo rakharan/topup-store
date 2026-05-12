@@ -118,6 +118,7 @@
     async function fetchRecentOrders(phone) {
         const result = document.getElementById("result");
         const autoRefresh = document.getElementById("autoRefresh");
+        const skeleton = document.getElementById("loadingSkeleton");
         if (refreshInterval) clearInterval(refreshInterval);
         autoRefresh.classList.add("hidden");
 
@@ -130,6 +131,7 @@
             }
             const json = await res.json();
             const orders = json.data || [];
+            skeleton.classList.add("hidden");
             result.classList.remove("hidden");
             if (!orders.length) {
                 result.innerHTML = '<p class="text-white/60 text-center">Tidak ada order ditemukan untuk nomor ini.</p>';
@@ -153,6 +155,7 @@
             html += '</div>';
             result.innerHTML = html;
         } catch (e) {
+            skeleton.classList.add("hidden");
             result.classList.remove("hidden");
             const isNetworkError = !navigator.onLine || e.name === 'TypeError';
             const msg = isNetworkError
@@ -189,10 +192,12 @@
     async function fetchOrder(orderId) {
         const result = document.getElementById("result");
         const autoRefresh = document.getElementById("autoRefresh");
+        const skeleton = document.getElementById("loadingSkeleton");
         if (refreshInterval) clearInterval(refreshInterval);
 
         try {
             const res = await fetch(`/api/orders/${orderId}`);
+            skeleton.classList.add("hidden");
             if (!res.ok) {
                 result.classList.remove("hidden");
                 result.innerHTML = `
@@ -273,6 +278,7 @@
                 autoRefresh.classList.add("hidden");
             }
         } catch (e) {
+            skeleton.classList.add("hidden");
             result.classList.remove("hidden");
             const isNetworkError = !navigator.onLine || e.name === 'TypeError';
             const msg = isNetworkError
@@ -353,7 +359,7 @@
         e.preventDefault();
         const orderId = document.getElementById("orderId").value.trim();
         document.getElementById("result").classList.add("hidden");
-        document.getElementById("loadingSkeleton").classList.add("hidden");
+        document.getElementById("loadingSkeleton").classList.remove("hidden");
         const cekBtn = document.getElementById("cekBtn");
         const cekText = document.getElementById("cekText");
         const cekSpinner = document.getElementById("cekSpinner");
@@ -373,6 +379,7 @@
         e.preventDefault();
         const phone = document.getElementById("phoneInput").value.trim();
         document.getElementById("result").classList.add("hidden");
+        document.getElementById("loadingSkeleton").classList.remove("hidden");
         const cekBtn = document.getElementById("cekPhoneBtn");
         const cekText = document.getElementById("cekPhoneText");
         const cekSpinner = document.getElementById("cekPhoneSpinner");
