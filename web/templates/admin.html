@@ -510,20 +510,19 @@
         }
     }
 
-    document.getElementById('searchInput')?.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
+    function filterOrders() {
+        const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
+        const status = document.getElementById('statusFilter')?.value || '';
         document.querySelectorAll('.order-row').forEach(row => {
             const search = row.dataset.search.toLowerCase();
-            row.style.display = search.includes(query) ? '' : 'none';
+            const matchesSearch = !query || search.includes(query);
+            const matchesStatus = !status || row.dataset.status === status;
+            row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
         });
-    });
+    }
 
-    document.getElementById('statusFilter')?.addEventListener('change', (e) => {
-        const status = e.target.value;
-        document.querySelectorAll('.order-row').forEach(row => {
-            row.style.display = !status || row.dataset.status === status ? '' : 'none';
-        });
-    });
+    document.getElementById('searchInput')?.addEventListener('input', filterOrders);
+    document.getElementById('statusFilter')?.addEventListener('change', filterOrders);
 
     function updateStats() {
         const rows = document.querySelectorAll('.order-row');
