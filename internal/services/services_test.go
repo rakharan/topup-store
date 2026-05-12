@@ -243,12 +243,16 @@ func TestNotifyService_ValidPhonePrefix(t *testing.T) {
 		{"  ", false},
 	}
 
-	svc := NewNotifyService("", "http://localhost:3001", "", nil)
+	// Use a non-existent endpoint to avoid real HTTP calls
+	svc := NewNotifyService("", "http://localhost:0", "", nil)
 
 	for _, tt := range tests {
 		err := svc.SendNotification(tt.phone, "test")
-		if tt.valid && err != nil && err.Error()[:6] != "send n" {
-			t.Errorf("phone %q: unexpected error: %v", tt.phone, err)
+		if tt.valid && err != nil {
+			// Valid phones should pass validation; network errors are expected with dummy endpoint
+			if err.Error()[:6] != "send n" && err.Error()[:6] != "Post \"h" {
+				t.Errorf("phone %q: unexpected error: %v", tt.phone, err)
+			}
 		}
 		if !tt.valid && err == nil {
 			t.Errorf("phone %q: expected error, got nil", tt.phone)
