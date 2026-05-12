@@ -27,16 +27,16 @@ func AdminAuth(adminPass string) func(http.Handler) http.Handler {
 				return
 			}
 
-		timestamp := parts[0]
-		token := parts[1]
+			timestamp := parts[0]
+			token := parts[1]
 
-		ts, err := strconv.ParseInt(timestamp, 10, 64)
-		if err != nil || time.Since(time.Unix(ts, 0)) > time.Hour {
-			apperrors.WriteError(w, http.StatusUnauthorized, apperrors.ErrUnauthorized, GetRequestID(r.Context()))
-			return
-		}
+			ts, err := strconv.ParseInt(timestamp, 10, 64)
+			if err != nil || time.Since(time.Unix(ts, 0)) > time.Hour {
+				apperrors.WriteError(w, http.StatusUnauthorized, apperrors.ErrUnauthorized, GetRequestID(r.Context()))
+				return
+			}
 
-		mac := hmac.New(sha256.New, []byte(adminPass))
+			mac := hmac.New(sha256.New, []byte(adminPass))
 			mac.Write([]byte(timestamp))
 			expected := hex.EncodeToString(mac.Sum(nil))
 

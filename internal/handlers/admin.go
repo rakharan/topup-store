@@ -345,7 +345,7 @@ func (h *AdminHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 
 func (h *AdminHandler) SyncPrices(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Prices     []struct {
+		Prices []struct {
 			SKU   string `json:"buyer_sku_code"`
 			Price int    `json:"price"`
 		} `json:"prices"`
@@ -401,9 +401,9 @@ func (h *AdminHandler) SyncPrices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
-		"updated": updated,
-		"skipped": skipped,
-		"total":   len(req.Prices),
+		"updated":  updated,
+		"skipped":  skipped,
+		"total":    len(req.Prices),
 		"products": results,
 	}, middleware.GetRequestID(r.Context()))
 }
@@ -430,10 +430,10 @@ func (h *AdminHandler) SyncPricesFromDigiflazz(w http.ResponseWriter, r *http.Re
 	h.cache.DeleteByPrefix(r.Context(), "product")
 
 	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
-		"updated": updated,
-		"created": created,
-		"skipped": skipped,
-		"total":   len(results),
+		"updated":  updated,
+		"created":  created,
+		"skipped":  skipped,
+		"total":    len(results),
 		"products": results,
 	}, middleware.GetRequestID(r.Context()))
 }
@@ -662,5 +662,3 @@ func (h *AdminHandler) OverrideOrderStatus(w http.ResponseWriter, r *http.Reques
 		"message": "order status overridden",
 	}, middleware.GetRequestID(r.Context()))
 }
-
-

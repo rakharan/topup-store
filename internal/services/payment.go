@@ -44,9 +44,9 @@ func NewPaymentService(orderRepo repositories.OrderRepository, serverKey string,
 
 func (s *PaymentService) CreateQRIS(ctx context.Context, order *models.Order) (qrString, qrisURL, expiryTime string, err error) {
 	gameName := map[string]string{
-		"free_fire":       "Free Fire",
-		"mobile_legends":  "Mobile Legends",
-		"pubg_mobile":     "PUBG Mobile",
+		"free_fire":      "Free Fire",
+		"mobile_legends": "Mobile Legends",
+		"pubg_mobile":    "PUBG Mobile",
 	}[order.Channel]
 	if gameName == "" {
 		gameName = "Game Top-Up"
@@ -118,10 +118,10 @@ func (s *PaymentService) CreateQRIS(ctx context.Context, order *models.Order) (q
 		CustomField2: order.UserPhone,
 		CustomField3: gameName,
 		Metadata: map[string]string{
-			"game_uid":     order.GameUID,
-			"game_server":  order.GameServer,
-			"product_id":   order.ProductID,
-			"channel":      order.Channel,
+			"game_uid":    order.GameUID,
+			"game_server": order.GameServer,
+			"product_id":  order.ProductID,
+			"channel":     order.Channel,
 		},
 	}
 

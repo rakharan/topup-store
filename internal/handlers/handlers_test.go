@@ -162,7 +162,9 @@ func TestCreateOrder_Success(t *testing.T) {
 	}
 
 	var resp map[string]any
-	json.NewDecoder(w.Body).Decode(&resp)
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
 	if resp["success"] != true {
 		t.Errorf("expected success=true, got %v", resp["success"])
 	}
@@ -228,7 +230,9 @@ func TestGetOrder_Success(t *testing.T) {
 	}
 
 	var resp map[string]any
-	json.NewDecoder(w.Body).Decode(&resp)
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
 	if resp["success"] != true {
 		t.Error("expected success=true")
 	}
@@ -484,12 +488,12 @@ func TestWebhookHandler_VerifySignature(t *testing.T) {
 	validSig := hex.EncodeToString(hash.Sum(nil))
 
 	if !wh.verifySignature(struct {
-		OrderID             string `json:"order_id"`
-		StatusCode          string `json:"status_code"`
-		GrossAmount         string `json:"gross_amount"`
-		SignatureKey        string `json:"signature_key"`
-		TransactionStatus   string `json:"transaction_status"`
-		FraudStatus         string `json:"fraud_status"`
+		OrderID           string `json:"order_id"`
+		StatusCode        string `json:"status_code"`
+		GrossAmount       string `json:"gross_amount"`
+		SignatureKey      string `json:"signature_key"`
+		TransactionStatus string `json:"transaction_status"`
+		FraudStatus       string `json:"fraud_status"`
 	}{
 		OrderID:      "order-123",
 		StatusCode:   "200",
@@ -500,12 +504,12 @@ func TestWebhookHandler_VerifySignature(t *testing.T) {
 	}
 
 	if wh.verifySignature(struct {
-		OrderID             string `json:"order_id"`
-		StatusCode          string `json:"status_code"`
-		GrossAmount         string `json:"gross_amount"`
-		SignatureKey        string `json:"signature_key"`
-		TransactionStatus   string `json:"transaction_status"`
-		FraudStatus         string `json:"fraud_status"`
+		OrderID           string `json:"order_id"`
+		StatusCode        string `json:"status_code"`
+		GrossAmount       string `json:"gross_amount"`
+		SignatureKey      string `json:"signature_key"`
+		TransactionStatus string `json:"transaction_status"`
+		FraudStatus       string `json:"fraud_status"`
 	}{
 		OrderID:      "order-123",
 		StatusCode:   "200",
@@ -615,7 +619,9 @@ func TestAPIResponseEnvelope(t *testing.T) {
 	h.GetOrder(w, req)
 
 	var resp map[string]any
-	json.NewDecoder(w.Body).Decode(&resp)
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
 
 	if resp["success"] != true {
 		t.Errorf("expected success=true, got %v", resp["success"])

@@ -26,9 +26,9 @@ var (
 )
 
 type APIResponse struct {
-	Success bool        `json:"success"`
-	Data    any         `json:"data,omitempty"`
-	Error   *AppError   `json:"error,omitempty"`
+	Success   bool      `json:"success"`
+	Data      any       `json:"data,omitempty"`
+	Error     *AppError `json:"error,omitempty"`
 	RequestID string    `json:"request_id,omitempty"`
 }
 

@@ -10,11 +10,11 @@ import (
 )
 
 type mockOrderRepo struct {
-	getByIDResult *models.Order
-	getByIDErr    error
-	updateStatusErr error
-	updateStatusIfOk bool
-	updateStatusIfErr error
+	getByIDResult         *models.Order
+	getByIDErr            error
+	updateStatusErr       error
+	updateStatusIfOk      bool
+	updateStatusIfErr     error
 	updateSerialNumberErr error
 }
 

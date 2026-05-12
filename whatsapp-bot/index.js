@@ -2,6 +2,11 @@ require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 
+const axiosInstance = axios.create({
+  timeout: 30000,
+  headers: { "Content-Type": "application/json" },
+});
+
 const GO_BACKEND_URL = process.env.GO_BACKEND_URL || "http://localhost:8080";
 const BOT_PORT = process.env.BOT_PORT || 3001;
 const FONNTE_TOKEN = process.env.FONNTE_TOKEN;
@@ -11,7 +16,7 @@ const BOT_NOTIFY_TOKEN = process.env.BOT_NOTIFY_TOKEN;
 const FONNTE_API = "https://api.fonnte.com/send";
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
@@ -27,23 +32,29 @@ app.get("/webhook", (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
-  const body = req.body;
+  try {
+    const body = req.body;
 
-  if (body.object === "whatsapp_business_account") {
-    for (const entry of body.entry) {
-      for (const change of entry.changes) {
-        if (change.value.messages) {
-          for (const msg of change.value.messages) {
-            if (msg.type === "text") {
-              await handleIncoming(msg);
+    if (body?.object === "whatsapp_business_account" && Array.isArray(body.entry)) {
+      for (const entry of body.entry) {
+        if (!Array.isArray(entry?.changes)) continue;
+        for (const change of entry.changes) {
+          if (change?.value?.messages && Array.isArray(change.value.messages)) {
+            for (const msg of change.value.messages) {
+              if (msg?.type === "text" && msg?.text?.body) {
+                await handleIncoming(msg);
+              }
             }
           }
         }
       }
     }
-  }
 
-  res.sendStatus(200);
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Webhook processing error:", err.message);
+    res.sendStatus(200);
+  }
 });
 
 async function handleIncoming(msg) {
@@ -83,7 +94,7 @@ async function handleIncoming(msg) {
 
 async function checkOrderByID(sender, orderId) {
   try {
-    const resp = await axios.get(`${GO_BACKEND_URL}/api/orders/${orderId}`);
+    const resp = await axiosInstance.get(`${GO_BACKEND_URL}/api/orders/${orderId}`);
     const order = resp.data?.data || resp.data;
     if (!order) {
       await sendText(sender, `Order *${orderId}* tidak ditemukan.`);
@@ -117,7 +128,7 @@ async function checkOrderByID(sender, orderId) {
 
 async function checkRecentOrders(sender) {
   try {
-    const resp = await axios.get(`${GO_BACKEND_URL}/api/orders/recent`, {
+    const resp = await axiosInstance.get(`${GO_BACKEND_URL}/api/orders/recent`, {
       params: { phone: sender, limit: 3 },
     });
     const orders = resp.data?.data || resp.data || [];
@@ -155,7 +166,7 @@ async function checkRecentOrders(sender) {
 
 async function handleOrder(sender, order) {
   try {
-    const resp = await axios.post(
+    const resp = await axiosInstance.post(
       `${GO_BACKEND_URL}/api/orders`,
       {
         game: order.game,
@@ -307,11 +318,12 @@ app.get("/health", (_req, res) => {
 });
 
 app.post("/notify", async (req, res) => {
-  if (BOT_NOTIFY_TOKEN) {
-    const token = req.headers["x-bot-token"];
-    if (!token || token !== BOT_NOTIFY_TOKEN) {
-      return res.status(401).json({ error: "unauthorized" });
-    }
+  if (!BOT_NOTIFY_TOKEN) {
+    return res.status(503).json({ error: "notify service not configured" });
+  }
+  const token = req.headers["x-bot-token"];
+  if (!token || token !== BOT_NOTIFY_TOKEN) {
+    return res.status(401).json({ error: "unauthorized" });
   }
   const { phone, message } = req.body;
   if (!phone || !message) {
@@ -326,6 +338,14 @@ app.post("/notify", async (req, res) => {
   }
 });
 
+let activeRequests = 0;
+
+app.use((req, res, next) => {
+  activeRequests++;
+  res.on("finish", () => { activeRequests--; });
+  next();
+});
+
 const server = app.listen(BOT_PORT, () => {
   console.log(`WhatsApp bot API listening on port ${BOT_PORT}`);
 });
@@ -336,8 +356,16 @@ function gracefulShutdown(signal) {
     console.log("HTTP server closed.");
     process.exit(0);
   });
+  const waitForRequests = setInterval(() => {
+    if (activeRequests === 0) {
+      clearInterval(waitForRequests);
+      console.log("All requests completed.");
+      process.exit(0);
+    }
+  }, 100);
   setTimeout(() => {
-    console.error("Forced shutdown after timeout.");
+    clearInterval(waitForRequests);
+    console.error(`Forced shutdown with ${activeRequests} active requests.`);
     process.exit(1);
   }, 5000);
 }

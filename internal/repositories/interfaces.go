@@ -59,13 +59,13 @@ type WebhookRepository interface {
 }
 
 type AuditLogEntry struct {
-	Action       string
-	EntityType   string
-	EntityID     string
-	OldValue     string
-	NewValue     string
-	AdminIP      string
-	AdminUA      string
+	Action     string
+	EntityType string
+	EntityID   string
+	OldValue   string
+	NewValue   string
+	AdminIP    string
+	AdminUA    string
 }
 
 type AuditLogRepository interface {

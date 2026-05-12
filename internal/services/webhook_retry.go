@@ -11,24 +11,24 @@ import (
 )
 
 type WebhookRetryEntry struct {
-	ID          string    `json:"id"`
-	WebhookLogID string   `json:"webhook_log_id"`
-	Source      string    `json:"source"`
-	RefID       *string   `json:"ref_id"`
-	Payload     string    `json:"payload"`
-	Attempt     int       `json:"attempt"`
-	MaxAttempts int       `json:"max_attempts"`
-	NextRetry   time.Time `json:"next_retry"`
-	LastError   *string   `json:"last_error"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID           string    `json:"id"`
+	WebhookLogID string    `json:"webhook_log_id"`
+	Source       string    `json:"source"`
+	RefID        *string   `json:"ref_id"`
+	Payload      string    `json:"payload"`
+	Attempt      int       `json:"attempt"`
+	MaxAttempts  int       `json:"max_attempts"`
+	NextRetry    time.Time `json:"next_retry"`
+	LastError    *string   `json:"last_error"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type WebhookRetryService struct {
-	pool          *pgxpool.Pool
-	logger        *slog.Logger
-	midtransFn    func(ctx context.Context, payload []byte) error
-	digiflazzFn   func(ctx context.Context, payload []byte) error
+	pool        *pgxpool.Pool
+	logger      *slog.Logger
+	midtransFn  func(ctx context.Context, payload []byte) error
+	digiflazzFn func(ctx context.Context, payload []byte) error
 }
 
 func NewWebhookRetryService(pool *pgxpool.Pool, logger *slog.Logger) *WebhookRetryService {

@@ -511,8 +511,13 @@
                                 setTimeout(() => window.location.href = `/status?id=${orderData.order_id}`, 1500);
                             }
                         }
-                    } catch (e) {}
+                    } catch (e) {
+                        console.error("Polling error:", e);
+                    }
                 }, 5000);
+                window.addEventListener('beforeunload', () => {
+                    if (pollInterval) clearInterval(pollInterval);
+                });
             } else {
                 result.classList.remove("hidden");
                 const errMsg = escapeHtml(data.error?.message || data.error || "Unknown error");

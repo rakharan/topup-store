@@ -372,7 +372,9 @@
             const res = await fetch(ADMIN_PATH);
             const token = res.headers.get('X-CSRF-Token');
             if (token) csrfToken = token;
-        } catch (e) {}
+        } catch (e) {
+            console.error("CSRF init failed:", e);
+        }
     }
     initCSRF();
 
@@ -591,7 +593,7 @@
 
     document.getElementById('refreshBtn')?.addEventListener('click', () => location.reload());
     updateStats();
-    setInterval(updateStats, 30000);
+    const statsInterval = setInterval(updateStats, 30000);
     setTimeout(paginateOrders, 0);
 
     async function loadBalance() {
@@ -610,10 +612,16 @@
             } else {
                 display.className = 'text-sm px-3 py-1 rounded-full bg-red-500/20 text-red-400';
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error("Balance load failed:", e);
+        }
     }
     loadBalance();
-    setInterval(loadBalance, 5 * 60 * 1000);
+    const balanceInterval = setInterval(loadBalance, 5 * 60 * 1000);
+    window.addEventListener('beforeunload', () => {
+        clearInterval(statsInterval);
+        clearInterval(balanceInterval);
+    });
 
     async function syncFromDigiflazz() {
         const btn = document.getElementById('syncBtn');

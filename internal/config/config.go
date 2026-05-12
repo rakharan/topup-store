@@ -8,62 +8,62 @@ import (
 )
 
 type Config struct {
-	Port                        string
-	DatabaseURL                 string
-	DBMaxConns                  int32
-	DBMinConns                  int32
-	DBMaxConnLifetime           string
-	DBMaxConnIdleTime           string
-	MidtransServerKey           string
-	MidtransIsProd              bool
-	DigiflazzUsername           string
-	DigiflazzAPIKey             string
-	DigiflazzWebhookSecret      string
-	DigiflazzAPIURL             string
-	DigiflazzTesting            bool
+	Port                         string
+	DatabaseURL                  string
+	DBMaxConns                   int32
+	DBMinConns                   int32
+	DBMaxConnLifetime            string
+	DBMaxConnIdleTime            string
+	MidtransServerKey            string
+	MidtransIsProd               bool
+	DigiflazzUsername            string
+	DigiflazzAPIKey              string
+	DigiflazzWebhookSecret       string
+	DigiflazzAPIURL              string
+	DigiflazzTesting             bool
 	DigiflazzLowBalanceThreshold int
-	WhatsappNumber              string
-	FonnteToken                 string
-	AdminPassword               string
-	AdminPath                   string
-	WaBotBaseURL                string
-	WaBotToken                  string
-	RequestTimeout              string
-	AllowedOrigins              string
-	RedisURL                    string
-	AutoMigrate                 bool
-	LogFormat                   string
+	WhatsappNumber               string
+	FonnteToken                  string
+	AdminPassword                string
+	AdminPath                    string
+	WaBotBaseURL                 string
+	WaBotToken                   string
+	RequestTimeout               string
+	AllowedOrigins               string
+	RedisURL                     string
+	AutoMigrate                  bool
+	LogFormat                    string
 }
 
 func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		Port:                   getEnv("PORT", "8080"),
-		DatabaseURL:            getEnv("DATABASE_URL", ""),
-		DBMaxConns:             int32(getEnvInt("DB_MAX_CONNS", 25)),
-		DBMinConns:             int32(getEnvInt("DB_MIN_CONNS", 5)),
-		DBMaxConnLifetime:      getEnv("DB_MAX_CONN_LIFETIME", "1h"),
-		DBMaxConnIdleTime:      getEnv("DB_MAX_CONN_IDLE_TIME", "30m"),
-		MidtransServerKey:      getEnv("MIDTRANS_SERVER_KEY", ""),
-		MidtransIsProd:         getEnv("MIDTRANS_IS_PRODUCTION", "false") == "true",
-		DigiflazzUsername:      getEnv("DIGIFLAZZ_USERNAME", ""),
-		DigiflazzAPIKey:        getEnv("DIGIFLAZZ_API_KEY", ""),
-		DigiflazzWebhookSecret: getEnv("DIGIFLAZZ_WEBHOOK_SECRET", ""),
-		DigiflazzAPIURL:        getEnv("DIGIFLAZZ_API_URL", "https://api.digiflazz.com/v1/transaction"),
+		Port:                         getEnv("PORT", "8080"),
+		DatabaseURL:                  getEnv("DATABASE_URL", ""),
+		DBMaxConns:                   int32(getEnvInt("DB_MAX_CONNS", 25)),
+		DBMinConns:                   int32(getEnvInt("DB_MIN_CONNS", 5)),
+		DBMaxConnLifetime:            getEnv("DB_MAX_CONN_LIFETIME", "1h"),
+		DBMaxConnIdleTime:            getEnv("DB_MAX_CONN_IDLE_TIME", "30m"),
+		MidtransServerKey:            getEnv("MIDTRANS_SERVER_KEY", ""),
+		MidtransIsProd:               getEnv("MIDTRANS_IS_PRODUCTION", "false") == "true",
+		DigiflazzUsername:            getEnv("DIGIFLAZZ_USERNAME", ""),
+		DigiflazzAPIKey:              getEnv("DIGIFLAZZ_API_KEY", ""),
+		DigiflazzWebhookSecret:       getEnv("DIGIFLAZZ_WEBHOOK_SECRET", ""),
+		DigiflazzAPIURL:              getEnv("DIGIFLAZZ_API_URL", "https://api.digiflazz.com/v1/transaction"),
 		DigiflazzTesting:             getEnv("DIGIFLAZZ_TESTING", "true") == "true",
 		DigiflazzLowBalanceThreshold: getEnvInt("DIGIFLAZZ_LOW_BALANCE_THRESHOLD", 50000),
 		WhatsappNumber:               getEnv("WHATSAPP_NUMBER", ""),
-		FonnteToken:            getEnv("FONNTE_TOKEN", ""),
-		AdminPassword:          getEnv("ADMIN_PASSWORD", ""),
-		AdminPath:              getEnv("ADMIN_PATH", "/admin"),
-		WaBotBaseURL:           getEnv("WA_BOT_BASE_URL", "http://localhost:3001"),
-		WaBotToken:             getEnv("WA_BOT_TOKEN", ""),
-		RequestTimeout:         getEnv("REQUEST_TIMEOUT", "30s"),
-		AllowedOrigins:         getEnv("ALLOWED_ORIGINS", ""),
-		RedisURL:               getEnv("REDIS_URL", ""),
-		AutoMigrate:            getEnv("AUTO_MIGRATE", "false") == "true",
-		LogFormat:              getEnv("LOG_FORMAT", "text"),
+		FonnteToken:                  getEnv("FONNTE_TOKEN", ""),
+		AdminPassword:                getEnv("ADMIN_PASSWORD", ""),
+		AdminPath:                    getEnv("ADMIN_PATH", "/admin"),
+		WaBotBaseURL:                 getEnv("WA_BOT_BASE_URL", "http://localhost:3001"),
+		WaBotToken:                   getEnv("WA_BOT_TOKEN", ""),
+		RequestTimeout:               getEnv("REQUEST_TIMEOUT", "30s"),
+		AllowedOrigins:               getEnv("ALLOWED_ORIGINS", ""),
+		RedisURL:                     getEnv("REDIS_URL", ""),
+		AutoMigrate:                  getEnv("AUTO_MIGRATE", "false") == "true",
+		LogFormat:                    getEnv("LOG_FORMAT", "text"),
 	}
 
 	var missing []string

@@ -11,9 +11,9 @@ import (
 const maxDurationEntries = 1000
 
 type PrometheusMetrics struct {
-	mu            sync.Mutex
-	counters      map[string]int64
-	histograms    map[string][]float64
+	mu         sync.Mutex
+	counters   map[string]int64
+	histograms map[string][]float64
 }
 
 func NewPrometheusMetrics() *PrometheusMetrics {
@@ -60,9 +60,20 @@ func (pm *PrometheusMetrics) Handler() http.HandlerFunc {
 				continue
 			}
 			var sum float64
+			buckets := []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10}
+			counts := make([]int, len(buckets))
 			for _, v := range values {
 				sum += v
+				for i, b := range buckets {
+					if v <= b {
+						counts[i]++
+					}
+				}
 			}
+			for i, b := range buckets {
+				w.Write([]byte(fmt.Sprintf("%s_bucket{le=\"%g\"} %d\n", key, b, counts[i])))
+			}
+			w.Write([]byte(fmt.Sprintf("%s_bucket{le=\"+Inf\"} %d\n", key, len(values))))
 			w.Write([]byte(fmt.Sprintf("%s_sum %f\n", key, sum)))
 			w.Write([]byte(fmt.Sprintf("%s_count %d\n", key, len(values))))
 		}

@@ -244,6 +244,9 @@
                     document.getElementById('autoRefresh').classList.add('hidden');
                 });
                 refreshInterval = setInterval(() => fetchOrder(orderId), 10000);
+                window.addEventListener('beforeunload', () => {
+                    if (refreshInterval) clearInterval(refreshInterval);
+                });
             } else {
                 autoRefresh.classList.add("hidden");
             }

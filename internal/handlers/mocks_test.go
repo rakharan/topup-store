@@ -162,7 +162,7 @@ func (m *mockNotifyService) SendNotification(phone, message string) error {
 }
 
 type mockWebhookRepo struct {
-	isProcessed   bool
+	isProcessed    bool
 	isProcessedErr error
 }
 
@@ -183,15 +183,15 @@ func (m *mockWebhookRepo) MarkWebhookProcessed(ctx context.Context, source, sign
 }
 
 type mockProductRepo struct {
-	getByIDResult    *models.Product
-	getByIDErr       error
-	listAllResult    []models.Product
-	listAllErr       error
-	createErr        error
-	updateErr        error
-	deleteErr        error
-	existsBySKU      bool
-	existsBySKUErr   error
+	getByIDResult  *models.Product
+	getByIDErr     error
+	listAllResult  []models.Product
+	listAllErr     error
+	createErr      error
+	updateErr      error
+	deleteErr      error
+	existsBySKU    bool
+	existsBySKUErr error
 }
 
 func (m *mockProductRepo) GetByID(ctx context.Context, id string) (*models.Product, error) {

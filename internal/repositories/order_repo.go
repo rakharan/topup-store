@@ -389,9 +389,9 @@ func (r *PGOrderRepository) ListAllForExport(ctx context.Context) ([]OrderExport
 }
 
 type DailyRevenue struct {
-	Date   string `json:"date"`
-	Orders int    `json:"orders"`
-	Revenue int   `json:"revenue"`
+	Date    string `json:"date"`
+	Orders  int    `json:"orders"`
+	Revenue int    `json:"revenue"`
 }
 
 type GameStats struct {
