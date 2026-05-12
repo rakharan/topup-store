@@ -1,13 +1,28 @@
-# TopUp Store
+# Faza TopUP Store
 
-Fullstack game top-up platform with QRIS payments, Digiflazz H2H integration, and WhatsApp ordering.
+Fullstack game top-up platform with QRIS payments, Digiflazz H2H integration, and WhatsApp notifications via Fonnte.
+
+## Features
+
+- **QRIS Payments** — Instant QRIS generation via Midtrans
+- **Game Top-Up** — Free Fire, Mobile Legends, PUBG Mobile
+- **WhatsApp Notifications** — Order confirmations and status updates via Fonnte
+- **Admin Dashboard** — Order management, product CRUD, analytics, webhook logs
+- **Dark/Light Mode** — Toggle between themes, persists in localStorage
+- **Auto-Retry** — Failed top-ups automatically retried with exponential backoff
+- **Webhook Idempotency** — Duplicate webhook protection
+- **Audit Logging** — Order status history, admin actions, webhook payloads
+- **Rate Limiting** — Per-IP rate limits with Redis fallback
+- **CSRF Protection** — PostgreSQL-backed token store
+- **OpenAPI Documentation** — Full API spec at `openapi.yaml`
 
 ## Prerequisites
 
-- **Go** 1.22+
-- **Node.js** 20+
-- **PostgreSQL** 15+
-- **Docker** & **Docker Compose** (optional, for containerized setup)
+- **Go** 1.24+
+- **Node.js** 20+ (for WhatsApp bot sidecar)
+- **PostgreSQL** 16+
+- **Redis** 7+ (optional, for distributed rate limiting)
+- **Docker** & **Docker Compose** (recommended)
 
 ## Quick Start (Docker)
 
@@ -21,7 +36,10 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Server runs on `http://localhost:8080`, WhatsApp bot on `http://localhost:3001`.
+Services:
+- App: `http://localhost:8080`
+- WhatsApp Bot: `http://localhost:3001`
+- Caddy reverse proxy: `http://localhost` (production)
 
 ## Manual Setup
 
@@ -31,12 +49,14 @@ Server runs on `http://localhost:8080`, WhatsApp bot on `http://localhost:3001`.
 cp .env.example .env
 # Edit .env with your credentials
 
-go mod tidy
+go mod download
 make migrate   # run database migrations
 make run       # starts server on :8080
 ```
 
 ### 2. WhatsApp Bot (Node.js)
+
+The bot handles incoming WhatsApp messages via Fonnte webhooks and parses orders.
 
 ```bash
 cd whatsapp-bot
@@ -45,33 +65,24 @@ npm install
 node index.js
 ```
 
-## WhatsApp Cloud API Setup
+## External Integrations
 
-This project uses the official **WhatsApp Cloud API** (Meta) for reliable, long-term WhatsApp integration.
+### Fonnte (WhatsApp Messaging)
 
-1. Go to [Meta for Developers](https://developers.facebook.com/)
-2. Create a new app → **Business** → **WhatsApp**
-3. In your app dashboard, go to **WhatsApp → API Setup**
-4. Copy your **Temporary access token** (valid for 24h) or generate a permanent one in **Settings → Advanced → System user**
-5. Copy your **Phone number ID**
-6. Set these in `.env`:
+This project uses [Fonnte](https://fonnte.com) for WhatsApp messaging.
+
+1. Register at [Fonnte](https://fonnte.com)
+2. Get your API token from the dashboard
+3. Set in `.env`:
    ```
-   WHATSAPP_TOKEN=your_access_token
-   WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id
-   WHATSAPP_VERIFY_TOKEN=topup-store-verify
+   FONNTE_TOKEN=your_fonnte_token
    ```
-7. Set up the webhook URL in your app dashboard:
-   - URL: `https://your-domain.com/webhook` (use ngrok for local dev)
-   - Verify token: `topup-store-verify`
-   - Subscribe to messages: `messages`
+4. Configure your Fonnte webhook URL to point to your bot:
+   ```
+   https://your-domain.com/webhook
+   ```
 
-For local development with ngrok:
-```bash
-ngrok http 3001
-# Set webhook URL to: https://xxxx.ngrok-free.app/webhook
-```
-
-## Midtrans Webhook Configuration
+### Midtrans (QRIS Payments)
 
 1. Log in to [Midtrans Dashboard](https://dashboard.midtrans.com)
 2. Go to **Settings > Configuration > Webhook Notifications**
@@ -79,70 +90,77 @@ ngrok http 3001
    ```
    https://your-domain.com/webhook/midtrans
    ```
-   For local development, use ngrok:
-   ```
-   ngrok http 8080
-   # Then set: https://xxxx.ngrok-free.app/webhook/midtrans
-   ```
 4. Ensure **Payment Notification** is enabled
 
-## Digiflazz API Setup
+### Digiflazz (Top-Up Supplier)
 
 1. Register at [Digiflazz](https://digiflazz.co.id)
-2. Go to your profile/dashboard to find your **Username** and **API Key**
+2. Find your **Username** and **API Key** in your profile
 3. Set them in `.env`:
    ```
    DIGIFLAZZ_USERNAME=your_username
    DIGIFLAZZ_API_KEY=your_api_key
    ```
-4. To find product SKUs, use the Digiflazz price list API or check their dashboard under **Products**
-5. Populate your `products` table with matching SKUs for each game package
+4. Product SKUs can be fetched via the Digiflazz price list API or found in their dashboard
 
 ## Environment Variables
 
-| Variable | Description |
-|---|---|
-| `PORT` | Server port (default: 8080) |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `MIDTRANS_SERVER_KEY` | Midtrans server key |
-| `MIDTRANS_IS_PRODUCTION` | `true` for production, `false` for sandbox |
-| `DIGIFLAZZ_USERNAME` | Digiflazz account username |
-| `DIGIFLAZZ_API_KEY` | Digiflazz API key |
-| `WHATSAPP_TOKEN` | Meta WhatsApp API access token |
-| `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp phone number ID from Meta |
-| `WHATSAPP_VERIFY_TOKEN` | Webhook verification token |
-| `ADMIN_PASSWORD` | Admin panel password |
-| `WA_BOT_BASE_URL` | WhatsApp bot sidecar URL (default: http://localhost:3001) |
+### Required
 
-## End-to-End Test Flow
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | *(required)* |
+| `MIDTRANS_SERVER_KEY` | Midtrans server key | *(required)* |
+| `DIGIFLAZZ_USERNAME` | Digiflazz account username | *(required)* |
+| `DIGIFLAZZ_API_KEY` | Digiflazz API key | *(required)* |
+| `ADMIN_PASSWORD` | Admin panel password | *(required)* |
+| `FONNTE_TOKEN` | Fonnte API token for WhatsApp | *(optional)* |
 
-### Via Web
+### Optional
 
-1. Open `http://localhost:8080`
-2. Select a game tab (Free Fire / Mobile Legends / PUBG)
-3. Click **Beli via WA** on any product — opens WhatsApp with pre-filled message
-4. Or go to `/order` to fill the manual order form
-5. After submitting, you receive a QRIS image for payment
-6. Pay via QRIS (use Midtrans sandbox test card/QR)
-7. Check order status at `/status` with your order ID
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Server port | `8080` |
+| `REDIS_URL` | Redis connection string | *(empty = in-memory)* |
+| `DB_MAX_CONNS` | Max DB connections | `25` |
+| `DB_MIN_CONNS` | Min DB connections | `5` |
+| `REQUEST_TIMEOUT` | HTTP request timeout | `30s` |
+| `ALLOWED_ORIGINS` | CORS origins (comma-separated) | *(empty = none)* |
+| `LOG_LEVEL` | Log level (debug/info/warn/error) | `info` |
+| `LOG_FORMAT` | Log format (json/text) | `text` |
+| `AUTO_MIGRATE` | Auto-run migrations on startup | `false` |
+| `ADMIN_PATH` | Admin panel path | `/admin` |
+| `WA_BOT_BASE_URL` | WhatsApp bot fallback URL | `http://localhost:3001` |
+| `WA_BOT_TOKEN` | Shared secret for bot fallback | *(optional)* |
+| `BOT_NOTIFY_TOKEN` | Bot /notify endpoint token | *(optional)* |
+| `DIGIFLAZZ_TESTING` | Digiflazz test mode | `true` |
+| `DIGIFLAZZ_WEBHOOK_SECRET` | Digiflazz webhook HMAC secret | *(default)* |
 
-### Via WhatsApp
+## API Documentation
 
-1. Send a message to your WhatsApp Business number in this format:
-   ```
-   FF 100 UID:12345678
-   ML 86 UID:12345|1234
-   PUBG 60 UID:12345678
-   ```
-2. Bot replies with QRIS image and payment instructions
-3. After payment, bot sends a success confirmation
+OpenAPI 3.0 spec is available at [`openapi.yaml`](./openapi.yaml).
 
-### Via API
+### Key Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Liveness probe |
+| `/ready` | GET | Readiness probe (DB + Redis) |
+| `/metrics` | GET | Prometheus metrics |
+| `/api/orders` | POST | Create order |
+| `/api/orders/{id}` | GET | Get order |
+| `/api/orders/{id}/cancel` | POST | Cancel pending order |
+| `/api/products` | GET | List products |
+| `/webhook/midtrans` | POST | Midtrans payment webhook |
+| `/webhook/digiflazz` | POST | Digiflazz status webhook |
+
+### Example API Calls
 
 ```bash
 # Create order
 curl -X POST http://localhost:8080/api/orders \
   -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: <token-from-homepage>" \
   -d '{
     "game": "free_fire",
     "game_uid": "12345678",
@@ -157,7 +175,7 @@ curl http://localhost:8080/api/orders/<order-id>
 curl "http://localhost:8080/api/products?game=free_fire"
 ```
 
-## Architecture
+## Order Flow
 
 ```
 ┌──────────┐     ┌──────────┐     ┌──────────────┐
@@ -170,10 +188,89 @@ curl "http://localhost:8080/api/products?game=free_fire"
                       │
                       ▼
                ┌──────────────┐
-               │  WhatsApp    │
-               │  Cloud API   │
-               │  (Meta)      │
+               │   Fonnte     │
+               │  (WhatsApp)  │
                └──────────────┘
+```
+
+### Status Flow
+
+```
+pending → paid → processing → success
+                ↓
+              failed
+                ↓
+              expired
+                ↓
+            cancelled
+```
+
+## Admin Panel
+
+Access at `/admin` (password-protected).
+
+**Features:**
+- Order management (list, search, filter, paginate)
+- Process/retry orders
+- Product CRUD with auto price calculation
+- Digiflazz price sync
+- Analytics (revenue, conversion rate, orders by game)
+- Webhook logs with payload viewer
+- Retry queue monitoring
+- Order export to CSV
+- Status override with audit trail
+
+## Testing
+
+```bash
+# Run all tests
+make test
+
+# Run with coverage
+make test-coverage
+
+# Run specific package
+go test -v ./internal/handlers
+```
+
+## CI/CD
+
+GitHub Actions workflows:
+- **CI** — `go vet`, `gofmt`, unit tests, integration tests (PostgreSQL + Redis), Docker build
+- **Docker Build & Push** — Multi-platform images pushed to Docker Hub
+
+## Docker Compose Services
+
+| Service | Image | Port | Description |
+|---------|-------|------|-------------|
+| postgres | postgres:16-alpine | 5432 | Database |
+| redis | redis:7-alpine | 6379 | Cache / rate limiting |
+| migrate | migrate/migrate | — | Database migrations |
+| app | topup-store-app | 8080 | Go backend |
+| whatsapp-bot | topup-store-whatsapp-bot | 3001 | Node.js sidecar |
+| caddy | caddy:2-alpine | 80/443 | Reverse proxy |
+
+## Project Structure
+
+```
+topup-store/
+├── cmd/server/main.go          # Entry point
+├── internal/
+│   ├── config/                 # Env config
+│   ├── handlers/               # HTTP handlers
+│   ├── middleware/             # CSRF, rate limit, auth, logging
+│   ├── models/                 # Data models
+│   ├── repositories/           # Database access
+│   ├── services/               # Business logic
+│   └── retry/                  # Exponential backoff
+├── web/templates/              # Go html/template
+├── web/static/                 # CSS, JS, images
+├── migrations/                 # SQL migrations
+├── whatsapp-bot/               # Node.js sidecar
+├── docker-compose.yml          # Full stack orchestration
+├── Dockerfile                  # Multi-stage build
+├── openapi.yaml                # API documentation
+└── Makefile                    # Build commands
 ```
 
 ## License
