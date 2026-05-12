@@ -18,7 +18,8 @@
 
         <form id="statusForm" class="flex gap-3 mb-8">
             <label for="orderId" class="sr-only">ID Order</label>
-            <input type="text" id="orderId" name="id" placeholder="Masukkan ID Order" inputmode="text" autocomplete="off" required class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+            <input type="text" id="orderId" name="id" placeholder="Masukkan ID Order" inputmode="text" autocomplete="off" required aria-describedby="orderIdHint" class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+            <span id="orderIdHint" class="sr-only">Format: ID unik yang diberikan setelah membuat order</span>
             <button type="submit" id="cekBtn" class="bg-primary hover:bg-orange-600 text-white font-semibold px-6 py-3 rounded-lg transition flex items-center gap-2 disabled:bg-white/20 disabled:cursor-not-allowed focus-ring">
                 <span id="cekText">Cek</span>
                 <svg id="cekSpinner" class="hidden animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
@@ -149,7 +150,17 @@
             result.innerHTML = html;
         } catch (e) {
             result.classList.remove("hidden");
-            result.innerHTML = '<p class="text-red-400">Terjadi kesalahan. Silakan coba lagi.</p>';
+            const isNetworkError = !navigator.onLine || e.name === 'TypeError';
+            const msg = isNetworkError
+                ? 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.'
+                : 'Terjadi kesalahan. Silakan coba lagi.';
+            result.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="text-red-400 text-4xl mb-3" aria-hidden="true">&#x26A0;</div>
+                    <p class="text-red-400 mb-4">${msg}</p>
+                    <button onclick="fetchRecentOrders(document.getElementById('phoneInput').value.trim())" class="bg-primary hover:bg-orange-600 text-white font-semibold px-6 py-2 rounded-lg transition focus-ring">Coba Lagi</button>
+                </div>
+            `;
         }
     }
 
@@ -180,7 +191,14 @@
             const res = await fetch(`/api/orders/${orderId}`);
             if (!res.ok) {
                 result.classList.remove("hidden");
-                result.innerHTML = '<p class="text-red-400">Order tidak ditemukan.</p>';
+                result.innerHTML = `
+                    <div class="text-center py-4">
+                        <div class="text-white/40 text-4xl mb-3" aria-hidden="true">&#128269;</div>
+                        <p class="text-red-400 font-medium mb-2">Order tidak ditemukan.</p>
+                        <p class="text-white/50 text-sm mb-4">Pastikan ID order yang dimasukkan sudah benar. ID order biasanya dimulai dengan huruf dan angka.</p>
+                        <a href="/order" class="inline-block bg-primary hover:bg-orange-600 text-white font-semibold px-6 py-2 rounded-lg transition focus-ring">Buat Order Baru</a>
+                    </div>
+                `;
                 autoRefresh.classList.add("hidden");
                 return;
             }
@@ -252,11 +270,17 @@
             }
         } catch (e) {
             result.classList.remove("hidden");
-            const isNetworkError = e.name === 'TypeError' || !navigator.onLine;
+            const isNetworkError = !navigator.onLine || e.name === 'TypeError';
             const msg = isNetworkError
                 ? 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.'
                 : 'Terjadi kesalahan. Silakan coba lagi.';
-            result.innerHTML = `<p class="text-red-400">${msg}</p>`;
+            result.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="text-red-400 text-4xl mb-3" aria-hidden="true">&#x26A0;</div>
+                    <p class="text-red-400 mb-4">${msg}</p>
+                    <button onclick="fetchOrder('${escapeHtml(orderId)}')" class="bg-primary hover:bg-orange-600 text-white font-semibold px-6 py-2 rounded-lg transition focus-ring">Coba Lagi</button>
+                </div>
+            `;
             autoRefresh.classList.add("hidden");
         }
     }

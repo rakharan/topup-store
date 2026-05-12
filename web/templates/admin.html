@@ -155,15 +155,18 @@
                     </div>
                     <div>
                         <label class="block text-sm text-white/70 mb-1" for="prodName">Name</label>
-                        <input type="text" id="prodName" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                        <input type="text" id="prodName" required aria-describedby="prodNameHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                        <span id="prodNameHint" class="sr-only">Nama produk yang akan ditampilkan ke pelanggan</span>
                     </div>
                     <div>
                         <label class="block text-sm text-white/70 mb-1" for="prodSku">SKU</label>
-                        <input type="text" id="prodSku" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                        <input type="text" id="prodSku" required aria-describedby="prodSkuHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                        <span id="prodSkuHint" class="sr-only">Kode unik produk dari supplier</span>
                     </div>
                     <div>
                         <label class="block text-sm text-white/70 mb-1" for="prodCostPrice">Cost Price (IDR)</label>
-                        <input type="number" id="prodCostPrice" required min="1" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                        <input type="number" id="prodCostPrice" required min="1" aria-describedby="prodCostHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                        <span id="prodCostHint" class="sr-only">Harga beli dari supplier dalam Rupiah</span>
                     </div>
                     <div>
                         <label class="block text-sm text-white/70 mb-1" for="prodMarginType">Margin Type</label>
@@ -178,12 +181,13 @@
                     </div>
                     <div>
                         <label class="block text-sm text-white/70 mb-1" for="prodPrice">Selling Price (IDR)</label>
-                        <input type="number" id="prodPrice" required min="1" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                        <input type="number" id="prodPrice" required min="1" aria-describedby="priceMarginInfo" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                         <div id="priceMarginInfo" class="text-xs text-white/40 mt-1"></div>
                     </div>
                     <div>
                         <label class="block text-sm text-white/70 mb-1" for="prodDiamonds">Diamonds</label>
-                        <input type="number" id="prodDiamonds" required min="0" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                        <input type="number" id="prodDiamonds" required min="0" aria-describedby="prodDiamondsHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                        <span id="prodDiamondsHint" class="sr-only">Jumlah diamond atau item yang didapat pelanggan</span>
                     </div>
                     <div>
                         <label class="block text-sm text-white/70 mb-1" for="prodType">Type</label>
@@ -195,7 +199,8 @@
                     </div>
                     <div>
                         <label class="block text-sm text-white/70 mb-1" for="prodDesc">Description</label>
-                        <input type="text" id="prodDesc" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                        <input type="text" id="prodDesc" aria-describedby="prodDescHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                        <span id="prodDescHint" class="sr-only">Deskripsi opsional untuk produk</span>
                     </div>
                     <div class="flex items-center gap-2 md:col-span-2">
                         <input type="checkbox" id="prodActive" checked class="w-4 h-4">
@@ -461,13 +466,57 @@
             btn.onclick = () => { closeConfirmModal(); resolve(true); };
             document.getElementById('confirmIcon').textContent = icon;
             modal.classList.remove('hidden');
+            trapFocus(modal);
             btn.focus();
         });
     }
 
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const confirmModal = document.getElementById('confirmModal');
+            const orderDetailModal = document.getElementById('orderDetailModal');
+            const payloadModal = document.getElementById('payloadModal');
+            if (!confirmModal.classList.contains('hidden')) {
+                closeConfirmModal();
+            } else if (!orderDetailModal.classList.contains('hidden')) {
+                closeOrderDetail();
+            } else if (!payloadModal.classList.contains('hidden')) {
+                closePayloadModal();
+            }
+        }
+    });
+
     function closeConfirmModal() {
-        document.getElementById('confirmModal').classList.add('hidden');
+        const modal = document.getElementById('confirmModal');
+        untrapFocus(modal);
+        modal.classList.add('hidden');
         if (confirmResolve) { confirmResolve(false); confirmResolve = null; }
+    }
+
+    function trapFocus(container) {
+        const focusable = container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        first.focus();
+        container._trapHandler = (e) => {
+            if (e.key !== 'Tab') return;
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        };
+        container.addEventListener('keydown', container._trapHandler);
+    }
+
+    function untrapFocus(container) {
+        if (container._trapHandler) {
+            container.removeEventListener('keydown', container._trapHandler);
+            delete container._trapHandler;
+        }
     }
 
     async function processOrder(orderId) {
@@ -935,10 +984,13 @@
         const modal = document.getElementById('payloadModal');
         document.getElementById('payloadContent').textContent = JSON.stringify(JSON.parse(payload), null, 2);
         modal.classList.remove('hidden');
+        trapFocus(modal);
     }
 
     function closePayloadModal() {
-        document.getElementById('payloadModal').classList.add('hidden');
+        const modal = document.getElementById('payloadModal');
+        untrapFocus(modal);
+        modal.classList.add('hidden');
     }
 
     let currentOrderId = '';
@@ -983,14 +1035,18 @@
 
             document.getElementById('cancelSection').classList.toggle('hidden', order.status !== 'pending');
             document.getElementById('overrideSection').classList.toggle('hidden', order.status === 'success');
-            document.getElementById('orderDetailModal').classList.remove('hidden');
+            const modal = document.getElementById('orderDetailModal');
+            modal.classList.remove('hidden');
+            trapFocus(modal);
         } catch (e) {
             showToast('Failed to load order detail', 'error');
         }
     }
 
     function closeOrderDetail() {
-        document.getElementById('orderDetailModal').classList.add('hidden');
+        const modal = document.getElementById('orderDetailModal');
+        untrapFocus(modal);
+        modal.classList.add('hidden');
     }
 
     async function confirmOverrideStatus() {
