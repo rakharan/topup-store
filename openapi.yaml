@@ -1,0 +1,536 @@
+openapi: 3.0.3
+info:
+  title: TopUp Store API
+  description: |
+    Game top-up platform API with QRIS payments, Digiflazz H2H integration, and WhatsApp notifications.
+    
+    ## Authentication
+    - **Public endpoints**: No authentication required
+    - **Admin endpoints**: HMAC-signed cookie authentication via `POST /admin` login
+    - **CSRF protection**: Required for all state-changing requests (POST/PUT/DELETE)
+    - **Rate limiting**: Applied per IP address
+    
+    ## Supported Games
+    - `free_fire` — Free Fire (UID: numeric)
+    - `mobile_legends` — Mobile Legends (UID: `UID|SERVER` format)
+    - `pubg_mobile` — PUBG Mobile (UID: numeric)
+    
+    ## Order Status Flow
+    ```
+    pending → paid → processing → success
+                         ↓
+                       failed
+                         ↓
+                       expired
+    ```
+  version: 1.0.0
+  contact:
+    name: Faza TopUP Store
+    url: https://sagameda.com
+
+servers:
+  - url: https://sagameda.com
+    description: Production
+  - url: http://localhost:8080
+    description: Local Development
+
+tags:
+  - name: Health
+    description: Service health and readiness probes
+  - name: Orders
+    description: Order creation, lookup, and management
+  - name: Products
+    description: Product listing and details
+  - name: Admin
+    description: Admin panel operations (requires authentication)
+  - name: Webhooks
+    description: Payment and top-up provider webhooks
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      description: Returns service status and uptime
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /ready:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      description: Returns 200 only when DB and Redis are connected
+      responses:
+        '200':
+          description: Service is ready to accept traffic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service not ready (DB or Redis unavailable)
+
+  /metrics:
+    get:
+      tags: [Health]
+      summary: Prometheus metrics
+      description: Returns request counts and duration histograms in Prometheus format
+      responses:
+        '200':
+          description: Metrics in Prometheus text format
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                http_requests_total{method="GET",path="/health",status="200"} 42
+                http_request_duration_seconds_bucket{le="0.005"} 10
+
+  /api/orders:
+    post:
+      tags: [Orders]
+      summary: Create a new order
+      description: |
+        Creates an order and generates a QRIS payment code.
+        Returns order ID, QRIS URL, and payment instructions.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded (5 requests/minute)
+      security:
+        - CsrfToken: []
+
+    get:
+      tags: [Orders]
+      summary: List orders
+      description: Returns paginated list of orders (admin only via cookie auth)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderListResponse'
+
+  /api/orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Get order by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
+          description: Order not found
+
+  /api/orders/lookup:
+    post:
+      tags: [Orders]
+      summary: Lookup order by game UID and phone
+      description: Finds the most recent order matching game UID and phone number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [game_uid, phone]
+              properties:
+                game_uid:
+                  type: string
+                  example: "12345678"
+                phone:
+                  type: string
+                  example: "6281234567890"
+      responses:
+        '200':
+          description: Order found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
+          description: Order not found
+
+  /api/orders/{id}/cancel:
+    post:
+      tags: [Orders]
+      summary: Cancel pending order
+      description: Cancels an order that is still in `pending` status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order cancelled
+        '400':
+          description: Cannot cancel (not pending)
+        '404':
+          description: Order not found
+      security:
+        - CsrfToken: []
+
+  /api/products:
+    get:
+      tags: [Products]
+      summary: List products
+      description: Returns active products, optionally filtered by game
+      parameters:
+        - name: game
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [free_fire, mobile_legends, pubg_mobile]
+          description: Filter by game
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+
+  /api/products/{id}:
+    get:
+      tags: [Products]
+      summary: Get product by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '404':
+          description: Product not found
+
+  /webhook/midtrans:
+    post:
+      tags: [Webhooks]
+      summary: Midtrans payment notification
+      description: |
+        Receives payment status updates from Midtrans.
+        Verifies SHA-512 signature before processing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MidtransWebhookPayload'
+      responses:
+        '200':
+          description: Webhook processed
+        '400':
+          description: Invalid signature or payload
+
+  /webhook/digiflazz:
+    post:
+      tags: [Webhooks]
+      summary: Digiflazz top-up notification
+      description: |
+        Receives top-up status updates from Digiflazz.
+        Verifies HMAC-SHA1 signature when secret is configured.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DigiflazzWebhookPayload'
+      responses:
+        '200':
+          description: Webhook processed
+        '400':
+          description: Invalid signature or payload
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        uptime:
+          type: string
+          example: 1h23m45s
+        version:
+          type: string
+          example: 1.0.0
+
+    CreateOrderRequest:
+      type: object
+      required: [game, game_uid, product_id, phone]
+      properties:
+        game:
+          type: string
+          enum: [free_fire, mobile_legends, pubg_mobile]
+          example: free_fire
+        game_uid:
+          type: string
+          description: Numeric UID (Free Fire/PUBG) or "UID|SERVER" (Mobile Legends)
+          example: "12345678"
+        game_server:
+          type: string
+          description: Required only for Mobile Legends
+          example: "1234"
+        product_id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        diamonds:
+          type: integer
+          description: Diamond amount (optional, auto-resolved from product)
+          example: 100
+        phone:
+          type: string
+          description: WhatsApp number with country code
+          example: "6281234567890"
+
+    CreateOrderResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            order_id:
+              type: string
+              format: uuid
+            order_number:
+              type: string
+              example: ORD-ABC123
+            amount_idr:
+              type: integer
+              example: 15000
+            qris_url:
+              type: string
+              format: uri
+            qris_string:
+              type: string
+              description: QRIS EMVCo string for generating QR code
+            expires_at:
+              type: string
+              format: date-time
+        request_id:
+          type: string
+          format: uuid
+
+    OrderResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Order'
+        request_id:
+          type: string
+
+    OrderListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        request_id:
+          type: string
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        order_number:
+          type: string
+        product_id:
+          type: string
+          format: uuid
+        user_phone:
+          type: string
+        game_uid:
+          type: string
+        game_server:
+          type: string
+        amount_idr:
+          type: integer
+        status:
+          type: string
+          enum: [pending, paid, processing, success, failed, expired, cancelled]
+        midtrans_order_id:
+          type: string
+        channel:
+          type: string
+          enum: [web, whatsapp]
+        serial_number:
+          type: string
+        digiflazz_ref_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ProductListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        request_id:
+          type: string
+
+    ProductResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Product'
+        request_id:
+          type: string
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        game:
+          type: string
+          enum: [free_fire, mobile_legends, pubg_mobile]
+        name:
+          type: string
+        description:
+          type: string
+        price_idr:
+          type: integer
+        cost_price_idr:
+          type: integer
+        diamonds:
+          type: integer
+        sku:
+          type: string
+        product_type:
+          type: string
+          enum: [diamond, subscription, other]
+        stock:
+          type: integer
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    MidtransWebhookPayload:
+      type: object
+      properties:
+        order_id:
+          type: string
+        status_code:
+          type: string
+        transaction_status:
+          type: string
+          enum: [settlement, capture, pending, deny, expire, cancel]
+        gross_amount:
+          type: string
+        signature_key:
+          type: string
+
+    DigiflazzWebhookPayload:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            ref_id:
+              type: string
+            status:
+              type: string
+            sn:
+              type: string
+              description: Serial number
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "invalid input"
+        request_id:
+          type: string
+          format: uuid
+
+  securitySchemes:
+    CsrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: Required for POST/PUT/DELETE requests. Obtain from GET request response headers.
