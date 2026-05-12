@@ -105,7 +105,7 @@ volumes:
   redisdata:
     driver: local
   caddy_data:
-    caddy_config:
+  caddy_config:
 networks:
   topup-network:
     driver: bridge
