@@ -6,13 +6,127 @@
 <link rel="stylesheet" href="/static/css/tailwind.css">
 <link rel="stylesheet" href="/static/css/style.css">
 
+<script>
+    (function() {
+        const saved = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (saved ? saved === 'dark' : prefersDark) {
+            document.documentElement.classList.add('dark');
+        }
+    })();
+</script>
+
 <style>
-    .game-card { transition: all 0.3s ease; }
-    .game-card:hover { transform: translateY(-4px); }
+    :root {
+        --bg-page: #f8fafc;
+        --bg-card: #ffffff;
+        --bg-input: #f1f5f9;
+        --bg-nav: rgba(255,255,255,0.95);
+        --text-primary: #0f172a;
+        --text-secondary: #475569;
+        --text-muted: #94a3b8;
+        --border-color: #e2e8f0;
+        --toast-bg: #ffffff;
+        --code-bg: #f1f5f9;
+    }
+    :root.dark {
+        --bg-page: #1C1C1E;
+        --bg-card: rgba(255,255,255,0.05);
+        --bg-input: rgba(255,255,255,0.05);
+        --bg-nav: rgba(28,28,30,0.95);
+        --text-primary: #ffffff;
+        --text-secondary: rgba(255,255,255,0.7);
+        --text-muted: rgba(255,255,255,0.5);
+        --border-color: rgba(255,255,255,0.1);
+        --toast-bg: #1e293b;
+        --code-bg: rgba(255,255,255,0.1);
+    }
+
+    /* Map existing utility classes to CSS vars for light mode */
+    :root:not(.dark) .bg-dark { background-color: var(--bg-page) !important; }
+    :root:not(.dark) .bg-darker { background-color: #f1f5f9 !important; }
+    :root:not(.dark) .bg-white\/5 { background-color: rgba(255,255,255,0.9) !important; }
+    :root:not(.dark) .bg-white\/10 { background-color: rgba(255,255,255,0.85) !important; }
+    :root:not(.dark) .text-white { color: var(--text-primary) !important; }
+    :root:not(.dark) .text-white\/70,
+    :root:not(.dark) .text-white\/60,
+    :root:not(.dark) .text-white\/50,
+    :root:not(.dark) .text-white\/40,
+    :root:not(.dark) .text-white\/30 { color: var(--text-secondary) !important; }
+    :root:not(.dark) .border-white\/10 { border-color: var(--border-color) !important; }
+    :root:not(.dark) .border-white\/5 { border-color: #f1f5f9 !important; }
+    :root:not(.dark) .hover\:bg-white\/5:hover { background-color: #f1f5f9 !important; }
+    :root:not(.dark) .hover\:bg-white\/10:hover { background-color: #e2e8f0 !important; }
+    :root:not(.dark) .hover\:bg-white\/20:hover { background-color: #cbd5e1 !important; }
+    :root:not(.dark) .hover\:border-primary\/50:hover { border-color: rgba(249,115,22,0.5) !important; }
+    :root:not(.dark) .placeholder-white\/30::placeholder { color: #94a3b8 !important; }
+    :root:not(.dark) .placeholder-white\/40::placeholder { color: #94a3b8 !important; }
+
+    /* Toast overrides */
+    :root:not(.dark) .toast-error { background-color: #fef2f2 !important; color: #991b1b !important; border: 1px solid #fecaca !important; }
+    :root:not(.dark) .toast-success { background-color: #f0fdf4 !important; color: #166534 !important; border: 1px solid #bbf7d0 !important; }
+    :root:not(.dark) .toast-warning { background-color: #fffbeb !important; color: #92400e !important; border: 1px solid #fde68a !important; }
+    :root:not(.dark) .toast-info { background-color: #eff6ff !important; color: #1e40af !important; border: 1px solid #bfdbfe !important; }
+
+    /* Code / inline highlights */
+    :root:not(.dark) code.bg-white\/10 { background-color: var(--code-bg) !important; color: var(--text-primary) !important; }
+
+    /* Game card text */
+    :root:not(.dark) .game-card .text-white\/60 { color: var(--text-secondary) !important; }
+
+    /* Keep primary orange always visible */
+    .text-primary { color: #F97316 !important; }
+    .bg-primary { background-color: #F97316 !important; }
+    .hover\:bg-primary:hover { background-color: #F97316 !important; }
+    .hover\:text-primary:hover { color: #F97316 !important; }
+    .border-primary { border-color: #F97316 !important; }
+    .focus\:border-primary:focus { border-color: #F97316 !important; }
+    .focus\:ring-primary\/50:focus { --tw-ring-color: rgba(249,115,22,0.5) !important; }
+
+    /* Status badges - keep colors */
+    .text-green-400 { color: #4ade80 !important; }
+    .text-yellow-400 { color: #facc15 !important; }
+    .text-red-400 { color: #f87171 !important; }
+    .text-blue-400 { color: #60a5fa !important; }
+    .bg-green-500\/10,
+    .bg-green-500\/20 { background-color: rgba(34,197,94,0.1) !important; }
+    .bg-yellow-500\/10,
+    .bg-yellow-500\/20 { background-color: rgba(234,179,8,0.1) !important; }
+    .bg-red-500\/10,
+    .bg-red-500\/20 { background-color: rgba(239,68,68,0.1) !important; }
+    .bg-blue-500\/10,
+    .bg-blue-500\/20 { background-color: rgba(59,130,246,0.1) !important; }
+    .bg-primary\/10 { background-color: rgba(249,115,22,0.1) !important; }
+    .border-green-500\/20 { border-color: rgba(34,197,94,0.2) !important; }
+    .border-yellow-500\/20 { border-color: rgba(234,179,8,0.2) !important; }
+    .border-red-500\/20 { border-color: rgba(239,68,68,0.2) !important; }
+    .border-blue-500\/20 { border-color: rgba(59,130,246,0.2) !important; }
+    .border-primary\/20 { border-color: rgba(249,115,22,0.2) !important; }
+
+    /* Skeleton */
     .skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    :root:not(.dark) .skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%) !important; }
+
+    /* Modal backdrop */
     .modal-backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+    :root:not(.dark) .modal-backdrop { background: rgba(0,0,0,0.4) !important; }
+
+    /* Focus ring */
     .focus-ring:focus-visible { outline: 2px solid #F97316; outline-offset: 2px; }
+
+    /* WhatsApp button */
+    .bg-green-600 { background-color: #16a34a !important; }
+    .hover\:bg-green-700:hover { background-color: #15803d !important; }
+
+    /* Red buttons */
+    .bg-red-600 { background-color: #dc2626 !important; }
+    .hover\:bg-red-700:hover { background-color: #b91c1c !important; }
+
+    /* Skip link */
+    .skip-link { position:absolute; top:-40px; left:8px; background:#F97316; color:#fff; padding:8px 16px; border-radius:8px; z-index:9999; transition:top 0.2s; }
+    .skip-link:focus { top: 8px; }
+
     @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
             animation-duration: 0.01ms !important;
@@ -21,6 +135,7 @@
             scroll-behavior: auto !important;
         }
         .skeleton { animation: none !important; background: rgba(255,255,255,0.05); }
+        :root:not(.dark) .skeleton { background: #f1f5f9 !important; }
     }
 </style>
 {{end}}
