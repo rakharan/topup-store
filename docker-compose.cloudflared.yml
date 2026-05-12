@@ -1,0 +1,22 @@
+# Docker Compose override for Cloudflare Tunnel deployment
+# Usage: docker compose -f docker-compose.yml -f docker-compose.cloudflared.yml up -d
+
+services:
+  # Remove Caddy since Cloudflare handles HTTPS
+  caddy:
+    deploy:
+      replicas: 0
+
+  # Add cloudflared tunnel
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    environment:
+      - TUNNEL_METRICS=0.0.0.0:45678
+    networks:
+      - topup-network
+    depends_on:
+      app:
+        condition: service_healthy
+    # No port mappings needed - tunnel connects outbound to Cloudflare

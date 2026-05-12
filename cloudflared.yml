@@ -1,0 +1,18 @@
+# Cloudflare Tunnel Configuration
+# Place this in ~/.cloudflared/config.yml after running `cloudflared tunnel login`
+
+# Replace with your tunnel ID after creating it
+tunnel: <YOUR-TUNNEL-ID>
+credentials-file: ~/.cloudflared/<YOUR-TUNNEL-ID>.json
+
+ingress:
+  # Main app
+  - hostname: sagameda.com
+    service: http://localhost:8080
+  
+  # WhatsApp bot webhooks (if needed externally)
+  - hostname: bot.sagameda.com
+    service: http://localhost:3001
+  
+  # Catch-all
+  - service: http_status:404
