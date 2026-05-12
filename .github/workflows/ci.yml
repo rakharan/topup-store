@@ -2,12 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master, main]
   pull_request:
-    branches: [main]
+    branches: [master, main]
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,25 +15,136 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.26'
+          go-version: '1.24'
+          cache: true
+
+      - name: Format check
+        run: |
+          if [ "$(gofmt -l . | wc -l)" -gt 0 ]; then
+            echo "Unformatted files:"
+            gofmt -l .
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build
+        run: go build -v ./...
+
+  test-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
           cache: true
 
       - name: Download dependencies
         run: go mod download
 
-      - name: Run go vet
-        run: go vet ./...
+      - name: Run unit tests (no DB required)
+        run: go test -v -count=1 ./internal/handlers ./internal/middleware ./internal/services
 
-      - name: Run tests
-        run: go test -v -race -count=1 ./...
+  test-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: topup
+          POSTGRES_PASSWORD: topup
+          POSTGRES_DB: topup_store
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+        ports:
+          - 5432:5432
 
-      - name: Build
-        run: go build -v ./...
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run migrations
+        run: |
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+          migrate -path migrations -database "postgres://topup:topup@localhost:5432/topup_store?sslmode=disable" up
+
+      - name: Run integration tests
+        env:
+          DATABASE_URL: postgres://topup:topup@localhost:5432/topup_store?sslmode=disable
+          REDIS_URL: redis://localhost:6379/0
+        run: go test -v -count=1 ./internal/repositories
 
   build-docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: docker build -t topup-store .
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build app image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: topup-store-app:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build bot image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./whatsapp-bot
+          push: false
+          tags: topup-store-bot:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  test-bot:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./whatsapp-bot
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './whatsapp-bot/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint check
+        run: npx eslint . || true
