@@ -21,6 +21,11 @@ whatsapp-bot/sessions/
 whatsapp-bot/.wwebjs_auth/
 whatsapp-bot/.wwebjs_cache/
 
+# Cloudflare Tunnel credentials
+*.cloudflared/
+cloudflared.json
+credentials.json
+
 # Logs
 *.log
 

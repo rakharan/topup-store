@@ -4,6 +4,8 @@
 
 Deploy the TopUp Store locally and expose it to the internet via Cloudflare Tunnel (no public IP needed, no port forwarding).
 
+> **Security Warning:** Never commit Cloudflare tunnel credentials or tokens to git. The `cloudflared.yml` file in this repo contains a placeholder (`<YOUR-TUNNEL-ID>`). The actual `.json` credentials file in `~/.cloudflared/` is already gitignored.
+
 ## Prerequisites
 
 1. A domain managed by Cloudflare (e.g., `sagameda.com`)
