@@ -47,9 +47,7 @@ services:
       - topup-network
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: sagameda/topup-store-app:latest
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -74,9 +72,7 @@ services:
       - topup-network
 
   whatsapp-bot:
-    build:
-      context: ./whatsapp-bot
-      dockerfile: Dockerfile
+    image: sagameda/topup-store-whatsapp-bot:latest
     restart: unless-stopped
     ports:
       - "3001:3001"
@@ -90,12 +86,26 @@ services:
     networks:
       - topup-network
 
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - topup-network
+
 volumes:
   pgdata:
     driver: local
   redisdata:
     driver: local
-
+  caddy_data:
+    caddy_config:
 networks:
   topup-network:
     driver: bridge
