@@ -945,6 +945,15 @@
     let revenueChartInstance = null;
     let gameChartInstance = null;
 
+    function getChartColors() {
+        const isDark = document.documentElement.classList.contains('dark');
+        return {
+            text: isDark ? '#9CA3AF' : '#475569',
+            grid: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+            ticks: isDark ? '#6B7280' : '#64748b',
+        };
+    }
+
     async function loadAnalytics(days) {
         document.querySelectorAll('.analytics-period').forEach(btn => {
             const isActive = parseInt(btn.dataset.days) === days;
@@ -992,10 +1001,10 @@
                     },
                     options: {
                         responsive: true,
-                        plugins: { legend: { labels: { color: '#9CA3AF' } } },
+                        plugins: { legend: { labels: { color: getChartColors().text } } },
                         scales: {
-                            x: { ticks: { color: '#6B7280', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                            y: { position: 'left', ticks: { color: '#F97316' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                            x: { ticks: { color: getChartColors().ticks, maxRotation: 45 }, grid: { color: getChartColors().grid } },
+                            y: { position: 'left', ticks: { color: '#F97316' }, grid: { color: getChartColors().grid } },
                             y1: { position: 'right', ticks: { color: '#3B82F6' }, grid: { drawOnChartArea: false } }
                         }
                     }
@@ -1014,7 +1023,7 @@
                     options: {
                         responsive: true,
                         plugins: {
-                            legend: { position: 'bottom', labels: { color: '#9CA3AF' } }
+                            legend: { position: 'bottom', labels: { color: getChartColors().text } }
                         }
                     }
                 });
