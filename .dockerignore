@@ -8,3 +8,12 @@ AGENTS.md
 whatsapp-bot/
 docker-compose.yml
 Makefile
+bin/
+coverage.out
+coverage.html
+web/static/css/tailwind.css
+tests/
+.github/
+cloudflared.yml
+docker-compose.cloudflared.yml
+DEPLOYMENT.md

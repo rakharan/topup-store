@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /webhook/
+
+Sitemap: https://sagameda.com/sitemap.xml

@@ -598,6 +598,23 @@ var allowedStaticExts = map[string]bool{
 	".css": true, ".js": true, ".svg": true, ".ico": true,
 	".png": true, ".jpg": true, ".jpeg": true, ".gif": true,
 	".woff": true, ".woff2": true, ".ttf": true,
+	".txt": true, ".xml": true,
+}
+
+var staticCachePolicy = map[string]string{
+	".css":  "public, max-age=3600",
+	".js":   "public, max-age=3600",
+	".svg":  "public, max-age=86400",
+	".ico":  "public, max-age=86400",
+	".png":  "public, max-age=86400",
+	".jpg":  "public, max-age=86400",
+	".jpeg": "public, max-age=86400",
+	".gif":  "public, max-age=86400",
+	".woff": "public, max-age=86400",
+	".woff2": "public, max-age=86400",
+	".ttf":  "public, max-age=86400",
+	".txt":  "public, max-age=86400",
+	".xml":  "public, max-age=3600",
 }
 
 func newStaticFileHandler(next http.Handler) http.Handler {
@@ -605,6 +622,9 @@ func newStaticFileHandler(next http.Handler) http.Handler {
 		path := r.URL.Path
 		for ext := range allowedStaticExts {
 			if strings.HasSuffix(path, ext) {
+				if policy, ok := staticCachePolicy[ext]; ok {
+					w.Header().Set("Cache-Control", policy)
+				}
 				next.ServeHTTP(w, r)
 				return
 			}

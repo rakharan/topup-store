@@ -55,6 +55,15 @@ docker-down:
 docker-logs:
 	docker compose logs -f app
 
+tunnel-up:
+	docker compose -f docker-compose.yml -f docker-compose.cloudflared.yml up -d
+
+tunnel-down:
+	docker compose -f docker-compose.yml -f docker-compose.cloudflared.yml down
+
+tunnel-logs:
+	docker compose -f docker-compose.yml -f docker-compose.cloudflared.yml logs -f cloudflared
+
 css:
 	npx tailwindcss -i ./web/static/css/input.css -o ./web/static/css/tailwind.css --minify
 
