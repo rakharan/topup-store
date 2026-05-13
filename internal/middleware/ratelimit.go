@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -67,7 +68,9 @@ func (rl *RateLimiter) allow(ip string) (bool, int, error) {
 		return rl.allowInMemory(ip)
 	}
 
-	key := "ratelimit:" + ip
+	// Use a time-windowed key so the counter resets each window period
+	windowKey := time.Now().Unix() / int64(rl.window.Seconds())
+	key := fmt.Sprintf("ratelimit:%s:%d", ip, windowKey)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
@@ -182,17 +185,25 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 }
 
 func extractIP(r *http.Request) string {
+	// Trust X-Real-Ip first (set by reverse proxies like Caddy, Nginx)
+	if realIP := r.Header.Get("X-Real-Ip"); realIP != "" {
+		if parsed := net.ParseIP(strings.TrimSpace(realIP)); parsed != nil {
+			return parsed.String()
+		}
+	}
+
+	// Trust X-Forwarded-For (set by reverse proxies and load balancers)
+	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+		first := strings.Split(forwarded, ",")[0]
+		if parsed := net.ParseIP(strings.TrimSpace(first)); parsed != nil {
+			return parsed.String()
+		}
+	}
+
+	// Fallback to connection remote address
 	ip := r.RemoteAddr
 	if host, _, err := net.SplitHostPort(ip); err == nil {
 		ip = host
-	}
-	if ip == "127.0.0.1" || ip == "::1" {
-		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-			first := strings.Split(forwarded, ",")[0]
-			if parsed := net.ParseIP(strings.TrimSpace(first)); parsed != nil {
-				return parsed.String()
-			}
-		}
 	}
 	return ip
 }
