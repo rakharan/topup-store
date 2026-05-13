@@ -137,16 +137,22 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	qrString, qrisURL, expiryTime, err := h.paymentSvc.CreateQRIS(r.Context(), order)
-	if err != nil {
-		h.logger.Error("create qris", slog.String("error", err.Error()))
-		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
-		return
+	// Try Snap first (snap token does not conflict with Core API)
+	snapToken, snapErr := h.paymentSvc.CreateSnapToken(r.Context(), order)
+	if snapErr != nil {
+		h.logger.Warn("create snap token failed", slog.String("order_id", orderID), slog.String("error", snapErr.Error()))
 	}
 
-	snapToken, _ := h.paymentSvc.CreateSnapToken(r.Context(), order)
-	if snapToken != "" {
-		h.logger.Info("snap token generated", slog.String("order_id", orderID))
+	qrString, qrisURL, expiryTime, err := h.paymentSvc.CreateQRIS(r.Context(), order)
+	if err != nil {
+		h.logger.Error("create qris failed", slog.String("order_id", orderID), slog.String("error", err.Error()))
+		if snapToken == "" {
+			// Neither Snap nor QRIS available — cannot proceed
+			apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+			return
+		}
+		// Snap succeeded but QRIS failed; continue with Snap only
+		expiryTime = time.Now().Add(30 * time.Minute).Format(time.RFC3339)
 	}
 
 	orderCopy := *order

@@ -11,7 +11,7 @@
     {{template "head"}}
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" onerror="window.qrcodeLoadFailed=true"></script>
     {{if .MidtransClientKey}}
-    <script src="{{if .MidtransIsProd}}https://app.midtrans.com/snap/snap.js{{else}}https://app.sandbox.midtrans.com/snap/snap.js{{end}}" data-client-key="{{.MidtransClientKey}}"></script>
+    <script type="text/javascript" src="{{if .MidtransIsProd}}https://app.midtrans.com/snap/snap.js{{else}}https://app.sandbox.midtrans.com/snap/snap.js{{end}}" data-client-key="{{.MidtransClientKey}}"></script>
     {{end}}
 </head>
 <body class="bg-dark text-white min-h-screen">
@@ -466,7 +466,8 @@
                 }
 
                 let snapButtonHTML = '';
-                if (snapToken && typeof snap !== 'undefined') {
+                console.log('[Snap] Token present:', !!snapToken, 'snap object available:', typeof window.snap !== 'undefined');
+                if (snapToken && typeof window.snap !== 'undefined') {
                     snapButtonHTML = `
                         <div class="mt-4 mb-2">
                             <p class="text-white/60 mb-3 text-sm">Atau bayar dengan metode lain (GoPay, OVO, DANA, Kartu Kredit, dll):</p>
@@ -475,6 +476,10 @@
                             </button>
                         </div>
                     `;
+                } else if (snapToken) {
+                    console.warn('[Snap] snap.js not loaded — check MIDTRANS_CLIENT_KEY and script URL');
+                } else if (typeof window.snap !== 'undefined') {
+                    console.warn('[Snap] Token empty — check server logs for CreateSnapToken errors');
                 }
 
                 result.innerHTML = `
@@ -496,20 +501,25 @@
                     </div>
                 `;
 
-                if (snapToken && typeof snap !== 'undefined') {
+                if (snapToken && typeof window.snap !== 'undefined') {
                     document.getElementById('snapPayBtn').addEventListener('click', () => {
-                        snap.pay(snapToken, {
+                        console.log('[Snap] Opening popup with token:', snapToken);
+                        window.snap.pay(snapToken, {
                             onSuccess: function(result) {
+                                console.log('[Snap] onSuccess:', result);
                                 showToast('Pembayaran berhasil! Order sedang diproses.', 'success');
                                 setTimeout(() => window.location.href = `/status?id=${orderNumber}`, 1500);
                             },
                             onPending: function(result) {
+                                console.log('[Snap] onPending:', result);
                                 showToast('Pembayaran pending. Silakan cek status order.', 'warning');
                             },
                             onError: function(result) {
+                                console.error('[Snap] onError:', result);
                                 showToast('Pembayaran gagal. Silakan coba lagi.', 'error');
                             },
                             onClose: function() {
+                                console.log('[Snap] onClose');
                                 showToast('Popup pembayaran ditutup.', 'info');
                             }
                         });

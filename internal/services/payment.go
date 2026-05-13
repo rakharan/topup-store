@@ -79,35 +79,24 @@ func (s *PaymentService) CreateQRIS(ctx context.Context, order *models.Order) (q
 		},
 	})
 
-	if coreErr == nil && coreResp.QRString != "" {
-		s.logger.Info("qris: core api success", slog.String("order_id", order.ID))
-		if storeErr := s.orderRepo.UpsertQRIS(ctx, order.ID, "", coreResp.QRString, "", &expiryTimeVal); storeErr != nil {
-			s.logger.Warn("qris: failed to store qr_string", slog.String("error", storeErr.Error()))
-		}
-		if storeErr := s.orderRepo.UpdateWithQRIS(ctx, order.ID, order.ID, ""); storeErr != nil {
-			s.logger.Warn("qris: failed to update order", slog.String("error", storeErr.Error()))
-		}
-		return coreResp.QRString, "", expiryTime, nil
-	}
-
 	if coreErr != nil {
-		s.logger.Warn("qris: core api failed, falling back to snap", slog.String("error", coreErr.Message))
+		s.logger.Warn("qris: core api failed", slog.String("error", coreErr.Message))
+		return "", "", "", fmt.Errorf("midtrans qris charge: %s", coreErr.Message)
 	}
 
-	snapResp, snapErr := s.createSnapTransaction(order, gameName, expiryDuration)
-	if snapErr != nil {
-		return "", "", "", snapErr
+	if coreResp.QRString == "" {
+		s.logger.Warn("qris: core api returned empty qr string", slog.String("order_id", order.ID))
+		return "", "", "", fmt.Errorf("midtrans qris returned empty qr string")
 	}
 
-	qrisURL = snapResp.RedirectURL
-	if storeErr := s.orderRepo.UpsertQRIS(ctx, order.ID, qrisURL, "", "", &expiryTimeVal); storeErr != nil {
-		s.logger.Warn("qris: failed to store qris_url", slog.String("error", storeErr.Error()))
+	s.logger.Info("qris: core api success", slog.String("order_id", order.ID))
+	if storeErr := s.orderRepo.UpsertQRIS(ctx, order.ID, "", coreResp.QRString, "", &expiryTimeVal); storeErr != nil {
+		s.logger.Warn("qris: failed to store qr_string", slog.String("error", storeErr.Error()))
 	}
-	if storeErr := s.orderRepo.UpdateWithQRIS(ctx, order.ID, order.ID, qrisURL); storeErr != nil {
+	if storeErr := s.orderRepo.UpdateWithQRIS(ctx, order.ID, order.ID, ""); storeErr != nil {
 		s.logger.Warn("qris: failed to update order", slog.String("error", storeErr.Error()))
 	}
-
-	return "", qrisURL, expiryTime, nil
+	return coreResp.QRString, "", expiryTime, nil
 }
 
 func (s *PaymentService) createSnapTransaction(order *models.Order, gameName string, expiryDuration int) (*snap.Response, error) {
@@ -144,11 +133,11 @@ func (s *PaymentService) createSnapTransaction(order *models.Order, gameName str
 
 	snapResp, snapErr := s.snap.CreateTransaction(snapReq)
 	if snapErr != nil {
-		return nil, fmt.Errorf("midtrans create transaction: %s", snapErr.Message)
+		return nil, fmt.Errorf("midtrans snap create transaction: %s", snapErr.Message)
 	}
 
-	if snapResp.RedirectURL == "" {
-		return nil, fmt.Errorf("midtrans returned empty QRIS URL")
+	if len(snapResp.ErrorMessages) > 0 {
+		return nil, fmt.Errorf("midtrans snap error: %v", snapResp.ErrorMessages)
 	}
 
 	return snapResp, nil
@@ -167,6 +156,10 @@ func (s *PaymentService) CreateSnapToken(ctx context.Context, order *models.Orde
 	snapResp, err := s.createSnapTransaction(order, gameName, 30)
 	if err != nil {
 		return "", err
+	}
+
+	if snapResp.Token == "" {
+		return "", fmt.Errorf("midtrans returned empty snap token")
 	}
 
 	s.logger.Info("snap token generated", slog.String("order_id", order.ID))
