@@ -144,6 +144,11 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	snapToken, _ := h.paymentSvc.CreateSnapToken(r.Context(), order)
+	if snapToken != "" {
+		h.logger.Info("snap token generated", slog.String("order_id", orderID))
+	}
+
 	orderCopy := *order
 	productCopy := *product
 	qrisURLCopy := qrisURL
@@ -169,6 +174,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		"amount_idr":   order.AmountIDR,
 		"qr_string":    qrString,
 		"qris_url":     qrisURL,
+		"snap_token":   snapToken,
 		"expiry_time":  expiryTime,
 	}, middleware.GetRequestID(r.Context()))
 }

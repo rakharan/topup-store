@@ -54,6 +54,10 @@ func (m *mockPaymentService) CreateQRIS(ctx context.Context, order *models.Order
 	return m.createQRISString, m.createQRISURL, m.createQRISExpiry, m.createQRISErr
 }
 
+func (m *mockPaymentService) CreateSnapToken(ctx context.Context, order *models.Order) (string, error) {
+	return "", nil
+}
+
 func (m *mockPaymentService) GetOrderByUIDAndPhone(ctx context.Context, gameUID, phone string) (*models.Order, error) {
 	return m.getByUIDPhoneResult, m.getByUIDPhoneErr
 }

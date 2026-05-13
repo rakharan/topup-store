@@ -62,33 +62,37 @@ func parseTemplates() (*template.Template, error) {
 }
 
 type PageHandler struct {
-	topupSvc     services.TopupServiceInterface
-	paymentSvc   services.PaymentServiceInterface
-	notifySvc    services.NotifyServiceInterface
-	templates    *template.Template
-	waNumber     string
-	adminPass    string
-	adminPath    string
-	cookieSecure bool
-	logger       *slog.Logger
+	topupSvc           services.TopupServiceInterface
+	paymentSvc         services.PaymentServiceInterface
+	notifySvc          services.NotifyServiceInterface
+	templates          *template.Template
+	waNumber           string
+	adminPass          string
+	adminPath          string
+	midtransClientKey  string
+	midtransIsProd     bool
+	cookieSecure       bool
+	logger             *slog.Logger
 }
 
-func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass, adminPath string, cookieSecure bool, logger *slog.Logger) *PageHandler {
+func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass, adminPath, midtransClientKey string, midtransIsProd, cookieSecure bool, logger *slog.Logger) *PageHandler {
 	templates, err := parseTemplates()
 	if err != nil {
 		logger.Error("Failed to parse templates", slog.String("error", err.Error()))
 		panic(err)
 	}
 	return &PageHandler{
-		topupSvc:     topupSvc,
-		paymentSvc:   paymentSvc,
-		notifySvc:    notifySvc,
-		templates:    templates,
-		waNumber:     waNumber,
-		adminPass:    adminPass,
-		adminPath:    adminPath,
-		cookieSecure: cookieSecure,
-		logger:       logger,
+		topupSvc:          topupSvc,
+		paymentSvc:        paymentSvc,
+		notifySvc:         notifySvc,
+		templates:         templates,
+		waNumber:          waNumber,
+		adminPass:         adminPass,
+		adminPath:         adminPath,
+		midtransClientKey: midtransClientKey,
+		midtransIsProd:    midtransIsProd,
+		cookieSecure:      cookieSecure,
+		logger:            logger,
 	}
 }
 
@@ -103,8 +107,10 @@ func (h *PageHandler) Home(w http.ResponseWriter, r *http.Request) {
 
 func (h *PageHandler) OrderForm(w http.ResponseWriter, r *http.Request) {
 	if err := h.templates.ExecuteTemplate(w, "order.html", map[string]any{
-		"WhatsappNumber": h.waNumber,
-		"CSRFToken":      middleware.GetCSRFToken(r.Context()),
+		"WhatsappNumber":    h.waNumber,
+		"CSRFToken":         middleware.GetCSRFToken(r.Context()),
+		"MidtransClientKey": h.midtransClientKey,
+		"MidtransIsProd":    h.midtransIsProd,
 	}); err != nil {
 		h.logger.Error("template error (order.html)", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

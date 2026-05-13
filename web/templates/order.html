@@ -10,6 +10,9 @@
     <meta property="og:image" content="https://sagameda.com/static/og-image.jpg">
     {{template "head"}}
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" onerror="window.qrcodeLoadFailed=true"></script>
+    {{if .MidtransClientKey}}
+    <script src="{{if .MidtransIsProd}}https://app.midtrans.com/snap/snap.js{{else}}https://app.sandbox.midtrans.com/snap/snap.js{{end}}" data-client-key="{{.MidtransClientKey}}"></script>
+    {{end}}
 </head>
 <body class="bg-dark text-white min-h-screen">
     {{template "nav" (dict "ActivePage" "order")}}
@@ -446,8 +449,7 @@
                 const orderId = escapeHtml(orderData.order_id);
                 const amount = parseInt(orderData.amount_idr || 0).toLocaleString("id-ID");
                 const qrString = orderData.qr_string || '';
-                const payLink = orderData.qris_url || '';
-                const safePayLink = payLink && payLink.startsWith('https://') ? escapeHtml(payLink) : '#';
+                const snapToken = orderData.snap_token || '';
                 const expiryTime = orderData.expiry_time || '';
 
                 let qrisHTML = '';
@@ -459,6 +461,18 @@
                                 Scan QRIS untuk pembayaran via <strong>Midtrans</strong>
                             </p>
                             <div id="qrisCode" class="bg-white rounded-xl p-4 inline-block"></div>
+                        </div>
+                    `;
+                }
+
+                let snapButtonHTML = '';
+                if (snapToken && typeof snap !== 'undefined') {
+                    snapButtonHTML = `
+                        <div class="mt-4 mb-2">
+                            <p class="text-white/60 mb-3 text-sm">Atau bayar dengan metode lain (GoPay, OVO, DANA, Kartu Kredit, dll):</p>
+                            <button id="snapPayBtn" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-3 rounded-lg transition text-lg focus-ring">
+                                Bayar Sekarang
+                            </button>
                         </div>
                     `;
                 }
@@ -476,14 +490,31 @@
                         </div>
                         <p class="text-2xl font-bold text-primary my-4">Rp ${amount}</p>
                         ${qrisHTML}
-                        ${safePayLink !== '#' ? `
-                            <p class="text-white/60 mb-4 text-sm">Atau bayar dengan metode lain:</p>
-                            <a href="${safePayLink}" target="_blank" rel="noopener noreferrer" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-3 rounded-lg transition text-lg focus-ring">Bayar Sekarang</a>
-                        ` : ''}
+                        ${snapButtonHTML}
                         <div id="countdown" class="mt-4 text-sm text-white/40"></div>
                         <a href="/status?id=${orderNumber}" class="inline-block text-white/60 hover:text-primary text-sm mt-4 focus-ring">Cek Status Order &rarr;</a>
                     </div>
                 `;
+
+                if (snapToken && typeof snap !== 'undefined') {
+                    document.getElementById('snapPayBtn').addEventListener('click', () => {
+                        snap.pay(snapToken, {
+                            onSuccess: function(result) {
+                                showToast('Pembayaran berhasil! Order sedang diproses.', 'success');
+                                setTimeout(() => window.location.href = `/status?id=${orderNumber}`, 1500);
+                            },
+                            onPending: function(result) {
+                                showToast('Pembayaran pending. Silakan cek status order.', 'warning');
+                            },
+                            onError: function(result) {
+                                showToast('Pembayaran gagal. Silakan coba lagi.', 'error');
+                            },
+                            onClose: function() {
+                                showToast('Popup pembayaran ditutup.', 'info');
+                            }
+                        });
+                    });
+                }
 
                 if (qrString && typeof QRCode !== 'undefined' && !window.qrcodeLoadFailed) {
                     try {
