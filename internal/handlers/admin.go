@@ -490,6 +490,13 @@ func (h *AdminHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	cacheKey := fmt.Sprintf("analytics:%d", days)
+	var cached map[string]any
+	if h.cache.Get(r.Context(), cacheKey, &cached) {
+		apperrors.WriteSuccess(w, http.StatusOK, cached, middleware.GetRequestID(r.Context()))
+		return
+	}
+
 	endDate := time.Now().Truncate(24 * time.Hour).Add(24 * time.Hour)
 	startDate := endDate.AddDate(0, 0, -days)
 
@@ -514,12 +521,14 @@ func (h *AdminHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
+	result := map[string]any{
 		"daily_revenue": dailyRevenue,
 		"top_games":     topGames,
 		"overall":       overall,
 		"period":        map[string]string{"start": startDate.Format("2006-01-02"), "end": endDate.Format("2006-01-02")},
-	}, middleware.GetRequestID(r.Context()))
+	}
+	h.cache.Set(r.Context(), cacheKey, result, 5*time.Minute)
+	apperrors.WriteSuccess(w, http.StatusOK, result, middleware.GetRequestID(r.Context()))
 }
 
 func (h *AdminHandler) GetRetryQueueStats(w http.ResponseWriter, r *http.Request) {

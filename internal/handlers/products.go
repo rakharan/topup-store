@@ -46,7 +46,7 @@ func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.cache.Set(r.Context(), cacheKey, products, 5*time.Minute)
+	h.cache.Set(r.Context(), cacheKey, products, 1*time.Hour)
 	apperrors.WriteSuccess(w, http.StatusOK, products, middleware.GetRequestID(r.Context()))
 }
 
@@ -66,6 +66,6 @@ func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.cache.Set(r.Context(), cacheKey, product, 5*time.Minute)
+	h.cache.Set(r.Context(), cacheKey, product, 1*time.Hour)
 	apperrors.WriteSuccess(w, http.StatusOK, product, middleware.GetRequestID(r.Context()))
 }
