@@ -16,6 +16,12 @@
 
     <main id="main-content" class="max-w-lg mx-auto px-4 py-12">
         <h1 class="text-3xl font-bold mb-8 text-center">Buat Order</h1>
+        <div class="text-center mb-4">
+            <p class="text-xs text-white/40 flex items-center justify-center gap-1.5">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Pembayaran aman & terpercaya via <strong class="text-white/60">Midtrans</strong>
+            </p>
+        </div>
         <form id="orderForm" class="space-y-5">
             <div>
                 <label class="block text-sm font-medium text-white/70 mb-1" for="game">Game</label>
@@ -448,7 +454,10 @@
                 if (qrString) {
                     qrisHTML = `
                         <div class="mb-6">
-                            <p class="text-white/60 mb-3 text-sm">Scan QR ini untuk pembayaran:</p>
+                            <p class="text-white/60 mb-3 text-sm flex items-center justify-center gap-1.5">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                Scan QRIS untuk pembayaran via <strong>Midtrans</strong>
+                            </p>
                             <div id="qrisCode" class="bg-white rounded-xl p-4 inline-block"></div>
                         </div>
                     `;
