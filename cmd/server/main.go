@@ -132,7 +132,7 @@ func main() {
 	timeoutDuration := mustParseDuration(cfg.RequestTimeout)
 	r.Use(middleware.Timeout(timeoutDuration))
 
-	rateLimiter := middleware.NewRateLimiter(100, time.Minute)
+	rateLimiter := middleware.NewRateLimiter(200, time.Minute)
 	if cacheStore != nil && cacheStore.Client() != nil {
 		rateLimiter.WithRedis(cacheStore.Client())
 	}
@@ -165,7 +165,7 @@ func main() {
 			}
 		}
 		r.Use(middleware.CORS(allowedOrigins))
-		orderRateLimiter := middleware.NewRateLimiter(5, time.Minute)
+		orderRateLimiter := middleware.NewRateLimiter(30, time.Minute)
 		if cacheStore != nil && cacheStore.Client() != nil {
 			orderRateLimiter.WithRedis(cacheStore.Client())
 		}
@@ -179,14 +179,14 @@ func main() {
 		r.Get("/products/{id}", products.GetProduct)
 	})
 
-	webhookRateLimiter := middleware.NewRateLimiter(20, time.Minute)
+	webhookRateLimiter := middleware.NewRateLimiter(60, time.Minute)
 	if cacheStore != nil && cacheStore.Client() != nil {
 		webhookRateLimiter.WithRedis(cacheStore.Client())
 	}
 	r.With(webhookRateLimiter.Middleware).Post("/webhook/midtrans", webhook.Midtrans)
 	r.With(webhookRateLimiter.Middleware).Post("/webhook/digiflazz", webhook.Digiflazz)
 
-	adminRateLimiter := middleware.NewRateLimiter(30, time.Minute)
+	adminRateLimiter := middleware.NewRateLimiter(100, time.Minute)
 	if cacheStore != nil && cacheStore.Client() != nil {
 		adminRateLimiter.WithRedis(cacheStore.Client())
 	}

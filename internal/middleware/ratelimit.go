@@ -142,6 +142,12 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
+		// Static assets should not count against rate limits
+		if strings.HasPrefix(r.URL.Path, "/static/") || r.URL.Path == "/favicon.ico" || r.URL.Path == "/robots.txt" || r.URL.Path == "/sitemap.xml" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		ip := extractIP(r)
 
 		if rl.allowedIPs[ip] {
