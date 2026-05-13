@@ -1,6 +1,12 @@
 <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" rx="12" fill="#FF6B00"/>
-  <path d="M20 44V28l12-8 12 8v16" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M28 44v-12h8v12" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="32" cy="24" r="4" fill="white"/>
+  <rect width="64" height="64" rx="12" fill="url(#ff-grad)"/>
+  <defs>
+    <linearGradient id="ff-grad" x1="0" y1="0" x2="64" y2="64">
+      <stop offset="0%" stop-color="#FF6B00"/>
+      <stop offset="100%" stop-color="#FF4500"/>
+    </linearGradient>
+  </defs>
+  <path d="M32 10c-8 4-14 12-14 22 0 8 4 14 10 18l4-6 4 6c6-4 10-10 10-18 0-10-6-18-14-22z" fill="white" opacity="0.95"/>
+  <path d="M32 18c-5 3-9 9-9 16 0 5 2 9 5 12l4-5 4 5c3-3 5-7 5-12 0-7-4-13-9-16z" fill="url(#ff-grad)"/>
+  <text x="32" y="38" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white" text-anchor="middle">FF</text>
 </svg>
