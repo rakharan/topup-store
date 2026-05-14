@@ -3,7 +3,6 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/topup-store/internal/apperrors"
 	"github.com/topup-store/internal/cache"
@@ -25,13 +24,7 @@ func NewProductHandler(topupSvc services.TopupServiceInterface, cache *cache.Cac
 func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	game := r.URL.Query().Get("game")
 
-	cacheKey := "products:" + game
 	var products []models.Product
-
-	if h.cache.Get(r.Context(), cacheKey, &products) {
-		apperrors.WriteSuccess(w, http.StatusOK, products, middleware.GetRequestID(r.Context()))
-		return
-	}
 
 	var err error
 	if game != "" {
@@ -46,19 +39,12 @@ func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.cache.Set(r.Context(), cacheKey, products, 1*time.Hour)
 	apperrors.WriteSuccess(w, http.StatusOK, products, middleware.GetRequestID(r.Context()))
 }
 
 func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	cacheKey := "product:" + id
 	var product *models.Product
-
-	if h.cache.Get(r.Context(), cacheKey, &product) {
-		apperrors.WriteSuccess(w, http.StatusOK, product, middleware.GetRequestID(r.Context()))
-		return
-	}
 
 	product, err := h.topupSvc.GetProduct(r.Context(), id)
 	if err != nil {
@@ -66,6 +52,5 @@ func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.cache.Set(r.Context(), cacheKey, product, 1*time.Hour)
 	apperrors.WriteSuccess(w, http.StatusOK, product, middleware.GetRequestID(r.Context()))
 }

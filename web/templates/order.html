@@ -85,7 +85,7 @@
                 <p class="text-xs text-white/40 mt-1" id="phoneHint">Format: 628xxx atau 08xxx (tanpa + atau spasi)</p>
             </div>
             <button type="submit" id="submitBtn" class="w-full bg-primary hover:bg-orange-600 disabled:bg-white/20 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 focus-ring">
-                <span id="submitText">Buat Order</span>
+                <span id="submitText">Lanjut ke Checkout Midtrans</span>
                 <svg id="submitSpinner" class="hidden animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
             </button>
         </form>
@@ -102,7 +102,7 @@
                 </div>
                 <div class="flex gap-3">
                     <button type="button" onclick="closeConfirmModal()" class="flex-1 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition focus-ring font-medium">Edit</button>
-                    <button type="button" onclick="confirmOrder()" class="flex-1 bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition focus-ring font-semibold shadow-lg shadow-primary/20">Konfirmasi</button>
+                    <button type="button" onclick="confirmOrder()" class="flex-1 bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition focus-ring font-semibold shadow-lg shadow-primary/20">Checkout</button>
                 </div>
             </div>
         </div>
@@ -433,7 +433,9 @@
         document.getElementById("gameServer").disabled = true;
         document.getElementById("phone").disabled = true;
 
-        const body = { game, product_id: productSelect.value, game_uid: gameUid, game_server: gameServer, phone };
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
+        const diamonds = parseInt(selectedOption?.dataset.diamonds || '0', 10);
+        const body = { game, product_id: productSelect.value, diamonds, game_uid: gameUid, game_server: gameServer, phone };
         try {
             const res = await fetch("/api/orders", {
                 method: "POST",
@@ -450,6 +452,7 @@
                 const amount = parseInt(orderData.amount_idr || 0).toLocaleString("id-ID");
                 const qrString = orderData.qr_string || '';
                 const snapToken = orderData.snap_token || '';
+                const snapRedirectURL = orderData.snap_redirect_url || '';
                 const expiryTime = orderData.expiry_time || '';
 
                 let qrisHTML = '';
@@ -470,10 +473,19 @@
                 if (snapToken && typeof window.snap !== 'undefined') {
                     snapButtonHTML = `
                         <div class="mt-4 mb-2">
-                            <p class="text-white/60 mb-3 text-sm">Atau bayar dengan metode lain (GoPay, OVO, DANA, Kartu Kredit, dll):</p>
+                            <p class="text-white/60 mb-3 text-sm">Bayar aman melalui <strong>Midtrans Checkout</strong> (QRIS, GoPay, Virtual Account, e-Wallet, kartu):</p>
                             <button id="snapPayBtn" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-3 rounded-lg transition text-lg focus-ring">
-                                Bayar Sekarang
+                                Checkout Midtrans
                             </button>
+                        </div>
+                    `;
+                } else if (snapRedirectURL) {
+                    snapButtonHTML = `
+                        <div class="mt-4 mb-2">
+                            <p class="text-white/60 mb-3 text-sm">Bayar aman melalui <strong>Midtrans Checkout</strong>:</p>
+                            <a href="${escapeHtml(snapRedirectURL)}" target="_blank" rel="noopener" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-3 rounded-lg transition text-lg focus-ring">
+                                Checkout Midtrans
+                            </a>
                         </div>
                     `;
                 } else if (snapToken) {
@@ -538,10 +550,10 @@
                         });
                     } catch (e) {
                         console.error("Failed to render QR code:", e);
-                        document.getElementById("qrisCode").innerHTML = '<p class="text-red-400 text-sm">Gagal memuat QR code. Gunakan tombol Bayar Sekarang.</p>';
+                        document.getElementById("qrisCode").innerHTML = '<p class="text-red-400 text-sm">Gagal memuat QR code. Gunakan tombol Checkout Midtrans.</p>';
                     }
                 } else if (qrString) {
-                    document.getElementById("qrisCode").innerHTML = '<p class="text-white/60 text-sm">QR code tidak dapat dimuat.<br>Gunakan tombol <strong>Bayar Sekarang</strong> di bawah.</p>';
+                    document.getElementById("qrisCode").innerHTML = '<p class="text-white/60 text-sm">QR code tidak dapat dimuat.<br>Gunakan tombol <strong>Checkout Midtrans</strong> di bawah.</p>';
                 }
 
                 result.querySelector('.copy-btn').addEventListener('click', () => {
@@ -607,7 +619,7 @@
             showToast(isNetworkError ? 'Koneksi bermasalah' : 'Terjadi kesalahan', 'error');
         } finally {
             submitBtn.disabled = false;
-            submitText.textContent = 'Buat Order';
+            submitText.textContent = 'Lanjut ke Checkout Midtrans';
             submitSpinner.classList.add('hidden');
             gameSelect.disabled = false;
             document.getElementById("gameUid").disabled = false;

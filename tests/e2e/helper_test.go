@@ -6,18 +6,20 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/go-chi/chi/v5"
-	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/topup-store/internal/cache"
 	"github.com/topup-store/internal/handlers"
 	"github.com/topup-store/internal/middleware"
@@ -26,9 +28,9 @@ import (
 )
 
 type TestServer struct {
-	Server   *httptest.Server
-	Pool     *pgxpool.Pool
-	Cleanup  func()
+	Server  *httptest.Server
+	Pool    *pgxpool.Pool
+	Cleanup func()
 }
 
 func SetupTestServer(t testing.TB) *TestServer {
@@ -39,28 +41,24 @@ func SetupTestServer(t testing.TB) *TestServer {
 	projectRoot := filepath.Join(filepath.Dir(filename), "..", "..")
 	os.Chdir(projectRoot)
 
-	dsn := os.Getenv("DATABASE_URL")
+	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
-		dsn = "postgres://topup:topup@localhost:5432/topup_store_test?sslmode=disable"
+		dsn = "postgres://topup:topup@localhost:5432/topup_store_e2e_test?sslmode=disable"
+	}
+	if !isTestDatabase(dsn) {
+		t.Fatalf("refusing to run e2e tests against non-test database: %s", dsn)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Use existing test database, just clean tables
+	if err := ensureTestDatabase(ctx, dsn); err != nil {
+		t.Fatalf("failed to prepare test database: %v", err)
+	}
+
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
-		// Try to create database if it doesn't exist
-		adminDSN := "postgres://topup:topup@localhost:5432/postgres?sslmode=disable"
-		adminPool, adminErr := pgxpool.New(ctx, adminDSN)
-		if adminErr == nil {
-			_, _ = adminPool.Exec(ctx, "CREATE DATABASE topup_store_test")
-			adminPool.Close()
-			pool, err = pgxpool.New(ctx, dsn)
-		}
-		if err != nil {
-			t.Fatalf("failed to connect to test database: %v", err)
-		}
+		t.Fatalf("failed to connect to test database: %v", err)
 	}
 
 	// Drop and recreate schema for clean state
@@ -91,7 +89,7 @@ func SetupTestServer(t testing.TB) *TestServer {
 	webhookRetrySvc := services.NewWebhookRetryService(pool, logger)
 
 	cacheStore, _ := cache.New("", logger)
-	
+
 	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, pool, ctx, logger)
 	products := handlers.NewProductHandler(topupSvc, cacheStore, logger)
 	_ = handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, nil, cacheStore, webhookRetrySvc, "test-admin-pass", logger)
@@ -134,4 +132,35 @@ func SetupTestServer(t testing.TB) *TestServer {
 		Pool:    pool,
 		Cleanup: func() { server.Close(); pool.Close() },
 	}
+}
+
+func isTestDatabase(dsn string) bool {
+	return strings.Contains(strings.ToLower(databaseName(dsn)), "test")
+}
+
+func databaseName(dsn string) string {
+	parsed, err := url.Parse(dsn)
+	if err != nil {
+		return dsn
+	}
+	return strings.Trim(parsed.Path, "/")
+}
+
+func ensureTestDatabase(ctx context.Context, dsn string) error {
+	dbName := databaseName(dsn)
+	parsed, err := url.Parse(dsn)
+	if err != nil {
+		return err
+	}
+	parsed.Path = "/postgres"
+	adminPool, err := pgxpool.New(ctx, parsed.String())
+	if err != nil {
+		return err
+	}
+	defer adminPool.Close()
+	_, err = adminPool.Exec(ctx, fmt.Sprintf("CREATE DATABASE %s", dbName))
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
+		return err
+	}
+	return nil
 }

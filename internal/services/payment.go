@@ -144,6 +144,11 @@ func (s *PaymentService) createSnapTransaction(order *models.Order, gameName str
 }
 
 func (s *PaymentService) CreateSnapToken(ctx context.Context, order *models.Order) (string, error) {
+	token, _, err := s.CreateSnapPayment(ctx, order)
+	return token, err
+}
+
+func (s *PaymentService) CreateSnapPayment(ctx context.Context, order *models.Order) (token, redirectURL string, err error) {
 	gameName := map[string]string{
 		"free_fire":      "Free Fire",
 		"mobile_legends": "Mobile Legends",
@@ -155,15 +160,15 @@ func (s *PaymentService) CreateSnapToken(ctx context.Context, order *models.Orde
 
 	snapResp, err := s.createSnapTransaction(order, gameName, 30)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if snapResp.Token == "" {
-		return "", fmt.Errorf("midtrans returned empty snap token")
+		return "", "", fmt.Errorf("midtrans returned empty snap token")
 	}
 
 	s.logger.Info("snap token generated", slog.String("order_id", order.ID))
-	return snapResp.Token, nil
+	return snapResp.Token, snapResp.RedirectURL, nil
 }
 
 func (s *PaymentService) GetOrderByMidtransID(ctx context.Context, midtransOrderID string) (*models.Order, error) {

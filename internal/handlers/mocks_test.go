@@ -21,6 +21,9 @@ type mockPaymentService struct {
 	createQRISString       string
 	createQRISExpiry       string
 	createQRISErr          error
+	createSnapToken        string
+	createSnapRedirectURL  string
+	createSnapErr          error
 	getByUIDPhoneResult    *models.Order
 	getByUIDPhoneErr       error
 	cancelTransactionErr   error
@@ -55,7 +58,11 @@ func (m *mockPaymentService) CreateQRIS(ctx context.Context, order *models.Order
 }
 
 func (m *mockPaymentService) CreateSnapToken(ctx context.Context, order *models.Order) (string, error) {
-	return "", nil
+	return m.createSnapToken, m.createSnapErr
+}
+
+func (m *mockPaymentService) CreateSnapPayment(ctx context.Context, order *models.Order) (string, string, error) {
+	return m.createSnapToken, m.createSnapRedirectURL, m.createSnapErr
 }
 
 func (m *mockPaymentService) GetOrderByUIDAndPhone(ctx context.Context, gameUID, phone string) (*models.Order, error) {

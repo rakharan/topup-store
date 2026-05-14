@@ -3,10 +3,17 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/topup-store/internal/db"
@@ -18,11 +25,20 @@ var testPool *pgxpool.Pool
 func TestMain(m *testing.M) {
 	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
-		dsn = "postgres://topup:topup@localhost:5432/topup_store?sslmode=disable"
+		dsn = "postgres://topup:topup@localhost:5432/topup_store_repo_test?sslmode=disable"
+	}
+	if !isTestDatabase(dsn) {
+		fmt.Fprintf(os.Stderr, "REFUSING: repository tests require a test database, got %q\n", dsn)
+		os.Exit(1)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	if err := ensureTestDatabase(ctx, dsn); err != nil {
+		fmt.Fprintf(os.Stderr, "SKIP: cannot prepare test database: %v\n", err)
+		os.Exit(0)
+	}
 
 	pool, err := db.NewPool(ctx, db.PoolConfig{
 		DSN:      dsn,
@@ -35,9 +51,59 @@ func TestMain(m *testing.M) {
 	}
 	testPool = pool
 
+	if err := migrateTestDatabase(dsn); err != nil {
+		fmt.Fprintf(os.Stderr, "SKIP: cannot migrate test database: %v\n", err)
+		pool.Close()
+		os.Exit(0)
+	}
+
 	code := m.Run()
 	pool.Close()
 	os.Exit(code)
+}
+
+func isTestDatabase(dsn string) bool {
+	return strings.Contains(strings.ToLower(databaseName(dsn)), "test")
+}
+
+func databaseName(dsn string) string {
+	parsed, err := url.Parse(dsn)
+	if err != nil {
+		return dsn
+	}
+	return strings.Trim(parsed.Path, "/")
+}
+
+func ensureTestDatabase(ctx context.Context, dsn string) error {
+	dbName := databaseName(dsn)
+	parsed, err := url.Parse(dsn)
+	if err != nil {
+		return err
+	}
+	parsed.Path = "/postgres"
+	adminPool, err := pgxpool.New(ctx, parsed.String())
+	if err != nil {
+		return err
+	}
+	defer adminPool.Close()
+	_, err = adminPool.Exec(ctx, fmt.Sprintf("CREATE DATABASE %s", dbName))
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
+		return err
+	}
+	return nil
+}
+
+func migrateTestDatabase(dsn string) error {
+	_, filename, _, _ := runtime.Caller(0)
+	migrationsPath := filepath.Join(filepath.Dir(filename), "..", "..", "migrations")
+	m, err := migrate.New("file://"+filepath.ToSlash(migrationsPath), dsn)
+	if err != nil {
+		return err
+	}
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+	return nil
 }
 
 func withCleanTables(t *testing.T, fn func(ctx context.Context)) {

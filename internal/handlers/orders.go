@@ -74,6 +74,9 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	if req.ProductID != "" {
 		product, err = h.topupSvc.GetProduct(r.Context(), req.ProductID)
+		if err != nil && req.Diamonds > 0 {
+			product, err = h.topupSvc.GetProductByGameAndDiamonds(r.Context(), req.Game, req.Diamonds)
+		}
 	} else {
 		product, err = h.topupSvc.GetProductByGameAndDiamonds(r.Context(), req.Game, req.Diamonds)
 	}
@@ -138,7 +141,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Try Snap first (snap token does not conflict with Core API)
-	snapToken, snapErr := h.paymentSvc.CreateSnapToken(r.Context(), order)
+	snapToken, snapRedirectURL, snapErr := h.paymentSvc.CreateSnapPayment(r.Context(), order)
 	if snapErr != nil {
 		h.logger.Warn("create snap token failed", slog.String("order_id", orderID), slog.String("error", snapErr.Error()))
 	}
@@ -157,9 +160,15 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	orderCopy := *order
 	productCopy := *product
-	qrisURLCopy := qrisURL
+	paymentLink := qrisURL
+	if paymentLink == "" {
+		paymentLink = snapRedirectURL
+	}
+	if paymentLink == "" {
+		paymentLink = "https://sagameda.com/status?id=" + orderNumber
+	}
 	if qrString != "" {
-		qrisURLCopy = "QRIS QR String available"
+		paymentLink = "https://sagameda.com/status?id=" + orderNumber
 	}
 	go func() {
 		defer func() {
@@ -169,19 +178,20 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		}()
 		ctx, cancel := context.WithTimeout(h.rootCtx, 10*time.Second)
 		defer cancel()
-		if err := h.notifySvc.SendOrderConfirmation(ctx, &orderCopy, &productCopy, orderCopy.UserPhone, qrisURLCopy); err != nil {
+		if err := h.notifySvc.SendOrderConfirmation(ctx, &orderCopy, &productCopy, orderCopy.UserPhone, paymentLink); err != nil {
 			h.logger.Error("failed to send notification", slog.String("order_id", orderCopy.ID), slog.String("error", err.Error()))
 		}
 	}()
 
 	apperrors.WriteSuccess(w, http.StatusCreated, map[string]any{
-		"order_id":     orderID,
-		"order_number": orderNumber,
-		"amount_idr":   order.AmountIDR,
-		"qr_string":    qrString,
-		"qris_url":     qrisURL,
-		"snap_token":   snapToken,
-		"expiry_time":  expiryTime,
+		"order_id":          orderID,
+		"order_number":      orderNumber,
+		"amount_idr":        order.AmountIDR,
+		"qr_string":         qrString,
+		"qris_url":          qrisURL,
+		"snap_token":        snapToken,
+		"snap_redirect_url": snapRedirectURL,
+		"expiry_time":       expiryTime,
 	}, middleware.GetRequestID(r.Context()))
 }
 

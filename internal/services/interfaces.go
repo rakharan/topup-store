@@ -15,6 +15,7 @@ type PaymentServiceInterface interface {
 	ListOrders(ctx context.Context, page, perPage int) ([]models.Order, int, error)
 	CreateQRIS(ctx context.Context, order *models.Order) (qrString, qrisURL, expiryTime string, err error)
 	CreateSnapToken(ctx context.Context, order *models.Order) (string, error)
+	CreateSnapPayment(ctx context.Context, order *models.Order) (token, redirectURL string, err error)
 	GetOrderByUIDAndPhone(ctx context.Context, gameUID, phone string) (*models.Order, error)
 	RecordStatusChange(ctx context.Context, orderID, fromStatus, toStatus, reason string) error
 	GetOrderStatusHistory(ctx context.Context, orderID string) ([]models.OrderStatusHistory, error)
