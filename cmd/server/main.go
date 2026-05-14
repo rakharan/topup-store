@@ -151,7 +151,7 @@ func main() {
 	r.Use(middleware.SecurityHeaders)
 
 	r.Get("/health", healthHandler(pool))
-	r.Get("/ready", readyHandler(pool, cacheStore))
+	r.Get("/ready", readyHandler(pool, cacheStore, cfg))
 	r.Get("/metrics", metricsMW.Handler())
 
 	r.Get("/", pages.Home)
@@ -330,15 +330,11 @@ func healthHandler(pool interface{ Ping(context.Context) error }) http.HandlerFu
 	}
 }
 
-type readinessChecker interface {
-	Ping(context.Context) error
-}
-
 type cacheChecker interface {
 	IsEnabled() bool
 }
 
-func readyHandler(pool readinessChecker, cache cacheChecker) http.HandlerFunc {
+func readyHandler(pool *pgxpool.Pool, cache cacheChecker, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 		defer cancel()
@@ -352,11 +348,41 @@ func readyHandler(pool readinessChecker, cache cacheChecker) http.HandlerFunc {
 			return
 		}
 
+		var productCount int
+		if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM products WHERE is_active = true AND deleted_at IS NULL`).Scan(&productCount); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			json.NewEncoder(w).Encode(map[string]any{
+				"status":   "not ready",
+				"database": "connected",
+				"products": "error",
+			})
+			return
+		}
+
+		warnings := []string{}
+		if productCount == 0 {
+			warnings = append(warnings, "no active products")
+		}
+		if cfg.MidtransClientKey == "" {
+			warnings = append(warnings, "MIDTRANS_CLIENT_KEY is not configured")
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(map[string]any{
-			"status":   "ready",
-			"database": "connected",
-			"cache":    cache.IsEnabled(),
+			"status": "ready",
+			"checks": map[string]any{
+				"database":        "connected",
+				"cache_enabled":   cache.IsEnabled(),
+				"active_products": productCount,
+			},
+			"config": map[string]bool{
+				"midtrans_server_key": cfg.MidtransServerKey != "",
+				"midtrans_client_key": cfg.MidtransClientKey != "",
+				"midtrans_production": cfg.MidtransIsProd,
+				"digiflazz":           cfg.DigiflazzUsername != "" && cfg.DigiflazzAPIKey != "",
+				"fonnte":              cfg.FonnteToken != "",
+			},
+			"warnings": warnings,
 		}); err != nil {
 			slog.Error("readyHandler: failed to encode response", slog.String("error", err.Error()))
 		}

@@ -53,5 +53,6 @@ If running from the VPS, make sure the command can reach the exposed Postgres po
 ```bash
 curl -I https://sagameda.com/order
 curl https://sagameda.com/health
+curl https://sagameda.com/ready
 docker compose exec postgres psql -U topup -d topup_store -c "select game, count(*) from products group by game order by game;"
 ```
