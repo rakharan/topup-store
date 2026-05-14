@@ -206,6 +206,7 @@ func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
 		apperrors.WriteError(w, http.StatusNotFound, apperrors.ErrNotFound, middleware.GetRequestID(r.Context()))
 		return
 	}
+	h.expirePendingOrderIfNeeded(r.Context(), order)
 
 	response := map[string]any{
 		"id":                 order.ID,
@@ -309,23 +310,23 @@ func (h *OrderHandler) CancelOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.paymentSvc.CancelTransaction(id); err != nil {
-		h.logger.Warn("cancel order: midtrans cancel failed (may be already expired)", slog.String("order_id", id), slog.String("error", err.Error()))
+	if err := h.paymentSvc.CancelTransaction(order.ID); err != nil {
+		h.logger.Warn("cancel order: midtrans cancel failed (may be already expired)", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 	}
 
-	if err := h.paymentSvc.UpdateOrderStatus(r.Context(), id, constants.StatusCancelled); err != nil {
-		h.logger.Error("cancel order: update status failed", slog.String("order_id", id), slog.String("error", err.Error()))
+	if err := h.paymentSvc.UpdateOrderStatus(r.Context(), order.ID, constants.StatusCancelled); err != nil {
+		h.logger.Error("cancel order: update status failed", slog.String("order_id", order.ID), slog.String("error", err.Error()))
 		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
 		return
 	}
 
-	if order.StockReserved {
+	if order.StockReserved && h.topupSvc != nil {
 		if err := h.topupSvc.IncrementProductStock(r.Context(), order.ProductID); err != nil {
 			h.logger.Warn("cancel order: failed to restore stock", slog.String("order_id", id), slog.String("product_id", order.ProductID), slog.String("error", err.Error()))
 		}
 	}
 
-	h.paymentSvc.RecordStatusChange(r.Context(), id, order.Status, constants.StatusCancelled, "user cancelled")
+	h.paymentSvc.RecordStatusChange(r.Context(), order.ID, order.Status, constants.StatusCancelled, "user cancelled")
 
 	orderCopy := *order
 	go func() {
@@ -344,6 +345,35 @@ func (h *OrderHandler) CancelOrder(w http.ResponseWriter, r *http.Request) {
 		"status":  "ok",
 		"message": "order cancelled",
 	}, middleware.GetRequestID(r.Context()))
+}
+
+func (h *OrderHandler) expirePendingOrderIfNeeded(ctx context.Context, order *models.Order) {
+	if order == nil || order.Status != constants.StatusPending || order.CreatedAt.IsZero() {
+		return
+	}
+	if time.Since(order.CreatedAt) < 30*time.Minute {
+		return
+	}
+
+	updated, err := h.paymentSvc.UpdateOrderStatusIf(ctx, order.ID, constants.StatusExpired, constants.StatusPending)
+	if err != nil {
+		h.logger.Warn("get order: failed to expire stale pending order", slog.String("order_id", order.ID), slog.String("error", err.Error()))
+		return
+	}
+	if !updated {
+		return
+	}
+
+	if order.StockReserved {
+		if err := h.topupSvc.IncrementProductStock(ctx, order.ProductID); err != nil {
+			h.logger.Warn("get order: failed to restore stock for expired order", slog.String("order_id", order.ID), slog.String("product_id", order.ProductID), slog.String("error", err.Error()))
+		}
+	}
+	if err := h.paymentSvc.CancelTransaction(order.ID); err != nil {
+		h.logger.Warn("get order: midtrans cancel failed for expired order", slog.String("order_id", order.ID), slog.String("error", err.Error()))
+	}
+	h.paymentSvc.RecordStatusChange(ctx, order.ID, constants.StatusPending, constants.StatusExpired, "expired during status check")
+	order.Status = constants.StatusExpired
 }
 
 var (
