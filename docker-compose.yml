@@ -47,9 +47,6 @@ services:
       - topup-network
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
     image: sagameda/topup-store-app:latest
     restart: unless-stopped
     ports:
@@ -75,9 +72,6 @@ services:
       - topup-network
 
   whatsapp-bot:
-    build:
-      context: ./whatsapp-bot
-      dockerfile: Dockerfile
     image: sagameda/topup-store-whatsapp-bot:latest
     restart: unless-stopped
     ports:
