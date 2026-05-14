@@ -208,25 +208,27 @@ func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]any{
-		"id":                order.ID,
-		"order_number":      order.OrderNumber,
-		"product_id":        order.ProductID,
-		"user_phone":        order.UserPhone,
-		"game_uid":          order.GameUID,
-		"game_server":       order.GameServer,
-		"amount_idr":        order.AmountIDR,
-		"status":            order.Status,
-		"midtrans_order_id": order.MidtransOrderID,
-		"channel":           order.Channel,
-		"serial_number":     order.SerialNumber,
-		"digiflazz_ref_id":  order.DigiflazzRefID,
-		"stock_reserved":    order.StockReserved,
-		"created_at":        order.CreatedAt,
-		"updated_at":        order.UpdatedAt,
-		"snap_token":        "",
-		"snap_redirect_url": "",
+		"id":                 order.ID,
+		"order_number":       order.OrderNumber,
+		"product_id":         order.ProductID,
+		"user_phone":         order.UserPhone,
+		"game_uid":           order.GameUID,
+		"game_server":        order.GameServer,
+		"amount_idr":         order.AmountIDR,
+		"status":             order.Status,
+		"midtrans_order_id":  order.MidtransOrderID,
+		"channel":            order.Channel,
+		"serial_number":      order.SerialNumber,
+		"digiflazz_ref_id":   order.DigiflazzRefID,
+		"stock_reserved":     order.StockReserved,
+		"created_at":         order.CreatedAt,
+		"updated_at":         order.UpdatedAt,
+		"payment_expires_at": nil,
+		"snap_token":         "",
+		"snap_redirect_url":  "",
 	}
 	if order.Status == constants.StatusPending {
+		response["payment_expires_at"] = order.CreatedAt.Add(30 * time.Minute)
 		if snapData, err := h.paymentSvc.GetOrderSnap(r.Context(), order.ID); err == nil && snapData != nil {
 			response["snap_token"] = snapData.SnapToken
 			response["snap_redirect_url"] = snapData.SnapRedirectURL
