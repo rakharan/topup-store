@@ -82,6 +82,14 @@ func (m *mockOrderRepo) GetQRIS(ctx context.Context, orderID string) (*models.Or
 	return nil, nil
 }
 
+func (m *mockOrderRepo) UpsertSnap(ctx context.Context, orderID, snapToken, snapRedirectURL string) error {
+	return nil
+}
+
+func (m *mockOrderRepo) GetSnap(ctx context.Context, orderID string) (*models.OrderSnap, error) {
+	return nil, nil
+}
+
 func (m *mockOrderRepo) InsertStatusHistory(ctx context.Context, orderID, fromStatus, toStatus, reason string) error {
 	return nil
 }

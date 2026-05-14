@@ -158,6 +158,27 @@ func (r *PGOrderRepository) GetQRIS(ctx context.Context, orderID string) (*model
 	return &qris, nil
 }
 
+func (r *PGOrderRepository) UpsertSnap(ctx context.Context, orderID, snapToken, snapRedirectURL string) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO order_snap (order_id, snap_token, snap_redirect_url)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (order_id) DO UPDATE SET snap_token = $2, snap_redirect_url = $3, updated_at = NOW()
+	`, orderID, snapToken, snapRedirectURL)
+	return err
+}
+
+func (r *PGOrderRepository) GetSnap(ctx context.Context, orderID string) (*models.OrderSnap, error) {
+	var snap models.OrderSnap
+	err := r.pool.QueryRow(ctx, `
+		SELECT order_id, snap_token, snap_redirect_url, created_at, updated_at
+		FROM order_snap WHERE order_id = $1
+	`, orderID).Scan(&snap.OrderID, &snap.SnapToken, &snap.SnapRedirectURL, &snap.CreatedAt, &snap.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &snap, nil
+}
+
 func (r *PGOrderRepository) List(ctx context.Context, page, perPage int) ([]models.Order, int, error) {
 	if page < 1 {
 		page = 1

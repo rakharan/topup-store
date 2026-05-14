@@ -222,6 +222,14 @@ func (s *PaymentService) GetOrderQRIS(ctx context.Context, orderID string) (*mod
 	return s.orderRepo.GetQRIS(ctx, orderID)
 }
 
+func (s *PaymentService) SaveOrderSnap(ctx context.Context, orderID, snapToken, snapRedirectURL string) error {
+	return s.orderRepo.UpsertSnap(ctx, orderID, snapToken, snapRedirectURL)
+}
+
+func (s *PaymentService) GetOrderSnap(ctx context.Context, orderID string) (*models.OrderSnap, error) {
+	return s.orderRepo.GetSnap(ctx, orderID)
+}
+
 func (s *PaymentService) CancelTransaction(orderID string) error {
 	resp, mErr := s.core.CancelTransaction(orderID)
 	if mErr != nil {

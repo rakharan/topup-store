@@ -46,6 +46,14 @@ type OrderQRIS struct {
 	CreatedAt       time.Time  `json:"created_at"`
 }
 
+type OrderSnap struct {
+	OrderID         string    `json:"order_id"`
+	SnapToken       string    `json:"snap_token"`
+	SnapRedirectURL string    `json:"snap_redirect_url"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
 type OrderStatusHistory struct {
 	ID         string    `json:"id"`
 	OrderID    string    `json:"order_id"`

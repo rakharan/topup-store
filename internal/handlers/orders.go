@@ -144,6 +144,10 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	snapToken, snapRedirectURL, snapErr := h.paymentSvc.CreateSnapPayment(r.Context(), order)
 	if snapErr != nil {
 		h.logger.Warn("create snap token failed", slog.String("order_id", orderID), slog.String("error", snapErr.Error()))
+	} else if snapRedirectURL != "" {
+		if err := h.paymentSvc.SaveOrderSnap(r.Context(), order.ID, snapToken, snapRedirectURL); err != nil {
+			h.logger.Warn("save snap checkout failed", slog.String("order_id", orderID), slog.String("error", err.Error()))
+		}
 	}
 
 	qrString, qrisURL, expiryTime, err := h.paymentSvc.CreateQRIS(r.Context(), order)
@@ -202,7 +206,33 @@ func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
 		apperrors.WriteError(w, http.StatusNotFound, apperrors.ErrNotFound, middleware.GetRequestID(r.Context()))
 		return
 	}
-	apperrors.WriteSuccess(w, http.StatusOK, order, middleware.GetRequestID(r.Context()))
+
+	response := map[string]any{
+		"id":                order.ID,
+		"order_number":      order.OrderNumber,
+		"product_id":        order.ProductID,
+		"user_phone":        order.UserPhone,
+		"game_uid":          order.GameUID,
+		"game_server":       order.GameServer,
+		"amount_idr":        order.AmountIDR,
+		"status":            order.Status,
+		"midtrans_order_id": order.MidtransOrderID,
+		"channel":           order.Channel,
+		"serial_number":     order.SerialNumber,
+		"digiflazz_ref_id":  order.DigiflazzRefID,
+		"stock_reserved":    order.StockReserved,
+		"created_at":        order.CreatedAt,
+		"updated_at":        order.UpdatedAt,
+		"snap_token":        "",
+		"snap_redirect_url": "",
+	}
+	if order.Status == constants.StatusPending {
+		if snapData, err := h.paymentSvc.GetOrderSnap(r.Context(), order.ID); err == nil && snapData != nil {
+			response["snap_token"] = snapData.SnapToken
+			response["snap_redirect_url"] = snapData.SnapRedirectURL
+		}
+	}
+	apperrors.WriteSuccess(w, http.StatusOK, response, middleware.GetRequestID(r.Context()))
 }
 
 func (h *OrderHandler) ListOrders(w http.ResponseWriter, r *http.Request) {

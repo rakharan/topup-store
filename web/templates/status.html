@@ -99,6 +99,10 @@
 
     let refreshInterval = null;
 
+    function safeText(value) {
+        return escapeHtml(String(value ?? ''));
+    }
+
     function switchTab(tab) {
         document.getElementById('statusForm').classList.toggle('hidden', tab !== 'orderId');
         document.getElementById('phoneForm').classList.toggle('hidden', tab !== 'phone');
@@ -142,10 +146,10 @@
                 const badgeClass = statusColors[order.status] || "bg-white/10 text-white";
                 const label = statusLabels[order.status] || order.status;
                 html += `
-                    <a href="/status?id=${escapeHtml(order.id)}" class="block bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition">
+                    <a href="/status?id=${encodeURIComponent(order.order_number || order.id)}" class="block bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition">
                         <div class="flex items-center justify-between mb-2">
-                            <span class="font-mono text-sm text-white/60">${escapeHtml(order.order_number || order.id.substring(0, 8))}</span>
-                            <span class="px-2 py-1 rounded-full text-xs font-medium border ${badgeClass}">${escapeHtml(label)}</span>
+                            <span class="font-mono text-sm text-white/60">${safeText(order.order_number || order.id.substring(0, 8))}</span>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium border ${badgeClass}">${safeText(label)}</span>
                         </div>
                         <div class="text-sm text-white/70">Rp ${parseInt(order.amount_idr || 0).toLocaleString('id-ID')}</div>
                         <div class="text-xs text-white/40 mt-1">${new Date(order.created_at).toLocaleString('id-ID')}</div>
@@ -196,7 +200,8 @@
         if (refreshInterval) clearInterval(refreshInterval);
 
         try {
-            const res = await fetch(`/api/orders/${orderId}`);
+            const lookupId = String(orderId || '').trim();
+            const res = await fetch(`/api/orders/${encodeURIComponent(lookupId)}`);
             skeleton.classList.add("hidden");
             if (!res.ok) {
                 result.classList.remove("hidden");
@@ -217,19 +222,21 @@
             const label = statusLabels[order.status] || order.status;
 
             result.classList.remove("hidden");
-            const orderId = escapeHtml(order.id);
-            const gameUid = escapeHtml(order.game_uid || '');
-            const gameServer = escapeHtml(order.game_server || '');
+            const rawOrderId = String(order.id || lookupId);
+            const displayOrderId = order.order_number || rawOrderId;
+            const gameUid = safeText(order.game_uid);
+            const gameServer = safeText(order.game_server);
             const amount = parseInt(order.amount_idr || 0).toLocaleString("id-ID");
             const createdAt = new Date(order.created_at).toLocaleString("id-ID");
-            const serialNumber = order.serial_number ? escapeHtml(order.serial_number) : '';
-            const qrisUrl = order.qris_url && order.qris_url.startsWith('https://') ? escapeHtml(order.qris_url) : '';
+            const serialNumber = order.serial_number ? safeText(order.serial_number) : '';
+            const qrisUrl = order.qris_url && order.qris_url.startsWith('https://') ? safeText(order.qris_url) : '';
+            const snapRedirectURL = order.snap_redirect_url && order.snap_redirect_url.startsWith('https://') ? safeText(order.snap_redirect_url) : '';
 
             result.innerHTML = `
                 <div class="animate-fade-in">
                     <div class="flex items-center justify-between mb-4">
-                        <span class="font-mono text-sm text-white/60">${orderId}</span>
-                        <span class="px-3 py-1 rounded-full text-sm font-medium border ${badgeClass}">${escapeHtml(label)}</span>
+                        <span class="font-mono text-sm text-white/60">${safeText(displayOrderId)}</span>
+                        <span class="px-3 py-1 rounded-full text-sm font-medium border ${badgeClass}">${safeText(label)}</span>
                     </div>
                     <div class="space-y-3 mb-6" aria-label="Order status timeline">
                         ${renderTimeline(order.status)}
@@ -237,7 +244,7 @@
                     <div class="space-y-2 text-sm border-t border-white/10 pt-4">
                         <div class="flex justify-between"><span class="text-white/70">Game UID</span><span>${gameUid}${gameServer ? ' (' + gameServer + ')' : ''}</span></div>
                         <div class="flex justify-between"><span class="text-white/70">Total</span><span>Rp ${amount}</span></div>
-                        <div class="flex justify-between"><span class="text-white/70">Dibuat</span><span>${escapeHtml(createdAt)}</span></div>
+                        <div class="flex justify-between"><span class="text-white/70">Dibuat</span><span>${safeText(createdAt)}</span></div>
                         ${serialNumber ? `<div class="flex justify-between"><span class="text-white/70">Serial Number</span><span class="font-mono">${serialNumber}</span></div>` : ''}
                     </div>
                     ${order.status === 'pending' && qrisUrl ? `
@@ -245,9 +252,15 @@
                             <p class="text-sm text-white/60 mb-3">Scan QRIS untuk membayar</p>
                             <a href="${qrisUrl}" target="_blank" rel="noopener noreferrer" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg transition focus-ring mb-3">Bayar Sekarang</a>
                             <div class="flex justify-center gap-3">
-                                <button onclick="copyLink('${orderId}')" class="text-sm text-primary hover:underline focus-ring">Salin Link</button>
-                                <button onclick="cancelOrder('${orderId}')" class="text-sm text-red-400 hover:underline focus-ring">Batalkan</button>
+                                <button onclick="copyLink('${safeText(displayOrderId)}')" class="text-sm text-primary hover:underline focus-ring">Salin Link</button>
+                                <button onclick="cancelOrder('${safeText(rawOrderId)}')" class="text-sm text-red-400 hover:underline focus-ring">Batalkan</button>
                             </div>
+                        </div>
+                    ` : ''}
+                    ${order.status === 'pending' && snapRedirectURL ? `
+                        <div class="mt-4 pt-4 border-t border-white/10 text-center">
+                            <p class="text-sm text-white/60 mb-3">Lanjutkan pembayaran melalui Midtrans Checkout</p>
+                            <a href="${snapRedirectURL}" target="_blank" rel="noopener noreferrer" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg transition focus-ring mb-3">Checkout Midtrans</a>
                         </div>
                     ` : ''}
                     ${order.status === 'cancelled' ? `
@@ -270,7 +283,7 @@
                     if (refreshInterval) clearInterval(refreshInterval);
                     document.getElementById('autoRefresh').classList.add('hidden');
                 });
-                refreshInterval = setInterval(() => fetchOrder(orderId), 10000);
+                refreshInterval = setInterval(() => fetchOrder(rawOrderId), 10000);
                 window.addEventListener('beforeunload', () => {
                     if (refreshInterval) clearInterval(refreshInterval);
                 });
@@ -288,9 +301,11 @@
                 <div class="text-center py-4">
                     <div class="text-red-400 text-4xl mb-3" aria-hidden="true">&#x26A0;</div>
                     <p class="text-red-400 mb-4">${msg}</p>
-                    <button onclick="fetchOrder('${escapeHtml(orderId)}')" class="bg-primary hover:bg-orange-600 text-white font-semibold px-6 py-2 rounded-lg transition focus-ring">Coba Lagi</button>
+                    <button id="retryFetchOrder" class="bg-primary hover:bg-orange-600 text-white font-semibold px-6 py-2 rounded-lg transition focus-ring">Coba Lagi</button>
                 </div>
             `;
+            const retryBtn = document.getElementById('retryFetchOrder');
+            if (retryBtn) retryBtn.addEventListener('click', () => fetchOrder(orderId));
             autoRefresh.classList.add("hidden");
         }
     }
