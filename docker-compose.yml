@@ -71,6 +71,19 @@ services:
     networks:
       - topup-network
 
+  seed:
+    image: sagameda/topup-store-app:latest
+    profiles: ["tools"]
+    env_file: .env
+    command: ["./server", "seed-products"]
+    environment:
+      DATABASE_URL: postgres://topup:topup@postgres:5432/topup_store?sslmode=disable
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - topup-network
+
   whatsapp-bot:
     image: sagameda/topup-store-whatsapp-bot:latest
     restart: unless-stopped

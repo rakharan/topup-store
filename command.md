@@ -34,7 +34,13 @@ docker compose run --rm migrate
 
 ## Seed products if DB is empty
 
-Use this from a shell with Go installed:
+Use this on the VPS:
+
+```bash
+docker compose run --rm seed
+```
+
+Alternative from a shell with Go installed:
 
 ```bash
 DATABASE_URL='postgres://topup:topup@localhost:5432/topup_store?sslmode=disable' go run ./db/seed.go

@@ -17,6 +17,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/topup-store/internal/cache"
 	"github.com/topup-store/internal/config"
 	"github.com/topup-store/internal/constants"
@@ -25,12 +26,21 @@ import (
 	"github.com/topup-store/internal/middleware"
 	"github.com/topup-store/internal/models"
 	"github.com/topup-store/internal/repositories"
+	"github.com/topup-store/internal/seed"
 	"github.com/topup-store/internal/services"
 )
 
 var startTime = time.Now()
 
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "seed-products":
+			runSeedProducts()
+			return
+		}
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("Failed to load config", slog.String("error", err.Error()))
@@ -594,6 +604,34 @@ func mustParseDuration(s string) time.Duration {
 	return d
 }
 
+func runSeedProducts() {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		slog.Error("DATABASE_URL is required")
+		os.Exit(1)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		slog.Error("failed to connect to database", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	defer pool.Close()
+
+	if err := pool.Ping(ctx); err != nil {
+		slog.Error("failed to ping database", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	if err := seed.Products(ctx, pool, os.Stdout); err != nil {
+		slog.Error("failed to seed products", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+}
+
 var allowedStaticExts = map[string]bool{
 	".css": true, ".js": true, ".svg": true, ".ico": true,
 	".png": true, ".jpg": true, ".jpeg": true, ".gif": true,
@@ -602,19 +640,19 @@ var allowedStaticExts = map[string]bool{
 }
 
 var staticCachePolicy = map[string]string{
-	".css":  "public, max-age=3600",
-	".js":   "public, max-age=3600",
-	".svg":  "public, max-age=86400",
-	".ico":  "public, max-age=86400",
-	".png":  "public, max-age=86400",
-	".jpg":  "public, max-age=86400",
-	".jpeg": "public, max-age=86400",
-	".gif":  "public, max-age=86400",
-	".woff": "public, max-age=86400",
+	".css":   "public, max-age=3600",
+	".js":    "public, max-age=3600",
+	".svg":   "public, max-age=86400",
+	".ico":   "public, max-age=86400",
+	".png":   "public, max-age=86400",
+	".jpg":   "public, max-age=86400",
+	".jpeg":  "public, max-age=86400",
+	".gif":   "public, max-age=86400",
+	".woff":  "public, max-age=86400",
 	".woff2": "public, max-age=86400",
-	".ttf":  "public, max-age=86400",
-	".txt":  "public, max-age=86400",
-	".xml":  "public, max-age=3600",
+	".ttf":   "public, max-age=86400",
+	".txt":   "public, max-age=86400",
+	".xml":   "public, max-age=3600",
 }
 
 func newStaticFileHandler(next http.Handler) http.Handler {
