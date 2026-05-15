@@ -432,9 +432,10 @@ type OverallStats struct {
 func (r *PGOrderRepository) GetDailyRevenue(ctx context.Context, startDate, endDate time.Time) ([]DailyRevenue, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT DATE(o.created_at)::text as date,
-		       COUNT(*) as orders,
-		       COALESCE(SUM(CASE WHEN o.status = 'success' THEN o.amount_idr ELSE 0 END), 0) as revenue
+		       COUNT(*) FILTER (WHERE o.status = 'success') as orders,
+		       COALESCE(SUM(CASE WHEN o.status = 'success' THEN o.amount_idr - COALESCE(p.cost_price_idr, 0) ELSE 0 END), 0) as revenue
 		FROM orders o
+		JOIN products p ON o.product_id = p.id
 		WHERE o.created_at >= $1 AND o.created_at < $2
 		GROUP BY DATE(o.created_at)
 		ORDER BY date ASC
@@ -462,10 +463,10 @@ func (r *PGOrderRepository) GetTopGamesByRevenue(ctx context.Context, startDate,
 	rows, err := r.pool.Query(ctx, `
 		SELECT p.game,
 		       COUNT(*) as orders,
-		       COALESCE(SUM(CASE WHEN o.status = 'success' THEN o.amount_idr ELSE 0 END), 0) as revenue
+		       COALESCE(SUM(o.amount_idr - COALESCE(p.cost_price_idr, 0)), 0) as revenue
 		FROM orders o
 		JOIN products p ON o.product_id = p.id
-		WHERE o.created_at >= $1 AND o.created_at < $2
+		WHERE o.created_at >= $1 AND o.created_at < $2 AND o.status = 'success'
 		GROUP BY p.game
 		ORDER BY revenue DESC
 	`, startDate, endDate)
@@ -492,10 +493,11 @@ func (r *PGOrderRepository) GetOverallStats(ctx context.Context, startDate, endD
 	var stats OverallStats
 	err := r.pool.QueryRow(ctx, `
 		SELECT COUNT(*) as total_orders,
-		       COALESCE(SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END), 0) as success_orders,
-		       COALESCE(SUM(CASE WHEN status = 'success' THEN amount_idr ELSE 0 END), 0) as total_revenue
-		FROM orders
-		WHERE created_at >= $1 AND created_at < $2
+		       COALESCE(SUM(CASE WHEN o.status = 'success' THEN 1 ELSE 0 END), 0) as success_orders,
+		       COALESCE(SUM(CASE WHEN o.status = 'success' THEN o.amount_idr - COALESCE(p.cost_price_idr, 0) ELSE 0 END), 0) as total_revenue
+		FROM orders o
+		LEFT JOIN products p ON o.product_id = p.id
+		WHERE o.created_at >= $1 AND o.created_at < $2
 	`, startDate, endDate).Scan(&stats.TotalOrders, &stats.SuccessOrders, &stats.TotalRevenue)
 	if err != nil {
 		return nil, err

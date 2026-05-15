@@ -26,6 +26,16 @@ docker compose ps
 docker compose logs -f app
 ```
 
+## Tunnel VPS database to local
+
+Keep this terminal open:
+
+```bash
+ssh -N -L 5433:127.0.0.1:5432 topup-store
+```
+
+Then connect your local database client to `127.0.0.1:5433` with the VPS Postgres database, user, and password from `.env`.
+
 ## Run migrations only
 
 ```bash

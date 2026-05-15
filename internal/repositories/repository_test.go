@@ -459,6 +459,83 @@ func TestOrderRepository_GetOverallStatsNoSuccessOrders(t *testing.T) {
 	})
 }
 
+func TestOrderRepository_AnalyticsUseNetProfit(t *testing.T) {
+	withCleanTables(t, func(ctx context.Context) {
+		repo := orderRepo()
+
+		productID := createTestProduct(t, ctx, "free_fire", 100)
+		successOrder := &models.Order{
+			ID:             uuid.New().String(),
+			OrderNumber:    "FT-20240101-0009",
+			ProductID:      productID,
+			UserPhone:      "6281234567890",
+			GameUID:        "12345678",
+			AmountIDR:      11000,
+			Channel:        "web",
+			DigiflazzRefID: "ref-success-net-profit",
+		}
+		if err := repo.Create(ctx, successOrder); err != nil {
+			t.Fatalf("create success order: %v", err)
+		}
+		if err := repo.UpdateStatus(ctx, successOrder.ID, "success"); err != nil {
+			t.Fatalf("mark success: %v", err)
+		}
+
+		failedOrder := &models.Order{
+			ID:             uuid.New().String(),
+			OrderNumber:    "FT-20240101-0010",
+			ProductID:      productID,
+			UserPhone:      "6281234567890",
+			GameUID:        "87654321",
+			AmountIDR:      999000,
+			Channel:        "web",
+			DigiflazzRefID: "ref-failed-net-profit",
+		}
+		if err := repo.Create(ctx, failedOrder); err != nil {
+			t.Fatalf("create failed order: %v", err)
+		}
+		if err := repo.UpdateStatus(ctx, failedOrder.ID, "failed"); err != nil {
+			t.Fatalf("mark failed: %v", err)
+		}
+
+		start := time.Now().Add(-time.Hour)
+		end := time.Now().Add(time.Hour)
+
+		stats, err := repo.GetOverallStats(ctx, start, end)
+		if err != nil {
+			t.Fatalf("overall stats: %v", err)
+		}
+		if stats.TotalRevenue != 3000 {
+			t.Fatalf("total_revenue = %d; want 3000", stats.TotalRevenue)
+		}
+		if stats.AvgOrderValue != 3000 {
+			t.Fatalf("avg_order_value = %v; want 3000", stats.AvgOrderValue)
+		}
+
+		daily, err := repo.GetDailyRevenue(ctx, start, end)
+		if err != nil {
+			t.Fatalf("daily revenue: %v", err)
+		}
+		if len(daily) != 1 {
+			t.Fatalf("daily len = %d; want 1", len(daily))
+		}
+		if daily[0].Orders != 1 || daily[0].Revenue != 3000 {
+			t.Fatalf("daily = orders %d revenue %d; want orders 1 revenue 3000", daily[0].Orders, daily[0].Revenue)
+		}
+
+		games, err := repo.GetTopGamesByRevenue(ctx, start, end)
+		if err != nil {
+			t.Fatalf("top games: %v", err)
+		}
+		if len(games) != 1 {
+			t.Fatalf("games len = %d; want 1", len(games))
+		}
+		if games[0].Game != "free_fire" || games[0].Orders != 1 || games[0].Revenue != 3000 {
+			t.Fatalf("game stats = %+v; want free_fire orders 1 revenue 3000", games[0])
+		}
+	})
+}
+
 func TestProductRepository_CreateAndGet(t *testing.T) {
 	withCleanTables(t, func(ctx context.Context) {
 		repo := productRepo()
