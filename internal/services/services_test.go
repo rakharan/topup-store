@@ -249,6 +249,11 @@ func TestTopupService_BuildCustomerNo(t *testing.T) {
 			product: &models.Product{Game: constants.GameFreeFire},
 			want:    "12345",
 		},
+		{
+			name:    "hoyo games default to uid pipe server",
+			product: &models.Product{Game: constants.GameGenshinImpact},
+			want:    "12345|556",
+		},
 	}
 
 	for _, tt := range tests {
@@ -256,6 +261,32 @@ func TestTopupService_BuildCustomerNo(t *testing.T) {
 			got := svc.buildCustomerNo(order, tt.product)
 			if got != tt.want {
 				t.Fatalf("customer_no = %q; want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTopupService_InferHoyoGames(t *testing.T) {
+	tests := []struct {
+		name  string
+		sku   string
+		title string
+		brand string
+		want  string
+	}{
+		{name: "genshin sku", sku: "gi_60", want: constants.GameGenshinImpact},
+		{name: "genshin name", title: "Genshin Impact 60 Genesis Crystals", want: constants.GameGenshinImpact},
+		{name: "star rail sku", sku: "hsr_60", want: constants.GameHonkaiStarRail},
+		{name: "star rail brand", brand: "Honkai Star Rail", want: constants.GameHonkaiStarRail},
+		{name: "zenless sku", sku: "zzz_60", want: constants.GameZenlessZoneZero},
+		{name: "honkai impact sku", sku: "hi3_60", want: constants.GameHonkaiImpact3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := inferGame(tt.sku, tt.title, tt.brand)
+			if got != tt.want {
+				t.Fatalf("inferGame() = %q; want %q", got, tt.want)
 			}
 		})
 	}

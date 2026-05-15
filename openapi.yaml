@@ -14,6 +14,10 @@ info:
     - `free_fire` — Free Fire (UID: numeric)
     - `mobile_legends` — Mobile Legends (UID: `UID|SERVER` format)
     - `pubg_mobile` — PUBG Mobile (UID: numeric)
+    - `genshin_impact` — Genshin Impact (UID + server)
+    - `honkai_star_rail` — Honkai: Star Rail (UID + server)
+    - `zenless_zone_zero` — Zenless Zone Zero (UID + server)
+    - `honkai_impact_3` — Honkai Impact 3 (UID + server)
     
     ## Order Status Flow
     ```
@@ -228,7 +232,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [free_fire, mobile_legends, pubg_mobile]
+            enum: [free_fire, mobile_legends, pubg_mobile, genshin_impact, honkai_star_rail, zenless_zone_zero, honkai_impact_3]
           description: Filter by game
       responses:
         '200':
@@ -318,15 +322,15 @@ components:
       properties:
         game:
           type: string
-          enum: [free_fire, mobile_legends, pubg_mobile]
+          enum: [free_fire, mobile_legends, pubg_mobile, genshin_impact, honkai_star_rail, zenless_zone_zero, honkai_impact_3]
           example: free_fire
         game_uid:
           type: string
-          description: Numeric UID (Free Fire/PUBG) or "UID|SERVER" (Mobile Legends)
+          description: Numeric UID. Server is submitted separately when required.
           example: "12345678"
         game_server:
           type: string
-          description: Required only for Mobile Legends
+          description: Required for Mobile Legends and HoYo games. HoYo products are sent to supplier as UID|Server.
           example: "1234"
         product_id:
           type: string
@@ -462,7 +466,7 @@ components:
           format: uuid
         game:
           type: string
-          enum: [free_fire, mobile_legends, pubg_mobile]
+          enum: [free_fire, mobile_legends, pubg_mobile, genshin_impact, honkai_star_rail, zenless_zone_zero, honkai_impact_3]
         name:
           type: string
         description:

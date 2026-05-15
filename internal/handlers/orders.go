@@ -379,6 +379,7 @@ func (h *OrderHandler) expirePendingOrderIfNeeded(ctx context.Context, order *mo
 var (
 	reNumeric     = regexp.MustCompile(`^\d{4,20}$`)
 	reNumericPair = regexp.MustCompile(`^\d+\|\d+$`)
+	reServerCode  = regexp.MustCompile(`^[A-Za-z0-9_-]{2,32}$`)
 	rePhone       = regexp.MustCompile(`^(0|62)\d{8,13}$`)
 )
 
@@ -391,18 +392,27 @@ func validateOrderInput(req struct {
 	Phone      string `json:"phone"`
 }) error {
 	if !constants.ValidGames[req.Game] {
-		return &validationError{field: "game", message: "must be free_fire, mobile_legends, or pubg_mobile"}
+		return &validationError{field: "game", message: "unsupported game"}
 	}
 	if req.GameUID == "" {
 		return &validationError{field: "game_uid", message: "is required"}
 	}
-	if req.Game == constants.GameMobileLegends {
+	if constants.ServerRequiredGames[req.Game] {
 		if req.GameServer == "" {
-			return &validationError{field: "game_server", message: "is required for Mobile Legends"}
+			return &validationError{field: "game_server", message: "is required for this game"}
 		}
-		combined := req.GameUID + "|" + req.GameServer
-		if !reNumericPair.MatchString(combined) {
-			return &validationError{field: "game_uid", message: "must be numeric|numeric format (e.g. 12345|1234)"}
+		if req.Game == constants.GameMobileLegends {
+			combined := req.GameUID + "|" + req.GameServer
+			if !reNumericPair.MatchString(combined) {
+				return &validationError{field: "game_uid", message: "must be numeric|numeric format (e.g. 12345|1234)"}
+			}
+		} else {
+			if !reNumeric.MatchString(req.GameUID) {
+				return &validationError{field: "game_uid", message: "must be numeric"}
+			}
+			if !reServerCode.MatchString(req.GameServer) {
+				return &validationError{field: "game_server", message: "must be 2-32 letters, numbers, underscore, or dash"}
+			}
 		}
 	} else {
 		if !reNumeric.MatchString(req.GameUID) {

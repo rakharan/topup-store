@@ -231,6 +231,9 @@ func (s *TopupService) buildCustomerNo(order *models.Order, product *models.Prod
 		return order.GameUID
 	}
 
+	if constants.PipeServerCustomerNoGames[product.Game] {
+		return order.GameUID + "|" + order.GameServer
+	}
 	if product.Game == constants.GameMobileLegends {
 		return order.GameUID + order.GameServer
 	}
@@ -520,9 +523,9 @@ func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType 
 		}
 
 		if !exists {
-			game := inferGameFromSKU(p.SKU)
+			game := inferGame(p.SKU, p.Name, p.Brand)
 			if game == "" {
-				s.logger.Debug("sync: skipping unknown SKU prefix", slog.String("sku", p.SKU))
+				s.logger.Debug("sync: skipping unknown game", slog.String("sku", p.SKU), slog.String("name", p.Name), slog.String("brand", p.Brand))
 				skipped++
 				continue
 			}
@@ -606,17 +609,34 @@ func CalcTieredPrice(costPrice int, marginType string, marginValue int) (selling
 }
 
 var skuPrefixGame = map[string]string{
-	"ff_":   constants.GameFreeFire,
-	"ml_":   constants.GameMobileLegends,
-	"pubg_": constants.GamePUBGMobile,
+	"ff_":      constants.GameFreeFire,
+	"ml_":      constants.GameMobileLegends,
+	"pubg_":    constants.GamePUBGMobile,
+	"gi_":      constants.GameGenshinImpact,
+	"genshin_": constants.GameGenshinImpact,
+	"hsr_":     constants.GameHonkaiStarRail,
+	"zzz_":     constants.GameZenlessZoneZero,
+	"hi3_":     constants.GameHonkaiImpact3,
 }
 
-func inferGameFromSKU(sku string) string {
+func inferGame(sku, name, brand string) string {
 	skuLower := strings.ToLower(sku)
 	for prefix, game := range skuPrefixGame {
 		if strings.HasPrefix(skuLower, prefix) {
 			return game
 		}
+	}
+
+	text := strings.ToLower(name + " " + brand)
+	switch {
+	case strings.Contains(text, "genshin"):
+		return constants.GameGenshinImpact
+	case strings.Contains(text, "star rail") || strings.Contains(text, "hsr"):
+		return constants.GameHonkaiStarRail
+	case strings.Contains(text, "zenless") || strings.Contains(text, "zzz"):
+		return constants.GameZenlessZoneZero
+	case strings.Contains(text, "honkai impact") || strings.Contains(text, "hi3"):
+		return constants.GameHonkaiImpact3
 	}
 	return ""
 }

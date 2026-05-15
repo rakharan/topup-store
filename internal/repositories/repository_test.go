@@ -575,6 +575,25 @@ func TestProductRepository_CreateAndGet(t *testing.T) {
 	})
 }
 
+func TestProductRepository_CreateFromDigiflazzHoyoUsesPipeFormat(t *testing.T) {
+	withCleanTables(t, func(ctx context.Context) {
+		repo := productRepo()
+
+		err := repo.CreateFromDigiflazz(ctx, "gi_60", "Genshin Impact 60 Genesis Crystals", "genshin_impact", "diamond", 12000, 10000, 60, "test")
+		if err != nil {
+			t.Fatalf("create from digiflazz: %v", err)
+		}
+
+		got, err := repo.GetByGameAndDiamonds(ctx, "genshin_impact", 60)
+		if err != nil {
+			t.Fatalf("get product: %v", err)
+		}
+		if got.CustomerNoFormat != "uid_server_pipe" {
+			t.Fatalf("customer_no_format = %q; want uid_server_pipe", got.CustomerNoFormat)
+		}
+	})
+}
+
 func TestProductRepository_GetByGameAndDiamonds(t *testing.T) {
 	withCleanTables(t, func(ctx context.Context) {
 		repo := productRepo()

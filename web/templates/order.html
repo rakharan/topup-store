@@ -4,7 +4,7 @@
     <title>Order - TopUp Store</title>
     <meta name="description" content="Buat order top up game dengan mudah dan cepat.">
     <meta property="og:title" content="Buat Order - Faza TopUp Store">
-    <meta property="og:description" content="Top up Free Fire, Mobile Legends, dan PUBG Mobile dengan harga terjangkau.">
+    <meta property="og:description" content="Top up Free Fire, Mobile Legends, PUBG Mobile, dan game HoYo dengan harga terjangkau.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://sagameda.com/order">
     <meta property="og:image" content="https://sagameda.com/static/og-image.jpg">
@@ -33,6 +33,10 @@
                     <option value="free_fire">Free Fire</option>
                     <option value="mobile_legends">Mobile Legends</option>
                     <option value="pubg_mobile">PUBG Mobile</option>
+                    <option value="genshin_impact">Genshin Impact</option>
+                    <option value="honkai_star_rail">Honkai: Star Rail</option>
+                    <option value="zenless_zone_zero">Zenless Zone Zero</option>
+                    <option value="honkai_impact_3">Honkai Impact 3</option>
                 </select>
                 <span id="gameError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
             </div>
@@ -53,6 +57,10 @@
                     <div class="flex items-start gap-2">
                         <span class="text-orange-400 font-bold min-w-[16px]">🎯</span>
                         <div><span class="text-white/70">PUBG Mobile:</span> Masukkan angka UID saja di kolom di bawah</div>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-cyan-400 font-bold min-w-[16px]">*</span>
+                        <div><span class="text-white/70">HoYo games:</span> Isi UID dan Server di kolom terpisah. Sistem mengirim format UID|Server.</div>
                     </div>
                 </div>
             </div>
@@ -127,6 +135,8 @@
     const submitText = document.getElementById("submitText");
     const submitSpinner = document.getElementById("submitSpinner");
     const confirmModal = document.getElementById("confirmModal");
+    const serverRequiredGames = new Set(["mobile_legends", "genshin_impact", "honkai_star_rail", "zenless_zone_zero", "honkai_impact_3"]);
+    const hoyoGames = new Set(["genshin_impact", "honkai_star_rail", "zenless_zone_zero", "honkai_impact_3"]);
     let selectedProduct = null;
     let pollInterval = null;
 
@@ -190,12 +200,17 @@
     function validateGameServer() {
         if (!serverGroup.classList.contains('hidden')) {
             const server = document.getElementById("gameServer").value.trim();
+            const game = gameSelect.value;
             if (!server) {
                 showFieldError('gameServer', 'Server ID wajib diisi');
                 return false;
             }
-            if (!/^\d+$/.test(server)) {
+            if (game === "mobile_legends" && !/^\d+$/.test(server)) {
                 showFieldError('gameServer', 'Server ID harus berupa angka');
+                return false;
+            }
+            if (hoyoGames.has(game) && !/^[A-Za-z0-9_-]{2,32}$/.test(server)) {
+                showFieldError('gameServer', 'Server harus 2-32 huruf/angka, underscore, atau dash');
                 return false;
             }
         }
@@ -302,9 +317,20 @@
         const game = gameSelect.value;
         productSelect.innerHTML = '<option value="">Loading...</option>';
         productSelect.disabled = true;
-        if (game === "mobile_legends") {
+        if (serverRequiredGames.has(game)) {
             serverGroup.classList.remove("hidden");
-            document.getElementById("uidHint").textContent = "Contoh: 12345678";
+            document.getElementById("uidHint").textContent = "Contoh UID: 123456789";
+            if (hoyoGames.has(game)) {
+                document.getElementById("gameServer").inputMode = "text";
+                document.getElementById("gameServer").removeAttribute("pattern");
+                document.getElementById("gameServer").placeholder = "Contoh: asia";
+                document.getElementById("serverHint").textContent = "Isi server sesuai pilihan akun. Contoh: asia, america, europe, atau tw_hk_mo.";
+            } else {
+                document.getElementById("gameServer").inputMode = "numeric";
+                document.getElementById("gameServer").setAttribute("pattern", "[0-9]*");
+                document.getElementById("gameServer").placeholder = "Masukkan Server ID";
+                document.getElementById("serverHint").textContent = "Buka profil game -> lihat angka di sebelah kanan UID (contoh: 1234)";
+            }
         } else {
             serverGroup.classList.add("hidden");
             document.getElementById("gameServer").value = "";

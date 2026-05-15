@@ -276,6 +276,14 @@ function gameToLabel(game) {
       return "Mobile Legends";
     case "pubg_mobile":
       return "PUBG Mobile";
+    case "genshin_impact":
+      return "Genshin Impact";
+    case "honkai_star_rail":
+      return "Honkai: Star Rail";
+    case "zenless_zone_zero":
+      return "Zenless Zone Zero";
+    case "honkai_impact_3":
+      return "Honkai Impact 3";
     default:
       return game;
   }
@@ -286,6 +294,10 @@ function parseOrderMessage(text) {
     /^(FF|Free\s*Fire)\s+(\d+)\s+(?:UID[:\s]+)?(\d+)$/i,
     /^(ML|Mobile\s*Legends)\s+(\d+)\s+(?:UID[:\s]+)?(\d+)\|(\d+)$/i,
     /^(PUBG|PUBG\s*Mobile)\s+(\d+)\s+(?:UID[:\s]+)?(\d+)$/i,
+    /^(GI|Genshin(?:\s*Impact)?)\s+(\d+)\s+(?:UID[:\s]+)?(\d+)\|([A-Za-z0-9_-]+)$/i,
+    /^(HSR|Honkai\s*Star\s*Rail|Star\s*Rail)\s+(\d+)\s+(?:UID[:\s]+)?(\d+)\|([A-Za-z0-9_-]+)$/i,
+    /^(ZZZ|Zenless(?:\s*Zone\s*Zero)?)\s+(\d+)\s+(?:UID[:\s]+)?(\d+)\|([A-Za-z0-9_-]+)$/i,
+    /^(HI3|Honkai\s*Impact\s*3)\s+(\d+)\s+(?:UID[:\s]+)?(\d+)\|([A-Za-z0-9_-]+)$/i,
   ];
 
   for (const pattern of patterns) {
@@ -297,6 +309,14 @@ function parseOrderMessage(text) {
         game = "free_fire";
       } else if (gameRaw.startsWith("ml") || gameRaw.includes("legend")) {
         game = "mobile_legends";
+      } else if (gameRaw.startsWith("gi") || gameRaw.includes("genshin")) {
+        game = "genshin_impact";
+      } else if (gameRaw.startsWith("hsr") || gameRaw.includes("star")) {
+        game = "honkai_star_rail";
+      } else if (gameRaw.startsWith("zzz") || gameRaw.includes("zenless")) {
+        game = "zenless_zone_zero";
+      } else if (gameRaw.startsWith("hi3") || gameRaw.includes("impact")) {
+        game = "honkai_impact_3";
       } else {
         game = "pubg_mobile";
       }

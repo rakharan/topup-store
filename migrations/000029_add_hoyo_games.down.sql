@@ -1,0 +1,2 @@
+-- PostgreSQL enum values cannot be removed safely without recreating the type.
+-- Leave the HoYo game values in place on rollback.

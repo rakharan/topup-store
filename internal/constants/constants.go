@@ -11,9 +11,13 @@ const (
 )
 
 const (
-	GameFreeFire      = "free_fire"
-	GameMobileLegends = "mobile_legends"
-	GamePUBGMobile    = "pubg_mobile"
+	GameFreeFire        = "free_fire"
+	GameMobileLegends   = "mobile_legends"
+	GamePUBGMobile      = "pubg_mobile"
+	GameGenshinImpact   = "genshin_impact"
+	GameHonkaiStarRail  = "honkai_star_rail"
+	GameZenlessZoneZero = "zenless_zone_zero"
+	GameHonkaiImpact3   = "honkai_impact_3"
 )
 
 const (
@@ -26,15 +30,38 @@ const (
 )
 
 var ValidGames = map[string]bool{
-	GameFreeFire:      true,
-	GameMobileLegends: true,
-	GamePUBGMobile:    true,
+	GameFreeFire:        true,
+	GameMobileLegends:   true,
+	GamePUBGMobile:      true,
+	GameGenshinImpact:   true,
+	GameHonkaiStarRail:  true,
+	GameZenlessZoneZero: true,
+	GameHonkaiImpact3:   true,
 }
 
 var GameLabels = map[string]string{
-	GameFreeFire:      "Free Fire",
-	GameMobileLegends: "Mobile Legends",
-	GamePUBGMobile:    "PUBG Mobile",
+	GameFreeFire:        "Free Fire",
+	GameMobileLegends:   "Mobile Legends",
+	GamePUBGMobile:      "PUBG Mobile",
+	GameGenshinImpact:   "Genshin Impact",
+	GameHonkaiStarRail:  "Honkai: Star Rail",
+	GameZenlessZoneZero: "Zenless Zone Zero",
+	GameHonkaiImpact3:   "Honkai Impact 3",
+}
+
+var ServerRequiredGames = map[string]bool{
+	GameMobileLegends:   true,
+	GameGenshinImpact:   true,
+	GameHonkaiStarRail:  true,
+	GameZenlessZoneZero: true,
+	GameHonkaiImpact3:   true,
+}
+
+var PipeServerCustomerNoGames = map[string]bool{
+	GameGenshinImpact:   true,
+	GameHonkaiStarRail:  true,
+	GameZenlessZoneZero: true,
+	GameHonkaiImpact3:   true,
 }
 
 var StatusLabels = map[string]string{

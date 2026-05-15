@@ -224,7 +224,7 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !constants.ValidGames[req.Game] {
-		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("game", "must be free_fire, mobile_legends, or pubg_mobile"), middleware.GetRequestID(r.Context()))
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("game", "unsupported game"), middleware.GetRequestID(r.Context()))
 		return
 	}
 	if req.Name == "" || req.SKU == "" || req.PriceIDR <= 0 {
@@ -308,7 +308,7 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !constants.ValidGames[req.Game] {
-		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("game", "must be free_fire, mobile_legends, or pubg_mobile"), middleware.GetRequestID(r.Context()))
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("game", "unsupported game"), middleware.GetRequestID(r.Context()))
 		return
 	}
 	if req.Name == "" || req.SKU == "" || req.PriceIDR <= 0 {

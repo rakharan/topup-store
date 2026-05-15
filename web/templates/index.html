@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <title>TopUp Store - Top Up Game Murah & Cepat</title>
-    <meta name="description" content="Top up game favoritmu dengan harga terjangkau. Free Fire, Mobile Legends, PUBG Mobile. Proses instan via QRIS.">
+    <meta name="description" content="Top up game favoritmu dengan harga terjangkau. Free Fire, Mobile Legends, PUBG Mobile, dan game HoYo. Proses instan via QRIS.">
     <meta property="og:title" content="TopUp Store - Top Up Game Murah & Cepat">
     <meta property="og:description" content="Top up game favoritmu dengan harga terjangkau. Proses instan via QRIS.">
     <meta property="og:type" content="website">
@@ -29,6 +29,18 @@
             </button>
             <button data-game="pubg_mobile" class="game-tab px-5 py-2 rounded-full bg-white/10 hover:bg-white/20 font-medium transition flex items-center gap-2 focus-ring" role="tab" aria-selected="false" aria-controls="productGrid" id="tab-pubg_mobile">
                 <img src="/static/images/pubg-mobile.svg" alt="PUBG Mobile" class="w-6 h-6" loading="lazy"> PUBG Mobile
+            </button>
+            <button data-game="genshin_impact" class="game-tab px-5 py-2 rounded-full bg-white/10 hover:bg-white/20 font-medium transition flex items-center gap-2 focus-ring" role="tab" aria-selected="false" aria-controls="productGrid" id="tab-genshin_impact">
+                Genshin Impact
+            </button>
+            <button data-game="honkai_star_rail" class="game-tab px-5 py-2 rounded-full bg-white/10 hover:bg-white/20 font-medium transition flex items-center gap-2 focus-ring" role="tab" aria-selected="false" aria-controls="productGrid" id="tab-honkai_star_rail">
+                Honkai: Star Rail
+            </button>
+            <button data-game="zenless_zone_zero" class="game-tab px-5 py-2 rounded-full bg-white/10 hover:bg-white/20 font-medium transition flex items-center gap-2 focus-ring" role="tab" aria-selected="false" aria-controls="productGrid" id="tab-zenless_zone_zero">
+                Zenless Zone Zero
+            </button>
+            <button data-game="honkai_impact_3" class="game-tab px-5 py-2 rounded-full bg-white/10 hover:bg-white/20 font-medium transition flex items-center gap-2 focus-ring" role="tab" aria-selected="false" aria-controls="productGrid" id="tab-honkai_impact_3">
+                Honkai Impact 3
             </button>
         </div>
         <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" role="tabpanel" aria-labelledby="tab-free_fire"></div>
@@ -60,7 +72,7 @@
 
     <script>
     const whatsappNumber = "{{.WhatsappNumber}}";
-    const gameLabels = { free_fire: "FF", mobile_legends: "ML", pubg_mobile: "PUBG" };
+    const gameLabels = { free_fire: "FF", mobile_legends: "ML", pubg_mobile: "PUBG", genshin_impact: "Genshin", honkai_star_rail: "HSR", zenless_zone_zero: "ZZZ", honkai_impact_3: "HI3" };
     let activeGame = "free_fire";
 
     async function loadProducts(game) {

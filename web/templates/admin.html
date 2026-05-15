@@ -165,6 +165,10 @@
                     <option value="free_fire">Free Fire</option>
                     <option value="mobile_legends">Mobile Legends</option>
                     <option value="pubg_mobile">PUBG Mobile</option>
+                    <option value="genshin_impact">Genshin Impact</option>
+                    <option value="honkai_star_rail">Honkai: Star Rail</option>
+                    <option value="zenless_zone_zero">Zenless Zone Zero</option>
+                    <option value="honkai_impact_3">Honkai Impact 3</option>
                 </select>
                 <select id="productTypeFilter" class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     <option value="">Semua Tipe</option>
@@ -189,6 +193,10 @@
                             <option value="free_fire">Free Fire</option>
                             <option value="mobile_legends">Mobile Legends</option>
                             <option value="pubg_mobile">PUBG Mobile</option>
+                            <option value="genshin_impact">Genshin Impact</option>
+                            <option value="honkai_star_rail">Honkai: Star Rail</option>
+                            <option value="zenless_zone_zero">Zenless Zone Zero</option>
+                            <option value="honkai_impact_3">Honkai Impact 3</option>
                         </select>
                     </div>
                     <div>
@@ -817,7 +825,7 @@
             mobileCards.innerHTML = '<div class="text-center py-8 text-white/40">No products found.</div>';
             return;
         }
-        const gameLabels = { free_fire: 'FF', mobile_legends: 'ML', pubg_mobile: 'PUBG' };
+        const gameLabels = { free_fire: 'FF', mobile_legends: 'ML', pubg_mobile: 'PUBG', genshin_impact: 'Genshin', honkai_star_rail: 'HSR', zenless_zone_zero: 'ZZZ', honkai_impact_3: 'HI3' };
         const typeLabels = { diamond: 'Diamond', subscription: 'Subscription', other: 'Other' };
         const typeColors = { diamond: 'bg-green-500/20 text-green-400', subscription: 'bg-blue-500/20 text-blue-400', other: 'bg-gray-500/20 text-gray-400' };
         const customerNoFormatLabels = { uid: 'UID', uid_server_pipe: 'UID|Server', uid_server_concat: 'UIDServer', uid_server_space: 'UID Server' };
@@ -1042,12 +1050,12 @@
 
             const gameCtx = document.getElementById('gameChart');
             if (gameCtx) {
-                const gameLabels = { free_fire: 'Free Fire', mobile_legends: 'Mobile Legends', pubg_mobile: 'PUBG Mobile' };
+                const gameLabels = { free_fire: 'Free Fire', mobile_legends: 'Mobile Legends', pubg_mobile: 'PUBG Mobile', genshin_impact: 'Genshin Impact', honkai_star_rail: 'Honkai: Star Rail', zenless_zone_zero: 'Zenless Zone Zero', honkai_impact_3: 'Honkai Impact 3' };
                 gameChartInstance = new Chart(gameCtx, {
                     type: 'doughnut',
                     data: {
                         labels: topGames.map(g => gameLabels[g.game] || g.game),
-                        datasets: [{ data: topGames.map(g => g.revenue), backgroundColor: ['#F97316', '#3B82F6', '#10B981'], borderWidth: 0 }]
+                        datasets: [{ data: topGames.map(g => g.revenue), backgroundColor: ['#F97316', '#3B82F6', '#10B981', '#A855F7', '#EC4899', '#06B6D4', '#FACC15'], borderWidth: 0 }]
                     },
                     options: {
                         responsive: true,

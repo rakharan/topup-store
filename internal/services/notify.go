@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/topup-store/internal/constants"
 	"github.com/topup-store/internal/models"
 	"github.com/topup-store/internal/retry"
 )
@@ -34,14 +35,13 @@ func NewNotifyService(fonnteToken, waBotBaseURL, waBotToken string, logger *slog
 }
 
 func (s *NotifyService) SendOrderConfirmation(ctx context.Context, order *models.Order, product *models.Product, phone, qrisURL string) error {
-	gameLabel := map[string]string{
-		"free_fire":      "Free Fire",
-		"mobile_legends": "Mobile Legends",
-		"pubg_mobile":    "PUBG Mobile",
-	}[product.Game]
+	gameLabel := constants.GameLabels[product.Game]
+	if gameLabel == "" {
+		gameLabel = product.Game
+	}
 
 	uidInfo := order.GameUID
-	if product.Game == "mobile_legends" && order.GameServer != "" {
+	if constants.ServerRequiredGames[product.Game] && order.GameServer != "" {
 		uidInfo = order.GameUID + " (" + order.GameServer + ")"
 	}
 
@@ -62,14 +62,13 @@ func (s *NotifyService) SendOrderConfirmation(ctx context.Context, order *models
 }
 
 func (s *NotifyService) SendTopupSuccess(ctx context.Context, order *models.Order, product *models.Product, phone, serialNumber string) error {
-	gameLabel := map[string]string{
-		"free_fire":      "Free Fire",
-		"mobile_legends": "Mobile Legends",
-		"pubg_mobile":    "PUBG Mobile",
-	}[product.Game]
+	gameLabel := constants.GameLabels[product.Game]
+	if gameLabel == "" {
+		gameLabel = product.Game
+	}
 
 	uidInfo := order.GameUID
-	if product.Game == "mobile_legends" && order.GameServer != "" {
+	if constants.ServerRequiredGames[product.Game] && order.GameServer != "" {
 		uidInfo = order.GameUID + " (" + order.GameServer + ")"
 	}
 
@@ -93,14 +92,13 @@ func (s *NotifyService) SendTopupSuccess(ctx context.Context, order *models.Orde
 }
 
 func (s *NotifyService) SendTopupFailure(ctx context.Context, order *models.Order, product *models.Product, phone string) error {
-	gameLabel := map[string]string{
-		"free_fire":      "Free Fire",
-		"mobile_legends": "Mobile Legends",
-		"pubg_mobile":    "PUBG Mobile",
-	}[product.Game]
+	gameLabel := constants.GameLabels[product.Game]
+	if gameLabel == "" {
+		gameLabel = product.Game
+	}
 
 	uidInfo := order.GameUID
-	if product.Game == "mobile_legends" && order.GameServer != "" {
+	if constants.ServerRequiredGames[product.Game] && order.GameServer != "" {
 		uidInfo = order.GameUID + " (" + order.GameServer + ")"
 	}
 

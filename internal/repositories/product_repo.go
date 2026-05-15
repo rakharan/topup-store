@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/topup-store/internal/constants"
 	"github.com/topup-store/internal/models"
 )
 
@@ -147,9 +148,14 @@ func (r *PGProductRepository) SyncPrice(ctx context.Context, sku string, costPri
 }
 
 func (r *PGProductRepository) CreateFromDigiflazz(ctx context.Context, sku, name, game, productType string, priceIDR, costPriceIDR, diamonds int, description string) error {
+	customerNoFormat := ""
+	if constants.PipeServerCustomerNoGames[game] {
+		customerNoFormat = "uid_server_pipe"
+	}
+
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO products (id, game, name, description, price_idr, cost_price_idr, diamonds, product_type, sku, is_active)
-		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, true)
-	`, game, name, description, priceIDR, costPriceIDR, diamonds, productType, sku)
+		INSERT INTO products (id, game, name, description, price_idr, cost_price_idr, diamonds, product_type, sku, customer_no_format, is_active)
+		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, true)
+	`, game, name, description, priceIDR, costPriceIDR, diamonds, productType, sku, customerNoFormat)
 	return err
 }

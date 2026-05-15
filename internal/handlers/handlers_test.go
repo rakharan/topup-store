@@ -35,10 +35,13 @@ func TestValidateOrderInput(t *testing.T) {
 		{"valid free_fire", "free_fire", "12345678", "", "abc", 0, "6281234567890", false},
 		{"valid mobile_legends", "mobile_legends", "12345", "1234", "abc", 0, "6281234567890", false},
 		{"valid pubg_mobile", "pubg_mobile", "5123456789", "", "abc", 0, "6281234567890", false},
+		{"valid genshin impact", "genshin_impact", "800123456", "asia", "abc", 0, "6281234567890", false},
 		{"invalid game", "valorant", "123", "", "abc", 0, "6281234567890", true},
 		{"missing game_uid", "free_fire", "", "", "abc", 0, "6281234567890", true},
 		{"non-numeric game_uid", "free_fire", "abc123", "", "abc", 0, "6281234567890", true},
 		{"missing server for ML", "mobile_legends", "12345", "", "abc", 0, "6281234567890", true},
+		{"missing server for genshin", "genshin_impact", "800123456", "", "abc", 0, "6281234567890", true},
+		{"invalid server for genshin", "genshin_impact", "800123456", "asia|bad", "abc", 0, "6281234567890", true},
 		{"invalid phone", "free_fire", "12345678", "", "abc", 0, "abc", true},
 		{"short phone", "free_fire", "12345678", "", "abc", 0, "1234567", true},
 	}
