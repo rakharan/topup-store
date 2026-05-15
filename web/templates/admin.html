@@ -90,6 +90,8 @@
                             <td class="py-3">
                                 {{if eq .Status "pending"}}
                                 <button onclick="processOrder('{{.ID}}')" class="text-primary hover:text-orange-400 text-sm focus-ring px-2 py-1 rounded">Process</button>
+                                {{else if eq .Status "failed"}}
+                                <button onclick="retryOrder('{{.ID}}')" class="text-blue-400 hover:text-blue-300 text-sm focus-ring px-2 py-1 rounded">Retry</button>
                                 {{else if eq .Status "processing"}}
                                 <button onclick="retryOrder('{{.ID}}')" class="text-blue-400 hover:text-blue-300 text-sm focus-ring px-2 py-1 rounded">Retry</button>
                                 {{else if eq .Status "paid"}}
@@ -122,6 +124,8 @@
                     <div class="flex gap-2">
                         {{if eq .Status "pending"}}
                         <button onclick="processOrder('{{.ID}}')" class="flex-1 bg-primary/20 hover:bg-primary/30 text-primary text-sm font-medium py-2 rounded-lg transition focus-ring">Process</button>
+                        {{else if eq .Status "failed"}}
+                        <button onclick="retryOrder('{{.ID}}')" class="flex-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-sm font-medium py-2 rounded-lg transition focus-ring">Retry</button>
                         {{else if eq .Status "processing"}}
                         <button onclick="retryOrder('{{.ID}}')" class="flex-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-sm font-medium py-2 rounded-lg transition focus-ring">Retry</button>
                         {{else if eq .Status "paid"}}

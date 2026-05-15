@@ -150,13 +150,14 @@ func (h *AdminHandler) RetryOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if order.Status != constants.StatusPaid && order.Status != constants.StatusProcessing {
-		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("status", "order must be in paid or processing status, current: "+order.Status), middleware.GetRequestID(r.Context()))
+	if order.Status != constants.StatusPaid && order.Status != constants.StatusProcessing && order.Status != constants.StatusFailed {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("status", "order must be in paid, processing, or failed status, current: "+order.Status), middleware.GetRequestID(r.Context()))
 		return
 	}
 
-	if order.Status == constants.StatusProcessing {
-		updated, err := h.paymentSvc.UpdateOrderStatusIf(r.Context(), order.ID, constants.StatusPaid, constants.StatusProcessing)
+	if order.Status == constants.StatusProcessing || order.Status == constants.StatusFailed {
+		oldStatus := order.Status
+		updated, err := h.paymentSvc.UpdateOrderStatusIf(r.Context(), order.ID, constants.StatusPaid, oldStatus)
 		if err != nil {
 			apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
 			return
@@ -165,7 +166,7 @@ func (h *AdminHandler) RetryOrder(w http.ResponseWriter, r *http.Request) {
 			apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("status", "order status changed, reload and try again"), middleware.GetRequestID(r.Context()))
 			return
 		}
-		h.paymentSvc.RecordStatusChange(r.Context(), order.ID, constants.StatusProcessing, constants.StatusPaid, "admin retry reset")
+		h.paymentSvc.RecordStatusChange(r.Context(), order.ID, oldStatus, constants.StatusPaid, "admin retry reset")
 		order.Status = constants.StatusPaid
 	}
 
