@@ -182,7 +182,22 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 }
 
 func (s *TopupService) buildCustomerNo(order *models.Order, product *models.Product) string {
-	if product.Game == constants.GameMobileLegends && order.GameServer != "" {
+	if order.GameServer == "" {
+		return order.GameUID
+	}
+
+	switch product.CustomerNoFormat {
+	case "uid_server_concat":
+		return order.GameUID + order.GameServer
+	case "uid_server_space":
+		return order.GameUID + " " + order.GameServer
+	case "uid_server_pipe":
+		return order.GameUID + "|" + order.GameServer
+	case "uid":
+		return order.GameUID
+	}
+
+	if product.Game == constants.GameMobileLegends {
 		return order.GameUID + "|" + order.GameServer
 	}
 	return order.GameUID

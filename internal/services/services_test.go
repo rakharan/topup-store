@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/topup-store/internal/constants"
 	"github.com/topup-store/internal/models"
 	"github.com/topup-store/internal/repositories"
 )
@@ -211,6 +212,52 @@ func TestTopupService_ProcessOrder_GetOrderFails(t *testing.T) {
 	err := svc.ProcessOrder(context.Background(), "order-1")
 	if err == nil {
 		t.Error("expected error when GetByID fails")
+	}
+}
+
+func TestTopupService_BuildCustomerNo(t *testing.T) {
+	svc := NewTopupService(nil, nil, "user", "key", "https://api.example.com", true, nil)
+	order := &models.Order{GameUID: "12345", GameServer: "556"}
+
+	tests := []struct {
+		name    string
+		product *models.Product
+		want    string
+	}{
+		{
+			name:    "mobile legends default keeps existing pipe behavior",
+			product: &models.Product{Game: constants.GameMobileLegends},
+			want:    "12345|556",
+		},
+		{
+			name:    "explicit concat",
+			product: &models.Product{Game: constants.GameMobileLegends, CustomerNoFormat: "uid_server_concat"},
+			want:    "12345556",
+		},
+		{
+			name:    "explicit space",
+			product: &models.Product{Game: constants.GameMobileLegends, CustomerNoFormat: "uid_server_space"},
+			want:    "12345 556",
+		},
+		{
+			name:    "explicit uid only",
+			product: &models.Product{Game: constants.GameMobileLegends, CustomerNoFormat: "uid"},
+			want:    "12345",
+		},
+		{
+			name:    "non mobile legends ignores server by default",
+			product: &models.Product{Game: constants.GameFreeFire},
+			want:    "12345",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := svc.buildCustomerNo(order, tt.product)
+			if got != tt.want {
+				t.Fatalf("customer_no = %q; want %q", got, tt.want)
+			}
+		})
 	}
 }
 

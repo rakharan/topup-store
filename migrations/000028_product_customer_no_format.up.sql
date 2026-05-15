@@ -1,0 +1,1 @@
+ALTER TABLE products ADD COLUMN IF NOT EXISTS customer_no_format TEXT NOT NULL DEFAULT '';

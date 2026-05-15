@@ -3,20 +3,21 @@ package models
 import "time"
 
 type Product struct {
-	ID           string     `json:"id"`
-	Game         string     `json:"game"`
-	Name         string     `json:"name"`
-	Description  string     `json:"description"`
-	PriceIDR     int        `json:"price_idr"`
-	CostPriceIDR int        `json:"cost_price_idr"`
-	Diamonds     int        `json:"diamonds"`
-	ProductType  string     `json:"product_type"`
-	SKU          string     `json:"sku"`
-	IsActive     bool       `json:"is_active"`
-	Stock        int        `json:"stock"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	DeletedAt    *time.Time `json:"deleted_at,omitempty"`
+	ID               string     `json:"id"`
+	Game             string     `json:"game"`
+	Name             string     `json:"name"`
+	Description      string     `json:"description"`
+	PriceIDR         int        `json:"price_idr"`
+	CostPriceIDR     int        `json:"cost_price_idr"`
+	Diamonds         int        `json:"diamonds"`
+	ProductType      string     `json:"product_type"`
+	SKU              string     `json:"sku"`
+	CustomerNoFormat string     `json:"customer_no_format"`
+	IsActive         bool       `json:"is_active"`
+	Stock            int        `json:"stock"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+	DeletedAt        *time.Time `json:"deleted_at,omitempty"`
 }
 
 type Order struct {

@@ -18,9 +18,9 @@ func NewProductRepository(pool *pgxpool.Pool) *PGProductRepository {
 func (r *PGProductRepository) GetByID(ctx context.Context, id string) (*models.Product, error) {
 	var p models.Product
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, game, name, description, price_idr, cost_price_idr, diamonds, product_type, sku, is_active, stock, created_at, updated_at, deleted_at
+		SELECT id, game, name, description, price_idr, cost_price_idr, diamonds, product_type, sku, customer_no_format, is_active, stock, created_at, updated_at, deleted_at
 		FROM products WHERE id = $1
-	`, id).Scan(&p.ID, &p.Game, &p.Name, &p.Description, &p.PriceIDR, &p.CostPriceIDR, &p.Diamonds, &p.ProductType, &p.SKU, &p.IsActive, &p.Stock, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt)
+	`, id).Scan(&p.ID, &p.Game, &p.Name, &p.Description, &p.PriceIDR, &p.CostPriceIDR, &p.Diamonds, &p.ProductType, &p.SKU, &p.CustomerNoFormat, &p.IsActive, &p.Stock, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -30,9 +30,9 @@ func (r *PGProductRepository) GetByID(ctx context.Context, id string) (*models.P
 func (r *PGProductRepository) GetByGameAndDiamonds(ctx context.Context, game string, diamonds int) (*models.Product, error) {
 	var p models.Product
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, game, name, description, price_idr, cost_price_idr, diamonds, product_type, sku, is_active, stock, created_at, updated_at, deleted_at
+		SELECT id, game, name, description, price_idr, cost_price_idr, diamonds, product_type, sku, customer_no_format, is_active, stock, created_at, updated_at, deleted_at
 		FROM products WHERE game = $1 AND diamonds = $2 AND is_active = true AND deleted_at IS NULL
-	`, game, diamonds).Scan(&p.ID, &p.Game, &p.Name, &p.Description, &p.PriceIDR, &p.CostPriceIDR, &p.Diamonds, &p.ProductType, &p.SKU, &p.IsActive, &p.Stock, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt)
+	`, game, diamonds).Scan(&p.ID, &p.Game, &p.Name, &p.Description, &p.PriceIDR, &p.CostPriceIDR, &p.Diamonds, &p.ProductType, &p.SKU, &p.CustomerNoFormat, &p.IsActive, &p.Stock, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (r *PGProductRepository) GetByGameAndDiamonds(ctx context.Context, game str
 
 func (r *PGProductRepository) ListByGame(ctx context.Context, game string) ([]models.Product, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, game, name, description, price_idr, cost_price_idr, diamonds, product_type, sku, is_active, stock, created_at, updated_at, deleted_at
+		SELECT id, game, name, description, price_idr, cost_price_idr, diamonds, product_type, sku, customer_no_format, is_active, stock, created_at, updated_at, deleted_at
 		FROM products WHERE game = $1 AND is_active = true AND deleted_at IS NULL ORDER BY price_idr
 	`, game)
 	if err != nil {
@@ -52,7 +52,7 @@ func (r *PGProductRepository) ListByGame(ctx context.Context, game string) ([]mo
 	var products []models.Product
 	for rows.Next() {
 		var p models.Product
-		if err := rows.Scan(&p.ID, &p.Game, &p.Name, &p.Description, &p.PriceIDR, &p.CostPriceIDR, &p.Diamonds, &p.ProductType, &p.SKU, &p.IsActive, &p.Stock, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Game, &p.Name, &p.Description, &p.PriceIDR, &p.CostPriceIDR, &p.Diamonds, &p.ProductType, &p.SKU, &p.CustomerNoFormat, &p.IsActive, &p.Stock, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt); err != nil {
 			return nil, err
 		}
 		products = append(products, p)
@@ -65,7 +65,7 @@ func (r *PGProductRepository) ListByGame(ctx context.Context, game string) ([]mo
 
 func (r *PGProductRepository) ListAll(ctx context.Context) ([]models.Product, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, game, name, description, price_idr, cost_price_idr, diamonds, product_type, sku, is_active, stock, created_at, updated_at, deleted_at
+		SELECT id, game, name, description, price_idr, cost_price_idr, diamonds, product_type, sku, customer_no_format, is_active, stock, created_at, updated_at, deleted_at
 		FROM products WHERE deleted_at IS NULL ORDER BY game, price_idr
 	`)
 	if err != nil {
@@ -76,7 +76,7 @@ func (r *PGProductRepository) ListAll(ctx context.Context) ([]models.Product, er
 	var products []models.Product
 	for rows.Next() {
 		var p models.Product
-		if err := rows.Scan(&p.ID, &p.Game, &p.Name, &p.Description, &p.PriceIDR, &p.CostPriceIDR, &p.Diamonds, &p.ProductType, &p.SKU, &p.IsActive, &p.Stock, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Game, &p.Name, &p.Description, &p.PriceIDR, &p.CostPriceIDR, &p.Diamonds, &p.ProductType, &p.SKU, &p.CustomerNoFormat, &p.IsActive, &p.Stock, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt); err != nil {
 			return nil, err
 		}
 		products = append(products, p)
@@ -106,17 +106,17 @@ func (r *PGProductRepository) IncrementStock(ctx context.Context, id string) err
 
 func (r *PGProductRepository) Create(ctx context.Context, p *models.Product) error {
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO products (id, game, name, description, price_idr, cost_price_idr, diamonds, product_type, sku, is_active, stock)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-	`, p.ID, p.Game, p.Name, p.Description, p.PriceIDR, p.CostPriceIDR, p.Diamonds, p.ProductType, p.SKU, p.IsActive, p.Stock)
+		INSERT INTO products (id, game, name, description, price_idr, cost_price_idr, diamonds, product_type, sku, customer_no_format, is_active, stock)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`, p.ID, p.Game, p.Name, p.Description, p.PriceIDR, p.CostPriceIDR, p.Diamonds, p.ProductType, p.SKU, p.CustomerNoFormat, p.IsActive, p.Stock)
 	return err
 }
 
 func (r *PGProductRepository) Update(ctx context.Context, p *models.Product) error {
 	_, err := r.pool.Exec(ctx, `
-		UPDATE products SET game=$1, name=$2, description=$3, price_idr=$4, cost_price_idr=$5, diamonds=$6, product_type=$7, sku=$8, is_active=$9, stock=$10, updated_at=NOW()
-		WHERE id=$11
-	`, p.Game, p.Name, p.Description, p.PriceIDR, p.CostPriceIDR, p.Diamonds, p.ProductType, p.SKU, p.IsActive, p.Stock, p.ID)
+		UPDATE products SET game=$1, name=$2, description=$3, price_idr=$4, cost_price_idr=$5, diamonds=$6, product_type=$7, sku=$8, customer_no_format=$9, is_active=$10, stock=$11, updated_at=NOW()
+		WHERE id=$12
+	`, p.Game, p.Name, p.Description, p.PriceIDR, p.CostPriceIDR, p.Diamonds, p.ProductType, p.SKU, p.CustomerNoFormat, p.IsActive, p.Stock, p.ID)
 	return err
 }
 

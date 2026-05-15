@@ -186,15 +186,16 @@ func (h *AdminHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 
 func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Game         string `json:"game"`
-		Name         string `json:"name"`
-		Description  string `json:"description"`
-		PriceIDR     int    `json:"price_idr"`
-		CostPriceIDR int    `json:"cost_price_idr"`
-		Diamonds     int    `json:"diamonds"`
-		ProductType  string `json:"product_type"`
-		SKU          string `json:"sku"`
-		IsActive     bool   `json:"is_active"`
+		Game             string `json:"game"`
+		Name             string `json:"name"`
+		Description      string `json:"description"`
+		PriceIDR         int    `json:"price_idr"`
+		CostPriceIDR     int    `json:"cost_price_idr"`
+		Diamonds         int    `json:"diamonds"`
+		ProductType      string `json:"product_type"`
+		SKU              string `json:"sku"`
+		CustomerNoFormat string `json:"customer_no_format"`
+		IsActive         bool   `json:"is_active"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		io.Copy(io.Discard, r.Body)
@@ -219,6 +220,10 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product_type", "must be diamond, subscription, or other"), middleware.GetRequestID(r.Context()))
 		return
 	}
+	if !validCustomerNoFormat(req.CustomerNoFormat) {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("customer_no_format", "must be uid, uid_server_pipe, uid_server_concat, or uid_server_space"), middleware.GetRequestID(r.Context()))
+		return
+	}
 
 	exists, err := h.productRepo.ExistsBySKU(r.Context(), req.SKU, "")
 	if err != nil {
@@ -232,16 +237,17 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	product := &models.Product{
-		ID:           uuid.New().String(),
-		Game:         req.Game,
-		Name:         req.Name,
-		Description:  req.Description,
-		PriceIDR:     req.PriceIDR,
-		CostPriceIDR: req.CostPriceIDR,
-		Diamonds:     req.Diamonds,
-		ProductType:  req.ProductType,
-		SKU:          req.SKU,
-		IsActive:     req.IsActive,
+		ID:               uuid.New().String(),
+		Game:             req.Game,
+		Name:             req.Name,
+		Description:      req.Description,
+		PriceIDR:         req.PriceIDR,
+		CostPriceIDR:     req.CostPriceIDR,
+		Diamonds:         req.Diamonds,
+		ProductType:      req.ProductType,
+		SKU:              req.SKU,
+		CustomerNoFormat: req.CustomerNoFormat,
+		IsActive:         req.IsActive,
 	}
 
 	if err := h.productRepo.Create(r.Context(), product); err != nil {
@@ -264,15 +270,16 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Game         string `json:"game"`
-		Name         string `json:"name"`
-		Description  string `json:"description"`
-		PriceIDR     int    `json:"price_idr"`
-		CostPriceIDR int    `json:"cost_price_idr"`
-		Diamonds     int    `json:"diamonds"`
-		ProductType  string `json:"product_type"`
-		SKU          string `json:"sku"`
-		IsActive     bool   `json:"is_active"`
+		Game             string `json:"game"`
+		Name             string `json:"name"`
+		Description      string `json:"description"`
+		PriceIDR         int    `json:"price_idr"`
+		CostPriceIDR     int    `json:"cost_price_idr"`
+		Diamonds         int    `json:"diamonds"`
+		ProductType      string `json:"product_type"`
+		SKU              string `json:"sku"`
+		CustomerNoFormat string `json:"customer_no_format"`
+		IsActive         bool   `json:"is_active"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		io.Copy(io.Discard, r.Body)
@@ -297,6 +304,10 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product_type", "must be diamond, subscription, or other"), middleware.GetRequestID(r.Context()))
 		return
 	}
+	if !validCustomerNoFormat(req.CustomerNoFormat) {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("customer_no_format", "must be uid, uid_server_pipe, uid_server_concat, or uid_server_space"), middleware.GetRequestID(r.Context()))
+		return
+	}
 
 	exists2, err := h.productRepo.ExistsBySKU(r.Context(), req.SKU, id)
 	if err != nil {
@@ -310,16 +321,17 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	product := &models.Product{
-		ID:           existing.ID,
-		Game:         req.Game,
-		Name:         req.Name,
-		Description:  req.Description,
-		PriceIDR:     req.PriceIDR,
-		CostPriceIDR: req.CostPriceIDR,
-		Diamonds:     req.Diamonds,
-		ProductType:  req.ProductType,
-		SKU:          req.SKU,
-		IsActive:     req.IsActive,
+		ID:               existing.ID,
+		Game:             req.Game,
+		Name:             req.Name,
+		Description:      req.Description,
+		PriceIDR:         req.PriceIDR,
+		CostPriceIDR:     req.CostPriceIDR,
+		Diamonds:         req.Diamonds,
+		ProductType:      req.ProductType,
+		SKU:              req.SKU,
+		CustomerNoFormat: req.CustomerNoFormat,
+		IsActive:         req.IsActive,
 	}
 
 	if err := h.productRepo.Update(r.Context(), product); err != nil {
@@ -670,4 +682,13 @@ func (h *AdminHandler) OverrideOrderStatus(w http.ResponseWriter, r *http.Reques
 		"status":  "ok",
 		"message": "order status overridden",
 	}, middleware.GetRequestID(r.Context()))
+}
+
+func validCustomerNoFormat(format string) bool {
+	switch format {
+	case "", "uid", "uid_server_pipe", "uid_server_concat", "uid_server_space":
+		return true
+	default:
+		return false
+	}
 }

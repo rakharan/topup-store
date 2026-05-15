@@ -464,17 +464,18 @@ func TestProductRepository_CreateAndGet(t *testing.T) {
 		repo := productRepo()
 
 		product := &models.Product{
-			ID:           uuid.New().String(),
-			Game:         "free_fire",
-			Name:         "100 Diamonds",
-			Description:  "Test product",
-			PriceIDR:     15000,
-			CostPriceIDR: 10000,
-			Diamonds:     100,
-			ProductType:  "diamond",
-			SKU:          "ff_100",
-			IsActive:     true,
-			Stock:        -1,
+			ID:               uuid.New().String(),
+			Game:             "free_fire",
+			Name:             "100 Diamonds",
+			Description:      "Test product",
+			PriceIDR:         15000,
+			CostPriceIDR:     10000,
+			Diamonds:         100,
+			ProductType:      "diamond",
+			SKU:              "ff_100",
+			CustomerNoFormat: "uid_server_concat",
+			IsActive:         true,
+			Stock:            -1,
 		}
 
 		if err := repo.Create(ctx, product); err != nil {
@@ -490,6 +491,9 @@ func TestProductRepository_CreateAndGet(t *testing.T) {
 		}
 		if got.SKU != product.SKU {
 			t.Errorf("sku = %s; want %s", got.SKU, product.SKU)
+		}
+		if got.CustomerNoFormat != product.CustomerNoFormat {
+			t.Errorf("customer_no_format = %s; want %s", got.CustomerNoFormat, product.CustomerNoFormat)
 		}
 	})
 }
