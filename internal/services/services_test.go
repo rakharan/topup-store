@@ -219,7 +219,7 @@ func TestPaymentService_UpdateOrderStatusIf(t *testing.T) {
 		updateStatusIfOk:  true,
 		updateStatusIfErr: nil,
 	}
-	svc := NewPaymentService(orderRepo, "key", false, nil)
+	svc := NewPaymentService(orderRepo, "key", "", false, nil)
 
 	ok, err := svc.UpdateOrderStatusIf(context.Background(), "order-1", "processing", "paid")
 	if err != nil {

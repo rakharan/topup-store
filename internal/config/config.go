@@ -16,6 +16,7 @@ type Config struct {
 	DBMaxConnIdleTime            string
 	MidtransServerKey            string
 	MidtransClientKey            string
+	MidtransMerchantPopID        string
 	MidtransIsProd               bool
 	DigiflazzUsername            string
 	DigiflazzAPIKey              string
@@ -48,6 +49,7 @@ func Load() (*Config, error) {
 		DBMaxConnIdleTime:            getEnv("DB_MAX_CONN_IDLE_TIME", "30m"),
 		MidtransServerKey:            getEnv("MIDTRANS_SERVER_KEY", ""),
 		MidtransClientKey:            getEnv("MIDTRANS_CLIENT_KEY", ""),
+		MidtransMerchantPopID:        getEnv("MIDTRANS_MERCHANT_POP_ID", getEnv("MERCHANT_ID", "")),
 		MidtransIsProd:               getEnv("MIDTRANS_IS_PRODUCTION", "false") == "true",
 		DigiflazzUsername:            getEnv("DIGIFLAZZ_USERNAME", ""),
 		DigiflazzAPIKey:              getEnv("DIGIFLAZZ_API_KEY", ""),

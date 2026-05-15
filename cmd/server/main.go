@@ -107,7 +107,7 @@ func main() {
 	productRepo := repositories.NewProductRepository(pool)
 	webhookRepo := repositories.NewWebhookRepository(pool)
 
-	paymentSvc := services.NewPaymentService(orderRepo, cfg.MidtransServerKey, cfg.MidtransIsProd, logger)
+	paymentSvc := services.NewPaymentService(orderRepo, cfg.MidtransServerKey, cfg.MidtransMerchantPopID, cfg.MidtransIsProd, logger)
 	topupSvc := services.NewTopupService(orderRepo, productRepo, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzAPIURL, cfg.DigiflazzTesting, logger)
 	notifySvc := services.NewNotifyService(cfg.FonnteToken, cfg.WaBotBaseURL, cfg.WaBotToken, logger)
 
@@ -378,6 +378,7 @@ func readyHandler(pool *pgxpool.Pool, cache cacheChecker, cfg *config.Config) ht
 			"config": map[string]bool{
 				"midtrans_server_key": cfg.MidtransServerKey != "",
 				"midtrans_client_key": cfg.MidtransClientKey != "",
+				"midtrans_pop_id":     cfg.MidtransMerchantPopID != "",
 				"midtrans_production": cfg.MidtransIsProd,
 				"digiflazz":           cfg.DigiflazzUsername != "" && cfg.DigiflazzAPIKey != "",
 				"fonnte":              cfg.FonnteToken != "",
