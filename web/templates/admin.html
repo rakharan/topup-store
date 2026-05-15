@@ -518,7 +518,11 @@
             const btn = document.getElementById('confirmActionBtn');
             btn.textContent = actionText;
             btn.className = 'px-4 py-2 rounded-lg text-sm transition focus-ring font-medium text-white ' + actionClass;
-            btn.onclick = () => { closeConfirmModal(); resolve(true); };
+            btn.onclick = () => {
+                confirmResolve = null;
+                hideConfirmModal();
+                resolve(true);
+            };
             document.getElementById('confirmIcon').textContent = icon;
             modal.classList.remove('hidden');
             trapFocus(modal);
@@ -542,10 +546,14 @@
     });
 
     function closeConfirmModal() {
+        hideConfirmModal();
+        if (confirmResolve) { confirmResolve(false); confirmResolve = null; }
+    }
+
+    function hideConfirmModal() {
         const modal = document.getElementById('confirmModal');
         untrapFocus(modal);
         modal.classList.add('hidden');
-        if (confirmResolve) { confirmResolve(false); confirmResolve = null; }
     }
 
     function trapFocus(container) {
