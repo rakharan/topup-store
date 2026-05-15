@@ -113,7 +113,9 @@ func (h *AdminHandler) ProcessOrder(w http.ResponseWriter, r *http.Request) {
 				h.logger.Error("admin process order panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", r))
 			}
 		}()
-		if err := h.topupSvc.ProcessOrder(r.Context(), orderCopy.ID); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		if err := h.topupSvc.ProcessOrder(ctx, orderCopy.ID); err != nil {
 			h.logger.Error("admin process order: topup failed", slog.String("order_id", orderCopy.ID), slog.String("error", err.Error()))
 			return
 		}
@@ -162,7 +164,9 @@ func (h *AdminHandler) RetryOrder(w http.ResponseWriter, r *http.Request) {
 				h.logger.Error("admin retry order panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", r))
 			}
 		}()
-		if err := h.topupSvc.ProcessOrder(r.Context(), orderCopy.ID); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		if err := h.topupSvc.ProcessOrder(ctx, orderCopy.ID); err != nil {
 			h.logger.Error("admin retry order: topup failed", slog.String("order_id", orderCopy.ID), slog.String("error", err.Error()))
 			return
 		}

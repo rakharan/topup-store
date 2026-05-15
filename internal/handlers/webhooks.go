@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/topup-store/internal/apperrors"
 	"github.com/topup-store/internal/constants"
@@ -154,7 +155,9 @@ func (h *WebhookHandler) Midtrans(w http.ResponseWriter, r *http.Request) {
 					h.logger.Error("topup process panicked", slog.String("order_id", orderCopy.ID), slog.String("order_number", orderCopy.OrderNumber), slog.Any("panic", r))
 				}
 			}()
-			if err := h.topupSvc.ProcessOrder(r.Context(), orderCopy.ID); err != nil {
+			ctx, cancel := context.WithTimeout(h.rootCtx, 2*time.Minute)
+			defer cancel()
+			if err := h.topupSvc.ProcessOrder(ctx, orderCopy.ID); err != nil {
 				h.logger.Error("topup process failed", slog.String("order_id", orderCopy.ID), slog.String("order_number", orderCopy.OrderNumber), slog.String("error", err.Error()))
 				return
 			}
