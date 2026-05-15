@@ -109,6 +109,15 @@ func (s *PaymentService) createSnapTransaction(order *models.Order, gameName str
 			Unit:     "minute",
 			Duration: int64(expiryDuration),
 		},
+		EnabledPayments: []snap.SnapPaymentType{
+			snap.PaymentTypeGopay,
+			snap.PaymentTypePermataVA,
+			snap.PaymentTypeBCAVA,
+			snap.PaymentTypeBNIVA,
+			snap.PaymentTypeBRIVA,
+			snap.PaymentTypeEChannel,
+			snap.PaymentTypeOtherVA,
+		},
 		CustomerDetail: &midtrans.CustomerDetails{
 			Phone: order.UserPhone,
 		},
