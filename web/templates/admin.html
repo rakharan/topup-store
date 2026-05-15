@@ -244,14 +244,15 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm text-white/70 mb-1" for="prodCustomerNoFormat">Customer No Format</label>
-                        <select id="prodCustomerNoFormat" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
-                            <option value="">Default</option>
+                        <label class="block text-sm text-white/70 mb-1" for="prodCustomerNoFormat">Digiflazz Customer No</label>
+                        <select id="prodCustomerNoFormat" aria-describedby="prodCustomerNoFormatHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                            <option value="">Default per game</option>
                             <option value="uid">UID only</option>
                             <option value="uid_server_pipe">UID|Server</option>
                             <option value="uid_server_concat">UIDServer</option>
                             <option value="uid_server_space">UID Server</option>
                         </select>
+                        <p id="prodCustomerNoFormatHint" class="text-xs text-white/40 mt-1">Format customer_no yang dikirim ke supplier.</p>
                     </div>
                     <div>
                         <label class="block text-sm text-white/70 mb-1" for="prodDesc">Description</label>
@@ -517,6 +518,37 @@
         if (cost > 0 && price > 0) {
             updateMarginInfo(cost, price);
         }
+    });
+
+    const pipeCustomerNoGames = new Set(['genshin_impact', 'honkai_star_rail', 'zenless_zone_zero', 'honkai_impact_3']);
+    const customerNoFormatLabels = { uid: 'UID', uid_server_pipe: 'UID|Server', uid_server_concat: 'UIDServer', uid_server_space: 'UID Server' };
+
+    function defaultCustomerNoFormat(game) {
+        if (pipeCustomerNoGames.has(game)) return 'uid_server_pipe';
+        if (game === 'mobile_legends') return 'uid_server_concat';
+        return 'uid';
+    }
+
+    function customerNoFormatDisplay(format, game) {
+        return customerNoFormatLabels[format] || `Default (${customerNoFormatLabels[defaultCustomerNoFormat(game)]})`;
+    }
+
+    function updateCustomerNoFormatHint() {
+        const game = document.getElementById('prodGame')?.value || '';
+        const format = document.getElementById('prodCustomerNoFormat')?.value || '';
+        const hint = document.getElementById('prodCustomerNoFormatHint');
+        if (hint) {
+            hint.textContent = `Digiflazz customer_no: ${customerNoFormatDisplay(format, game)}. Override this if the seller notes use another format.`;
+        }
+    }
+
+    document.getElementById('prodCustomerNoFormat')?.addEventListener('change', updateCustomerNoFormatHint);
+    document.getElementById('prodGame')?.addEventListener('change', () => {
+        const formatEl = document.getElementById('prodCustomerNoFormat');
+        if (formatEl && !document.getElementById('editProductId').value) {
+            formatEl.value = defaultCustomerNoFormat(document.getElementById('prodGame').value);
+        }
+        updateCustomerNoFormatHint();
     });
 
     let confirmResolve = null;
@@ -828,7 +860,6 @@
         const gameLabels = { free_fire: 'FF', mobile_legends: 'ML', pubg_mobile: 'PUBG', genshin_impact: 'Genshin', honkai_star_rail: 'HSR', zenless_zone_zero: 'ZZZ', honkai_impact_3: 'HI3' };
         const typeLabels = { diamond: 'Diamond', subscription: 'Subscription', other: 'Other' };
         const typeColors = { diamond: 'bg-green-500/20 text-green-400', subscription: 'bg-blue-500/20 text-blue-400', other: 'bg-gray-500/20 text-gray-400' };
-        const customerNoFormatLabels = { uid: 'UID', uid_server_pipe: 'UID|Server', uid_server_concat: 'UIDServer', uid_server_space: 'UID Server' };
         tbody.innerHTML = filtered.map(p => `
             <tr class="border-b border-white/5 hover:bg-white/5" data-id="${escapeHtml(p.id)}">
                 <td class="py-3 pr-4 font-mono text-xs">${escapeHtml(p.id.substring(0, 8))}...</td>
@@ -839,7 +870,7 @@
                 <td class="py-3 pr-4">Rp ${p.price_idr.toLocaleString('id-ID')}</td>
                 <td class="py-3 pr-4">${p.diamonds || '-'}</td>
                 <td class="py-3 pr-4"><span class="px-2 py-1 rounded-full text-xs ${typeColors[p.product_type] || typeColors.other}">${escapeHtml(typeLabels[p.product_type] || 'Other')}</span></td>
-                <td class="py-3 pr-4 text-xs text-white/60">${escapeHtml(customerNoFormatLabels[p.customer_no_format] || 'Default')}</td>
+                <td class="py-3 pr-4 text-xs text-white/60">${escapeHtml(customerNoFormatDisplay(p.customer_no_format, p.game))}</td>
                 <td class="py-3 pr-4">${p.is_active ? '<span class="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">Active</span>' : '<span class="px-2 py-1 rounded-full text-xs bg-gray-500/20 text-gray-400">Inactive</span>'}</td>
                 <td class="py-3">
                     <button onclick="editProduct('${escapeHtml(p.id)}')" class="text-blue-400 hover:text-blue-300 text-sm mr-2 focus-ring">Edit</button>
@@ -854,7 +885,7 @@
                     ${p.is_active ? '<span class="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">Active</span>' : '<span class="px-2 py-1 rounded-full text-xs bg-gray-500/20 text-gray-400">Inactive</span>'}
                 </div>
                 <div class="text-xs text-white/50 mb-1">${escapeHtml(gameLabels[p.game] || p.game)} &middot; ${escapeHtml(p.sku)}</div>
-                <div class="text-xs text-white/40 mb-1">${escapeHtml(customerNoFormatLabels[p.customer_no_format] || 'Default')}</div>
+                <div class="text-xs text-white/40 mb-1">${escapeHtml(customerNoFormatDisplay(p.customer_no_format, p.game))}</div>
                 <div class="text-sm text-primary font-semibold mb-3">Rp ${p.price_idr.toLocaleString('id-ID')}</div>
                 <div class="flex gap-2">
                     <button onclick="editProduct('${escapeHtml(p.id)}')" class="flex-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-sm font-medium py-2 rounded-lg transition focus-ring">Edit</button>
@@ -887,10 +918,11 @@
         document.getElementById('prodPrice').value = '';
         document.getElementById('prodDiamonds').value = '';
         document.getElementById('prodType').value = 'diamond';
-        document.getElementById('prodCustomerNoFormat').value = '';
+        document.getElementById('prodCustomerNoFormat').value = defaultCustomerNoFormat('free_fire');
         document.getElementById('prodDesc').value = '';
         document.getElementById('prodActive').checked = true;
         document.getElementById('priceMarginInfo').textContent = '';
+        updateCustomerNoFormatHint();
     }
 
     function hideProductForm() {
@@ -914,6 +946,7 @@
         document.getElementById('prodDesc').value = p.description || '';
         document.getElementById('prodActive').checked = p.is_active;
         updateMarginInfo(p.cost_price_idr || 0, p.price_idr);
+        updateCustomerNoFormatHint();
     }
 
     async function deleteProduct(id) {
