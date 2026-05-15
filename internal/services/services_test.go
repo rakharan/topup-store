@@ -261,6 +261,20 @@ func TestTopupService_BuildCustomerNo(t *testing.T) {
 	}
 }
 
+func TestTopupService_TrimsDigiflazzConfig(t *testing.T) {
+	svc := NewTopupService(nil, nil, " user ", " key \n", " https://api.example.com ", true, nil)
+
+	if svc.digiflazzUser != "user" {
+		t.Fatalf("digiflazzUser = %q; want user", svc.digiflazzUser)
+	}
+	if svc.digiflazzAPIKey != "key" {
+		t.Fatalf("digiflazzAPIKey = %q; want key", svc.digiflazzAPIKey)
+	}
+	if svc.digiflazzURL != "https://api.example.com" {
+		t.Fatalf("digiflazzURL = %q; want https://api.example.com", svc.digiflazzURL)
+	}
+}
+
 func TestPaymentService_UpdateOrderStatusIf(t *testing.T) {
 	orderRepo := &mockOrderRepo{
 		updateStatusIfOk:  true,

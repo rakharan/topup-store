@@ -35,12 +35,16 @@ type TopupService struct {
 }
 
 func NewTopupService(orderRepo repositories.OrderRepository, productRepo repositories.ProductRepository, user, apiKey, digiflazzURL string, testing bool, logger *slog.Logger) *TopupService {
+	if logger == nil {
+		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
+	}
+
 	return &TopupService{
 		orderRepo:       orderRepo,
 		productRepo:     productRepo,
-		digiflazzUser:   user,
-		digiflazzAPIKey: apiKey,
-		digiflazzURL:    digiflazzURL,
+		digiflazzUser:   strings.TrimSpace(user),
+		digiflazzAPIKey: strings.TrimSpace(apiKey),
+		digiflazzURL:    strings.TrimSpace(digiflazzURL),
 		digiflazzTest:   testing,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
@@ -98,6 +102,18 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 		refID = order.ID
 	}
 	sign := s.generateSign(refID)
+
+	s.logger.Info("digiflazz topup request",
+		slog.String("order_id", order.ID),
+		slog.String("ref_id", refID),
+		slog.String("sku", product.SKU),
+		slog.String("customer_no", customerNo),
+		slog.String("api_url", s.digiflazzURL),
+		slog.Bool("testing", s.digiflazzTest),
+		slog.Int("username_len", len(s.digiflazzUser)),
+		slog.Int("api_key_len", len(s.digiflazzAPIKey)),
+		slog.String("sign_prefix", signPrefix(sign)),
+	)
 
 	payload := map[string]any{
 		"username":       s.digiflazzUser,
@@ -207,6 +223,13 @@ func (s *TopupService) generateSign(refID string) string {
 	raw := s.digiflazzUser + s.digiflazzAPIKey + refID
 	hash := md5.Sum([]byte(raw))
 	return hex.EncodeToString(hash[:])
+}
+
+func signPrefix(sign string) string {
+	if len(sign) <= 8 {
+		return sign
+	}
+	return sign[:8]
 }
 
 func (s *TopupService) CheckTransactionStatus(orderID string) (status string, sn string, err error) {
