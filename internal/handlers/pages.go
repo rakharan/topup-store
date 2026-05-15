@@ -33,9 +33,21 @@ func dict(values ...any) map[string]any {
 	return dict
 }
 
+var wibLocation = time.FixedZone("WIB", 7*60*60)
+
+func formatWIB(t time.Time) string {
+	if t.IsZero() {
+		return "-"
+	}
+	return t.In(wibLocation).Format("2006-01-02 15:04 WIB")
+}
+
 func parseTemplates() (*template.Template, error) {
 	var templates *template.Template
-	funcMap := template.FuncMap{"dict": dict}
+	funcMap := template.FuncMap{
+		"dict":      dict,
+		"formatWIB": formatWIB,
+	}
 
 	err := filepath.WalkDir("web/templates", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -62,17 +74,17 @@ func parseTemplates() (*template.Template, error) {
 }
 
 type PageHandler struct {
-	topupSvc           services.TopupServiceInterface
-	paymentSvc         services.PaymentServiceInterface
-	notifySvc          services.NotifyServiceInterface
-	templates          *template.Template
-	waNumber           string
-	adminPass          string
-	adminPath          string
-	midtransClientKey  string
-	midtransIsProd     bool
-	cookieSecure       bool
-	logger             *slog.Logger
+	topupSvc          services.TopupServiceInterface
+	paymentSvc        services.PaymentServiceInterface
+	notifySvc         services.NotifyServiceInterface
+	templates         *template.Template
+	waNumber          string
+	adminPass         string
+	adminPath         string
+	midtransClientKey string
+	midtransIsProd    bool
+	cookieSecure      bool
+	logger            *slog.Logger
 }
 
 func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass, adminPath, midtransClientKey string, midtransIsProd, cookieSecure bool, logger *slog.Logger) *PageHandler {

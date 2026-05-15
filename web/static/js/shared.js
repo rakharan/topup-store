@@ -18,7 +18,7 @@ function formatCurrency(amount) {
 
 function formatDate(dateStr) {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleString('id-ID');
+    return new Date(dateStr).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + ' WIB';
 }
 
 function copyToClipboard(text) {
