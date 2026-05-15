@@ -198,7 +198,7 @@ func (s *TopupService) buildCustomerNo(order *models.Order, product *models.Prod
 	}
 
 	if product.Game == constants.GameMobileLegends {
-		return order.GameUID + "|" + order.GameServer
+		return order.GameUID + order.GameServer
 	}
 	return order.GameUID
 }

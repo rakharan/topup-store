@@ -225,9 +225,9 @@ func TestTopupService_BuildCustomerNo(t *testing.T) {
 		want    string
 	}{
 		{
-			name:    "mobile legends default keeps existing pipe behavior",
+			name:    "mobile legends default concatenates uid and server",
 			product: &models.Product{Game: constants.GameMobileLegends},
-			want:    "12345|556",
+			want:    "12345556",
 		},
 		{
 			name:    "explicit concat",
