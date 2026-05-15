@@ -19,7 +19,6 @@ import (
 	"github.com/topup-store/internal/constants"
 	"github.com/topup-store/internal/models"
 	"github.com/topup-store/internal/repositories"
-	"github.com/topup-store/internal/retry"
 )
 
 type TopupService struct {
@@ -83,19 +82,63 @@ func (s *TopupService) ProcessOrder(ctx context.Context, orderID string) error {
 		return fmt.Errorf("fetch product %s: %w", order.ProductID, err)
 	}
 
-	if err := s.processTopupViaDigiflazz(ctx, order, product); err != nil {
-		if err2 := s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusFailed); err2 != nil {
-			s.logger.Error("failed to mark order as failed", slog.String("order_id", orderID), slog.String("error", err2.Error()))
+	result, err := s.processTopupViaDigiflazz(ctx, order, product)
+	if err != nil {
+		current, getErr := s.orderRepo.GetByID(ctx, orderID)
+		if getErr == nil && current.Status == constants.StatusSuccess {
+			return nil
 		}
-		s.orderRepo.InsertStatusHistory(ctx, orderID, constants.StatusProcessing, constants.StatusFailed, err.Error())
+		s.orderRepo.InsertStatusHistory(ctx, orderID, constants.StatusProcessing, constants.StatusProcessing, err.Error())
 		return fmt.Errorf("digiflazz topup: %w", err)
 	}
 
-	s.orderRepo.InsertStatusHistory(ctx, orderID, constants.StatusProcessing, constants.StatusSuccess, "digiflazz topup completed")
-	return s.orderRepo.UpdateStatus(ctx, orderID, constants.StatusSuccess)
+	switch normalizeDigiflazzStatus(result.Status) {
+	case constants.StatusSuccess:
+		if result.SN != "" {
+			if err := s.orderRepo.UpdateSerialNumber(ctx, orderID, result.SN); err != nil {
+				return fmt.Errorf("update serial number: %w", err)
+			}
+		}
+		updated, err := s.orderRepo.UpdateStatusIf(ctx, orderID, constants.StatusSuccess, constants.StatusProcessing)
+		if err != nil {
+			return fmt.Errorf("mark success: %w", err)
+		}
+		if updated {
+			s.orderRepo.InsertStatusHistory(ctx, orderID, constants.StatusProcessing, constants.StatusSuccess, "digiflazz topup completed")
+		}
+	case constants.StatusFailed:
+		reason := result.Message
+		if reason == "" {
+			reason = "digiflazz transaction failed"
+		}
+		updated, err := s.orderRepo.UpdateStatusIf(ctx, orderID, constants.StatusFailed, constants.StatusProcessing)
+		if err != nil {
+			return fmt.Errorf("mark failed: %w", err)
+		}
+		if updated {
+			s.orderRepo.InsertStatusHistory(ctx, orderID, constants.StatusProcessing, constants.StatusFailed, reason)
+		}
+		return fmt.Errorf("digiflazz transaction failed: %s", reason)
+	case constants.StatusProcessing:
+		s.logger.Info("digiflazz topup pending", slog.String("order_id", orderID))
+	default:
+		s.logger.Warn("digiflazz topup returned unknown status",
+			slog.String("order_id", orderID),
+			slog.String("status", result.Status),
+		)
+	}
+	return nil
 }
 
-func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *models.Order, product *models.Product) error {
+type digiflazzTopupData struct {
+	Status         string `json:"status"`
+	Message        string `json:"message"`
+	SN             string `json:"sn"`
+	BuyerLastSaldo int    `json:"buyer_last_saldo"`
+	Price          int    `json:"price"`
+}
+
+func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *models.Order, product *models.Product) (*digiflazzTopupData, error) {
 	customerNo := s.buildCustomerNo(order, product)
 	refID := order.DigiflazzRefID
 	if refID == "" {
@@ -126,56 +169,36 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("marshal payload: %w", err)
+		return nil, fmt.Errorf("marshal payload: %w", err)
 	}
 
 	var result struct {
-		Data struct {
-			Status         string `json:"status"`
-			Message        string `json:"message"`
-			SN             string `json:"sn"`
-			BuyerLastSaldo int    `json:"buyer_last_saldo"`
-			Price          int    `json:"price"`
-		} `json:"data"`
+		Data digiflazzTopupData `json:"data"`
 	}
 
-	retryCfg := retry.DefaultConfig()
-	err = retry.Do(ctx, retryCfg, func(ctx context.Context) error {
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.digiflazzURL, bytes.NewReader(body))
-		if err != nil {
-			return fmt.Errorf("create request: %w", err)
-		}
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := s.httpClient.Do(req)
-		if err != nil {
-			return fmt.Errorf("send request: %w", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			respBody, _ := io.ReadAll(resp.Body)
-			return fmt.Errorf("digiflazz returned status %d: %s", resp.StatusCode, string(respBody))
-		}
-
-		respBody, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("read response: %w", err)
-		}
-
-		if err := json.Unmarshal(respBody, &result); err != nil {
-			return fmt.Errorf("parse response: %w, body: %s", err, string(respBody))
-		}
-
-		if result.Data.Status == "Gagal" || result.Data.Status == "Fail" {
-			return fmt.Errorf("digiflazz transaction failed: %s", result.Data.Message)
-		}
-
-		return nil
-	})
-
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.digiflazzURL, bytes.NewReader(body))
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("digiflazz returned status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return nil, fmt.Errorf("parse response: %w, body: %s", err, string(respBody))
 	}
 
 	if result.Data.Status == constants.StatusSuccess {
@@ -188,13 +211,8 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 		if result.Data.BuyerLastSaldo > 0 {
 			s.balance.Store(int64(result.Data.BuyerLastSaldo))
 		}
-	} else {
-		s.logger.Info("digiflazz topup pending",
-			slog.String("order_id", order.ID),
-			slog.String("status", result.Data.Status),
-		)
 	}
-	return nil
+	return &result.Data, nil
 }
 
 func (s *TopupService) buildCustomerNo(order *models.Order, product *models.Product) string {
@@ -223,6 +241,19 @@ func (s *TopupService) generateSign(refID string) string {
 	raw := s.digiflazzUser + s.digiflazzAPIKey + refID
 	hash := md5.Sum([]byte(raw))
 	return hex.EncodeToString(hash[:])
+}
+
+func normalizeDigiflazzStatus(status string) string {
+	switch strings.ToLower(status) {
+	case "sukses", constants.StatusSuccess:
+		return constants.StatusSuccess
+	case "pending":
+		return constants.StatusProcessing
+	case "gagal", "fail", constants.StatusFailed:
+		return constants.StatusFailed
+	default:
+		return status
+	}
 }
 
 func signPrefix(sign string) string {
