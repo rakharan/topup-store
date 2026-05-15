@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -267,6 +268,82 @@ func TestOrderRepository_UpdateStatus(t *testing.T) {
 	})
 }
 
+func TestOrderRepository_ListIncludesExpired(t *testing.T) {
+	withCleanTables(t, func(ctx context.Context) {
+		repo := orderRepo()
+
+		productID := createTestProduct(t, ctx, "free_fire", 70)
+		order := &models.Order{
+			ID:          uuid.New().String(),
+			OrderNumber: "FT-20240101-0006",
+			ProductID:   productID,
+			UserPhone:   "6281234567890",
+			GameUID:     "12345678",
+			AmountIDR:   7000,
+			Channel:     "web",
+		}
+		if err := repo.Create(ctx, order); err != nil {
+			t.Fatalf("create: %v", err)
+		}
+		if err := repo.UpdateStatus(ctx, order.ID, "expired"); err != nil {
+			t.Fatalf("update status: %v", err)
+		}
+
+		orders, total, err := repo.List(ctx, 1, 10)
+		if err != nil {
+			t.Fatalf("list: %v", err)
+		}
+		if total != 1 {
+			t.Fatalf("total = %d; want 1", total)
+		}
+		if len(orders) != 1 {
+			t.Fatalf("len = %d; want 1", len(orders))
+		}
+		if orders[0].Status != "expired" {
+			t.Errorf("status = %s; want expired", orders[0].Status)
+		}
+	})
+}
+
+func TestOrderRepository_ExpireOldPendingScansReturnedOrder(t *testing.T) {
+	withCleanTables(t, func(ctx context.Context) {
+		repo := orderRepo()
+
+		productID := createTestProduct(t, ctx, "free_fire", 80)
+		order := &models.Order{
+			ID:             uuid.New().String(),
+			OrderNumber:    "FT-20240101-0007",
+			ProductID:      productID,
+			UserPhone:      "6281234567890",
+			GameUID:        "12345678",
+			AmountIDR:      8000,
+			Channel:        "web",
+			StockReserved:  true,
+			DigiflazzRefID: "ref-expire",
+		}
+		if err := repo.Create(ctx, order); err != nil {
+			t.Fatalf("create: %v", err)
+		}
+		if _, err := testPool.Exec(ctx, "UPDATE orders SET created_at = NOW() - INTERVAL '31 minutes' WHERE id = $1", order.ID); err != nil {
+			t.Fatalf("age order: %v", err)
+		}
+
+		expired, err := repo.ExpireOldPending(ctx)
+		if err != nil {
+			t.Fatalf("expire old pending: %v", err)
+		}
+		if len(expired) != 1 {
+			t.Fatalf("expired len = %d; want 1", len(expired))
+		}
+		if expired[0].Status != "expired" {
+			t.Errorf("status = %s; want expired", expired[0].Status)
+		}
+		if !expired[0].StockReserved {
+			t.Error("stock_reserved = false; want true")
+		}
+	})
+}
+
 func TestOrderRepository_UpdateStatusIf(t *testing.T) {
 	withCleanTables(t, func(ctx context.Context) {
 		repo := orderRepo()
@@ -344,6 +421,40 @@ func TestOrderRepository_StatusHistory(t *testing.T) {
 				reason = *history[0].Reason
 			}
 			t.Errorf("reason = %s; want payment received", reason)
+		}
+	})
+}
+
+func TestOrderRepository_GetOverallStatsNoSuccessOrders(t *testing.T) {
+	withCleanTables(t, func(ctx context.Context) {
+		repo := orderRepo()
+
+		productID := createTestProduct(t, ctx, "free_fire", 90)
+		order := &models.Order{
+			ID:          uuid.New().String(),
+			OrderNumber: "FT-20240101-0008",
+			ProductID:   productID,
+			UserPhone:   "6281234567890",
+			GameUID:     "12345678",
+			AmountIDR:   9000,
+			Channel:     "web",
+		}
+		if err := repo.Create(ctx, order); err != nil {
+			t.Fatalf("create: %v", err)
+		}
+
+		stats, err := repo.GetOverallStats(ctx, time.Now().Add(-time.Hour), time.Now().Add(time.Hour))
+		if err != nil {
+			t.Fatalf("overall stats: %v", err)
+		}
+		if stats.TotalOrders != 1 {
+			t.Fatalf("total_orders = %d; want 1", stats.TotalOrders)
+		}
+		if stats.AvgOrderValue != 0 {
+			t.Errorf("avg_order_value = %v; want 0", stats.AvgOrderValue)
+		}
+		if _, err := json.Marshal(stats); err != nil {
+			t.Fatalf("marshal stats: %v", err)
 		}
 	})
 }

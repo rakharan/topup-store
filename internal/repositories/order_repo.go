@@ -196,7 +196,7 @@ func (r *PGOrderRepository) List(ctx context.Context, page, perPage int) ([]mode
 
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
-		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
+		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, stock_reserved, created_at, updated_at
 		FROM orders ORDER BY created_at DESC LIMIT $1 OFFSET $2
 	`, perPage, offset)
 	if err != nil {
@@ -223,7 +223,7 @@ func (r *PGOrderRepository) List(ctx context.Context, page, perPage int) ([]mode
 func (r *PGOrderRepository) ListProcessing(ctx context.Context) ([]models.Order, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
-		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
+		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, stock_reserved, created_at, updated_at
 		FROM orders WHERE status = 'processing' AND created_at > NOW() - INTERVAL '24 hours'
 	`)
 	if err != nil {
@@ -236,7 +236,7 @@ func (r *PGOrderRepository) ListProcessing(ctx context.Context) ([]models.Order,
 		var o models.Order
 		if err := rows.Scan(&o.ID, &o.OrderNumber, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
 			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.Channel,
-			&o.SerialNumber, &o.DigiflazzRefID, &o.CreatedAt, &o.UpdatedAt); err != nil {
+			&o.SerialNumber, &o.DigiflazzRefID, &o.StockReserved, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, err
 		}
 		orders = append(orders, o)
@@ -264,7 +264,7 @@ func (r *PGOrderRepository) ExpireOldPending(ctx context.Context) ([]models.Orde
 		var o models.Order
 		if err := rows.Scan(&o.ID, &o.OrderNumber, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
 			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.Channel,
-			&o.SerialNumber, &o.DigiflazzRefID, &o.CreatedAt, &o.UpdatedAt); err != nil {
+			&o.SerialNumber, &o.DigiflazzRefID, &o.StockReserved, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, err
 		}
 		orders = append(orders, o)
@@ -278,7 +278,7 @@ func (r *PGOrderRepository) ExpireOldPending(ctx context.Context) ([]models.Orde
 func (r *PGOrderRepository) GetPendingOrdersOlderThan(ctx context.Context, age time.Duration) ([]models.Order, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, order_number, product_id, user_phone, game_uid, game_server, amount_idr, status,
-		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, created_at, updated_at
+		       midtrans_order_id, channel, serial_number, digiflazz_ref_id, stock_reserved, created_at, updated_at
 		FROM orders WHERE status = 'pending' AND created_at < NOW() - ($1 * INTERVAL '1 minute')
 		ORDER BY created_at ASC
 	`, int(age.Minutes()))
@@ -292,7 +292,7 @@ func (r *PGOrderRepository) GetPendingOrdersOlderThan(ctx context.Context, age t
 		var o models.Order
 		if err := rows.Scan(&o.ID, &o.OrderNumber, &o.ProductID, &o.UserPhone, &o.GameUID, &o.GameServer,
 			&o.AmountIDR, &o.Status, &o.MidtransOrderID, &o.Channel,
-			&o.SerialNumber, &o.DigiflazzRefID, &o.CreatedAt, &o.UpdatedAt); err != nil {
+			&o.SerialNumber, &o.DigiflazzRefID, &o.StockReserved, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, err
 		}
 		orders = append(orders, o)
@@ -503,6 +503,8 @@ func (r *PGOrderRepository) GetOverallStats(ctx context.Context, startDate, endD
 
 	if stats.TotalOrders > 0 {
 		stats.ConversionRate = float64(stats.SuccessOrders) / float64(stats.TotalOrders) * 100
+	}
+	if stats.SuccessOrders > 0 {
 		stats.AvgOrderValue = float64(stats.TotalRevenue) / float64(stats.SuccessOrders)
 	}
 	return &stats, nil
