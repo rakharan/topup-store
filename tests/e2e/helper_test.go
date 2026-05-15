@@ -83,7 +83,7 @@ func SetupTestServer(t testing.TB) *TestServer {
 	productRepo := repositories.NewProductRepository(pool)
 	webhookRepo := repositories.NewWebhookRepository(pool)
 
-	paymentSvc := services.NewPaymentService(orderRepo, "test-key", "", false, logger)
+	paymentSvc := services.NewPaymentService(orderRepo, "test-key", false, logger)
 	topupSvc := services.NewTopupService(orderRepo, productRepo, "test-user", "test-key", "https://api.digiflazz.com/v1/transaction", true, logger)
 	notifySvc := services.NewNotifyService("", "", "", logger)
 	webhookRetrySvc := services.NewWebhookRetryService(pool, logger)
