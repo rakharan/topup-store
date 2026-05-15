@@ -291,7 +291,8 @@
                 const opt = document.createElement("option");
                 opt.value = p.id;
                 const stockLabel = p.stock === 0 ? ' (Stok Habis)' : (p.stock > 0 ? ` (Stok: ${p.stock})` : '');
-                opt.textContent = `${p.name} (${p.diamonds} Diamonds) - Rp ${p.price_idr.toLocaleString("id-ID")}${stockLabel}`;
+                const qtyLabel = p.diamonds > 0 ? ` (${p.diamonds} item)` : '';
+                opt.textContent = `${p.name}${qtyLabel} - Rp ${p.price_idr.toLocaleString("id-ID")}${stockLabel}`;
                 opt.dataset.amount = p.price_idr;
                 opt.dataset.name = p.name;
                 opt.dataset.diamonds = p.diamonds;

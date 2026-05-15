@@ -93,17 +93,13 @@
                 card.className = "game-card bg-white/5 rounded-xl p-4 border border-white/10 hover:border-primary/50 transition flex flex-col animate-fade-in";
                 card.style.animationDelay = `${i * 50}ms`;
 
-                const header = document.createElement("div");
-                header.className = "flex items-center gap-2 mb-2";
-                header.innerHTML = '<svg class="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>';
-                const diamondCount = document.createElement("span");
-                diamondCount.className = "text-2xl font-bold text-primary";
-                diamondCount.textContent = p.diamonds;
-                header.appendChild(diamondCount);
-
                 const nameEl = document.createElement("div");
-                nameEl.className = "text-sm text-white/60 mb-3";
+                nameEl.className = "text-sm text-white/80 mb-2 font-medium min-h-[2.5rem]";
                 nameEl.textContent = p.name;
+
+                const qtyEl = document.createElement("div");
+                qtyEl.className = "text-xs text-white/40 mb-3";
+                qtyEl.textContent = p.diamonds > 0 ? `${p.diamonds} item` : "Paket";
 
                 const priceEl = document.createElement("div");
                 priceEl.className = "text-lg font-semibold mb-4";
@@ -114,8 +110,8 @@
                 link.className = "mt-auto block text-center bg-primary hover:bg-orange-600 text-white font-medium py-2 rounded-lg transition focus-ring";
                 link.textContent = "Order Sekarang";
 
-                card.appendChild(header);
                 card.appendChild(nameEl);
+                card.appendChild(qtyEl);
                 card.appendChild(priceEl);
                 card.appendChild(link);
                 grid.appendChild(card);

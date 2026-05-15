@@ -181,8 +181,9 @@ async function handleOrder(sender, order) {
     const { order_id, qris_url, qris_base64, amount_idr } = resp.data;
 
     const gameLabel = gameToLabel(order.game);
+    const itemText = order.diamonds ? `${order.diamonds} item` : "paket pilihan";
     const caption =
-      `Halo! Berikut QRIS untuk pembayaran ${gameLabel} ${order.diamonds} diamonds.\n` +
+      `Halo! Berikut QRIS untuk pembayaran ${gameLabel} ${itemText}.\n` +
       `Total: Rp${amount_idr.toLocaleString("id-ID")}\n` +
       `ID Order: ${order_id}\n` +
       `Berlaku 30 menit. Segera lakukan pembayaran.\n` +
@@ -221,9 +222,9 @@ async function sendHelpMenu(sender) {
   const helpText =
     "🎮 *Top-Up Game*\n\n" +
     "📦 *Order:*\n" +
-    "`FF <diamonds> UID:<uid>` — Free Fire\n" +
-    "`ML <diamonds> UID:<uid>|<server>` — Mobile Legends\n" +
-    "`PUBG <diamonds> UID:<uid>` — PUBG Mobile\n\n" +
+    "`FF <qty> UID:<uid>` — Free Fire\n" +
+    "`ML <qty> UID:<uid>|<server>` — Mobile Legends\n" +
+    "`PUBG <qty> UID:<uid>` — PUBG Mobile\n\n" +
     "🔍 *Cek Status:*\n" +
     "`CEK <order_id>` — Cek status order\n" +
     "`RIWAYAT` — Lihat 3 order terakhir\n\n" +
@@ -231,7 +232,7 @@ async function sendHelpMenu(sender) {
     "`FF 100 UID:12345678`\n" +
     "`ML 86 UID:12345|1234`\n" +
     "`CEK abc-123-def`\n\n" +
-    "Silakan pilih game dan jumlah diamond yang diinginkan.";
+    "Silakan pilih game dan jumlah item/currency yang diinginkan.";
 
   await sendText(sender, helpText);
 }

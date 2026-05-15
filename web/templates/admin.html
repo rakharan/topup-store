@@ -172,7 +172,7 @@
                 </select>
                 <select id="productTypeFilter" class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     <option value="">Semua Tipe</option>
-                    <option value="diamond">Diamond</option>
+                    <option value="diamond">Currency/Item</option>
                     <option value="subscription">Subscription</option>
                     <option value="other">Other</option>
                 </select>
@@ -231,14 +231,14 @@
                         <div id="priceMarginInfo" class="text-xs text-white/40 mt-1"></div>
                     </div>
                     <div>
-                        <label class="block text-sm text-white/70 mb-1" for="prodDiamonds">Diamonds</label>
+                        <label class="block text-sm text-white/70 mb-1" for="prodDiamonds">Item Qty</label>
                         <input type="number" id="prodDiamonds" required min="0" aria-describedby="prodDiamondsHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
-                        <span id="prodDiamondsHint" class="sr-only">Jumlah diamond atau item yang didapat pelanggan</span>
+                        <span id="prodDiamondsHint" class="sr-only">Jumlah item, currency, diamond, crystal, atau paket yang didapat pelanggan</span>
                     </div>
                     <div>
                         <label class="block text-sm text-white/70 mb-1" for="prodType">Type</label>
                         <select id="prodType" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
-                            <option value="diamond">Diamond</option>
+                            <option value="diamond">Currency/Item</option>
                             <option value="subscription">Subscription</option>
                             <option value="other">Other</option>
                         </select>
@@ -280,7 +280,7 @@
                             <th scope="col" class="pb-3 pr-4">SKU</th>
                             <th scope="col" class="pb-3 pr-4">Cost</th>
                             <th scope="col" class="pb-3 pr-4">Price</th>
-                            <th scope="col" class="pb-3 pr-4">Diamonds</th>
+                            <th scope="col" class="pb-3 pr-4">Qty</th>
                             <th scope="col" class="pb-3 pr-4">Type</th>
                             <th scope="col" class="pb-3 pr-4">Format</th>
                             <th scope="col" class="pb-3 pr-4">Status</th>
@@ -858,7 +858,7 @@
             return;
         }
         const gameLabels = { free_fire: 'FF', mobile_legends: 'ML', pubg_mobile: 'PUBG', genshin_impact: 'Genshin', honkai_star_rail: 'HSR', zenless_zone_zero: 'ZZZ', honkai_impact_3: 'HI3' };
-        const typeLabels = { diamond: 'Diamond', subscription: 'Subscription', other: 'Other' };
+        const typeLabels = { diamond: 'Currency/Item', subscription: 'Subscription', other: 'Other' };
         const typeColors = { diamond: 'bg-green-500/20 text-green-400', subscription: 'bg-blue-500/20 text-blue-400', other: 'bg-gray-500/20 text-gray-400' };
         tbody.innerHTML = filtered.map(p => `
             <tr class="border-b border-white/5 hover:bg-white/5" data-id="${escapeHtml(p.id)}">

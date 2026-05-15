@@ -292,6 +292,29 @@ func TestTopupService_InferHoyoGames(t *testing.T) {
 	}
 }
 
+func TestTopupService_ExtractItemQuantityFromName(t *testing.T) {
+	tests := []struct {
+		name string
+		want int
+	}{
+		{name: "MOBILELEGEND - 50 Diamond", want: 50},
+		{name: "PUBG Mobile 60 UC", want: 60},
+		{name: "Genshin Impact 60 Genesis Crystals", want: 60},
+		{name: "Honkai Star Rail 60 Oneiric Shards", want: 60},
+		{name: "Zenless Zone Zero 300 Monochrome", want: 300},
+		{name: "Honkai Impact 3 330 B-Chips", want: 330},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractDiamondsFromName(tt.name)
+			if got != tt.want {
+				t.Fatalf("extractDiamondsFromName() = %d; want %d", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestTopupService_TrimsDigiflazzConfig(t *testing.T) {
 	svc := NewTopupService(nil, nil, " user ", " key \n", " https://api.example.com ", true, nil)
 

@@ -641,13 +641,21 @@ func inferGame(sku, name, brand string) string {
 	return ""
 }
 
-var diamondsRegex = regexp.MustCompile(`(\d+)\s*(dm|diamonds?|d$)`)
+var itemQuantityRegex = regexp.MustCompile(`(\d+)\s*(dm|diamonds?|uc|genesis\s*crystals?|crystals?|oneiric\s*shards?|shards?|monochromes?|polychromes?|lunites?|b-?chips?|chips?|d$)`)
+var firstNumberRegex = regexp.MustCompile(`\d+`)
 
 func extractDiamondsFromName(name string) int {
 	nameLower := strings.ToLower(name)
-	matches := diamondsRegex.FindStringSubmatch(nameLower)
+	matches := itemQuantityRegex.FindStringSubmatch(nameLower)
 	if len(matches) >= 2 {
 		n, err := strconv.Atoi(matches[1])
+		if err == nil {
+			return n
+		}
+	}
+	firstNumber := firstNumberRegex.FindString(nameLower)
+	if firstNumber != "" {
+		n, err := strconv.Atoi(firstNumber)
 		if err == nil {
 			return n
 		}
