@@ -29,7 +29,7 @@ type PaymentServiceInterface interface {
 
 type TopupServiceInterface interface {
 	GetProduct(ctx context.Context, id string) (*models.Product, error)
-	GetProductByGameAndDiamonds(ctx context.Context, game string, diamonds int) (*models.Product, error)
+	GetProductByGameAndDiamonds(ctx context.Context, game string, itemQty int) (*models.Product, error)
 	ListProducts(ctx context.Context, game string) ([]models.Product, error)
 	ListAllProducts(ctx context.Context) ([]models.Product, error)
 	ProcessOrder(ctx context.Context, orderID string) error

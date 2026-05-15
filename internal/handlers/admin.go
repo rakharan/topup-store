@@ -210,7 +210,7 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		Description      string `json:"description"`
 		PriceIDR         int    `json:"price_idr"`
 		CostPriceIDR     int    `json:"cost_price_idr"`
-		Diamonds         int    `json:"diamonds"`
+		ItemQty          int    `json:"item_qty"`
 		ProductType      string `json:"product_type"`
 		SKU              string `json:"sku"`
 		CustomerNoFormat string `json:"customer_no_format"`
@@ -262,7 +262,7 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		Description:      req.Description,
 		PriceIDR:         req.PriceIDR,
 		CostPriceIDR:     req.CostPriceIDR,
-		Diamonds:         req.Diamonds,
+		ItemQty:          req.ItemQty,
 		ProductType:      req.ProductType,
 		SKU:              req.SKU,
 		CustomerNoFormat: req.CustomerNoFormat,
@@ -294,7 +294,7 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		Description      string `json:"description"`
 		PriceIDR         int    `json:"price_idr"`
 		CostPriceIDR     int    `json:"cost_price_idr"`
-		Diamonds         int    `json:"diamonds"`
+		ItemQty          int    `json:"item_qty"`
 		ProductType      string `json:"product_type"`
 		SKU              string `json:"sku"`
 		CustomerNoFormat string `json:"customer_no_format"`
@@ -346,7 +346,7 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		Description:      req.Description,
 		PriceIDR:         req.PriceIDR,
 		CostPriceIDR:     req.CostPriceIDR,
-		Diamonds:         req.Diamonds,
+		ItemQty:          req.ItemQty,
 		ProductType:      req.ProductType,
 		SKU:              req.SKU,
 		CustomerNoFormat: req.CustomerNoFormat,

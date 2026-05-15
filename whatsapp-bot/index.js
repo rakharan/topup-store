@@ -170,7 +170,7 @@ async function handleOrder(sender, order) {
       `${GO_BACKEND_URL}/api/orders`,
       {
         game: order.game,
-        diamonds: order.diamonds,
+        item_qty: order.item_qty,
         game_uid: order.game_uid,
         game_server: order.game_server,
         phone: sender,
@@ -181,7 +181,7 @@ async function handleOrder(sender, order) {
     const { order_id, qris_url, qris_base64, amount_idr } = resp.data;
 
     const gameLabel = gameToLabel(order.game);
-    const itemText = order.diamonds ? `${order.diamonds} item` : "paket pilihan";
+    const itemText = order.item_qty ? `${order.item_qty} item` : "paket pilihan";
     const caption =
       `Halo! Berikut QRIS untuk pembayaran ${gameLabel} ${itemText}.\n` +
       `Total: Rp${amount_idr.toLocaleString("id-ID")}\n` +
@@ -324,7 +324,7 @@ function parseOrderMessage(text) {
 
       return {
         game,
-        diamonds: parseInt(match[2], 10),
+        item_qty: parseInt(match[2], 10),
         game_uid: match[3],
         game_server: match[4] || "",
       };

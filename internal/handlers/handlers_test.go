@@ -28,7 +28,7 @@ func TestValidateOrderInput(t *testing.T) {
 		gameUID    string
 		gameServer string
 		productID  string
-		diamonds   int
+		itemQty    int
 		phone      string
 		wantErr    bool
 	}{
@@ -53,14 +53,14 @@ func TestValidateOrderInput(t *testing.T) {
 				GameUID    string `json:"game_uid"`
 				GameServer string `json:"game_server"`
 				ProductID  string `json:"product_id"`
-				Diamonds   int    `json:"diamonds"`
+				ItemQty    int    `json:"item_qty"`
 				Phone      string `json:"phone"`
 			}{
 				Game:       tt.game,
 				GameUID:    tt.gameUID,
 				GameServer: tt.gameServer,
 				ProductID:  tt.productID,
-				Diamonds:   tt.diamonds,
+				ItemQty:    tt.itemQty,
 				Phone:      tt.phone,
 			}
 			err := validateOrderInput(req)

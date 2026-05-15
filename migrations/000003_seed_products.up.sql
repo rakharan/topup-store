@@ -1,4 +1,4 @@
-INSERT INTO products (game, name, description, price_idr, diamonds, sku) VALUES
+INSERT INTO products (game, name, description, price_idr, item_qty, sku) VALUES
 ('free_fire', '12 Diamonds', '12 Free Fire Diamonds', 1811, 12, 'ff_12'),
 ('free_fire', '50 Diamonds', '50 Free Fire Diamonds', 6405, 50, 'ff_50'),
 ('free_fire', '70 Diamonds', '70 Free Fire Diamonds', 8960, 70, 'ff_70'),

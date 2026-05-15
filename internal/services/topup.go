@@ -349,8 +349,8 @@ func (s *TopupService) GetProduct(ctx context.Context, id string) (*models.Produ
 	return s.productRepo.GetByID(ctx, id)
 }
 
-func (s *TopupService) GetProductByGameAndDiamonds(ctx context.Context, game string, diamonds int) (*models.Product, error) {
-	return s.productRepo.GetByGameAndDiamonds(ctx, game, diamonds)
+func (s *TopupService) GetProductByGameAndDiamonds(ctx context.Context, game string, itemQty int) (*models.Product, error) {
+	return s.productRepo.GetByGameAndDiamonds(ctx, game, itemQty)
 }
 
 func (s *TopupService) ListProducts(ctx context.Context, game string) ([]models.Product, error) {
@@ -488,7 +488,7 @@ type SyncResult struct {
 	Created     bool   `json:"created"`
 	Game        string `json:"game,omitempty"`
 	ProductType string `json:"product_type,omitempty"`
-	Diamonds    int    `json:"diamonds,omitempty"`
+	ItemQty     int    `json:"item_qty,omitempty"`
 }
 
 func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType string, marginValue int) ([]SyncResult, int, int, int, error) {
@@ -530,10 +530,13 @@ func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType 
 				continue
 			}
 
-			diamonds := extractDiamondsFromName(p.Name)
 			productType := detectProductType(p.Name)
+			itemQty := extractItemQtyFromName(p.Name)
+			if itemQty == 0 && productType != "diamond" {
+				itemQty = 1
+			}
 
-			if err := s.productRepo.CreateFromDigiflazz(ctx, p.SKU, p.Name, game, productType, sellingPrice, costPrice, diamonds, p.Description); err != nil {
+			if err := s.productRepo.CreateFromDigiflazz(ctx, p.SKU, p.Name, game, productType, sellingPrice, costPrice, itemQty, p.Description); err != nil {
 				s.logger.Warn("sync: failed to create product", slog.String("sku", p.SKU), slog.String("error", err.Error()))
 				skipped++
 				continue
@@ -550,7 +553,7 @@ func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType 
 				Created:     true,
 				Game:        game,
 				ProductType: productType,
-				Diamonds:    diamonds,
+				ItemQty:     itemQty,
 			})
 			continue
 		}
@@ -641,10 +644,10 @@ func inferGame(sku, name, brand string) string {
 	return ""
 }
 
-var itemQuantityRegex = regexp.MustCompile(`(\d+)\s*(dm|diamonds?|uc|genesis\s*crystals?|crystals?|oneiric\s*shards?|shards?|monochromes?|polychromes?|lunites?|b-?chips?|chips?|d$)`)
+var itemQuantityRegex = regexp.MustCompile(`(\d+)\s*(dm|diamonds?|uc|genesis\s*crystals?|crystals?|oneiric\s*shards?|shards?|monochromes?|polychromes?|lunites?|b-?chips?|chips?|stellar\s*jades?|jades?|d$)`)
 var firstNumberRegex = regexp.MustCompile(`\d+`)
 
-func extractDiamondsFromName(name string) int {
+func extractItemQtyFromName(name string) int {
 	nameLower := strings.ToLower(name)
 	matches := itemQuantityRegex.FindStringSubmatch(nameLower)
 	if len(matches) >= 2 {
@@ -663,7 +666,7 @@ func extractDiamondsFromName(name string) int {
 	return 0
 }
 
-var subscriptionKeywords = []string{"weekly", "monthly", "membership", "season pass", "diamond pass", "twilight pass", "starlight pass", "starlight"}
+var subscriptionKeywords = []string{"weekly", "monthly", "membership", "season pass", "diamond pass", "twilight pass", "starlight pass", "starlight", "welkin", "express supply", "inter-knot membership", "monthly card"}
 
 func detectProductType(name string) string {
 	nameLower := strings.ToLower(name)

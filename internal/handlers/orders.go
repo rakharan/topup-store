@@ -45,7 +45,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		GameUID    string `json:"game_uid"`
 		GameServer string `json:"game_server"`
 		ProductID  string `json:"product_id"`
-		Diamonds   int    `json:"diamonds"`
+		ItemQty    int    `json:"item_qty"`
 		Phone      string `json:"phone"`
 	}
 
@@ -74,11 +74,11 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	if req.ProductID != "" {
 		product, err = h.topupSvc.GetProduct(r.Context(), req.ProductID)
-		if err != nil && req.Diamonds > 0 {
-			product, err = h.topupSvc.GetProductByGameAndDiamonds(r.Context(), req.Game, req.Diamonds)
+		if err != nil && req.ItemQty > 0 {
+			product, err = h.topupSvc.GetProductByGameAndDiamonds(r.Context(), req.Game, req.ItemQty)
 		}
 	} else {
-		product, err = h.topupSvc.GetProductByGameAndDiamonds(r.Context(), req.Game, req.Diamonds)
+		product, err = h.topupSvc.GetProductByGameAndDiamonds(r.Context(), req.Game, req.ItemQty)
 	}
 
 	if err != nil {
@@ -388,7 +388,7 @@ func validateOrderInput(req struct {
 	GameUID    string `json:"game_uid"`
 	GameServer string `json:"game_server"`
 	ProductID  string `json:"product_id"`
-	Diamonds   int    `json:"diamonds"`
+	ItemQty    int    `json:"item_qty"`
 	Phone      string `json:"phone"`
 }) error {
 	if !constants.ValidGames[req.Game] {
@@ -422,8 +422,8 @@ func validateOrderInput(req struct {
 	if !rePhone.MatchString(req.Phone) {
 		return &validationError{field: "phone", message: "must be valid Indonesian number (08xxx or 628xxx, 10-15 digits)"}
 	}
-	if req.ProductID == "" && req.Diamonds <= 0 {
-		return &validationError{field: "product_id", message: "either product_id or diamonds is required"}
+	if req.ProductID == "" && req.ItemQty <= 0 {
+		return &validationError{field: "product_id", message: "either product_id or item_qty is required"}
 	}
 	return nil
 }

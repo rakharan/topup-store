@@ -142,20 +142,20 @@ func cleanTables(t *testing.T, ctx context.Context) {
 	}
 }
 
-func createTestProduct(t *testing.T, ctx context.Context, game string, diamonds int) string {
+func createTestProduct(t *testing.T, ctx context.Context, game string, itemQty int) string {
 	t.Helper()
 	repo := &PGProductRepository{pool: testPool}
 	id := uuid.New().String()
 	product := &models.Product{
 		ID:           id,
 		Game:         game,
-		Name:         fmt.Sprintf("Test %d Diamonds", diamonds),
+		Name:         fmt.Sprintf("Test %d Diamonds", itemQty),
 		Description:  "test product",
-		PriceIDR:     diamonds * 100,
-		CostPriceIDR: diamonds * 80,
-		Diamonds:     diamonds,
+		PriceIDR:     itemQty * 100,
+		CostPriceIDR: itemQty * 80,
+		ItemQty:      itemQty,
 		ProductType:  "diamond",
-		SKU:          fmt.Sprintf("test_%s_%d", game, diamonds),
+		SKU:          fmt.Sprintf("test_%s_%d", game, itemQty),
 		IsActive:     true,
 		Stock:        -1,
 	}
@@ -547,7 +547,7 @@ func TestProductRepository_CreateAndGet(t *testing.T) {
 			Description:      "Test product",
 			PriceIDR:         15000,
 			CostPriceIDR:     10000,
-			Diamonds:         100,
+			ItemQty:          100,
 			ProductType:      "diamond",
 			SKU:              "ff_100",
 			CustomerNoFormat: "uid_server_concat",
@@ -604,7 +604,7 @@ func TestProductRepository_GetByGameAndDiamonds(t *testing.T) {
 			Name:         "86 Diamonds",
 			PriceIDR:     12000,
 			CostPriceIDR: 8000,
-			Diamonds:     86,
+			ItemQty:      86,
 			ProductType:  "diamond",
 			SKU:          "ml_86",
 			IsActive:     true,
@@ -634,7 +634,7 @@ func TestProductRepository_ListByGame(t *testing.T) {
 				Game:        "pubg_mobile",
 				Name:        fmt.Sprintf("Product %d", i),
 				PriceIDR:    int(10000 * (i + 1)),
-				Diamonds:    100 * (i + 1),
+				ItemQty:     100 * (i + 1),
 				ProductType: "diamond",
 				SKU:         fmt.Sprintf("pubg_%d", i),
 				IsActive:    true,

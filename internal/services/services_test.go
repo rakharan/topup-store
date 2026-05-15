@@ -140,7 +140,7 @@ func (m *mockProductRepo) GetByID(ctx context.Context, id string) (*models.Produ
 	return m.getByIDResult, m.getByIDErr
 }
 
-func (m *mockProductRepo) GetByGameAndDiamonds(ctx context.Context, game string, diamonds int) (*models.Product, error) {
+func (m *mockProductRepo) GetByGameAndDiamonds(ctx context.Context, game string, itemQty int) (*models.Product, error) {
 	return nil, nil
 }
 
@@ -176,7 +176,7 @@ func (m *mockProductRepo) SyncPrice(ctx context.Context, sku string, costPrice, 
 	return nil
 }
 
-func (m *mockProductRepo) CreateFromDigiflazz(ctx context.Context, sku, name, game, productType string, priceIDR, costPriceIDR, diamonds int, description string) error {
+func (m *mockProductRepo) CreateFromDigiflazz(ctx context.Context, sku, name, game, productType string, priceIDR, costPriceIDR, itemQty int, description string) error {
 	return nil
 }
 
@@ -303,13 +303,32 @@ func TestTopupService_ExtractItemQuantityFromName(t *testing.T) {
 		{name: "Honkai Star Rail 60 Oneiric Shards", want: 60},
 		{name: "Zenless Zone Zero 300 Monochrome", want: 300},
 		{name: "Honkai Impact 3 330 B-Chips", want: 330},
+		{name: "Honkai Star Rail 300 Stellar Jade", want: 300},
+		{name: "Blessing of the Welkin Moon", want: 0},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractDiamondsFromName(tt.name)
+			got := extractItemQtyFromName(tt.name)
 			if got != tt.want {
-				t.Fatalf("extractDiamondsFromName() = %d; want %d", got, tt.want)
+				t.Fatalf("extractItemQtyFromName() = %d; want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTopupService_DetectHoyoSubscriptions(t *testing.T) {
+	tests := []string{
+		"Blessing of the Welkin Moon",
+		"Express Supply Pass",
+		"Inter-Knot Membership",
+	}
+
+	for _, name := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := detectProductType(name)
+			if got != "subscription" {
+				t.Fatalf("detectProductType() = %q; want subscription", got)
 			}
 		})
 	}

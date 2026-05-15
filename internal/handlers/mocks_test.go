@@ -123,7 +123,7 @@ func (m *mockTopupService) GetProduct(ctx context.Context, id string) (*models.P
 	return m.getProductResult, m.getProductErr
 }
 
-func (m *mockTopupService) GetProductByGameAndDiamonds(ctx context.Context, game string, diamonds int) (*models.Product, error) {
+func (m *mockTopupService) GetProductByGameAndDiamonds(ctx context.Context, game string, itemQty int) (*models.Product, error) {
 	return m.getProductByGameResult, m.getProductByGameErr
 }
 
@@ -219,7 +219,7 @@ func (m *mockProductRepo) GetByID(ctx context.Context, id string) (*models.Produ
 	return m.getByIDResult, m.getByIDErr
 }
 
-func (m *mockProductRepo) GetByGameAndDiamonds(ctx context.Context, game string, diamonds int) (*models.Product, error) {
+func (m *mockProductRepo) GetByGameAndDiamonds(ctx context.Context, game string, itemQty int) (*models.Product, error) {
 	return nil, nil
 }
 
@@ -255,7 +255,7 @@ func (m *mockProductRepo) SyncPrice(ctx context.Context, sku string, costPrice, 
 	return nil
 }
 
-func (m *mockProductRepo) CreateFromDigiflazz(ctx context.Context, sku, name, game, productType string, priceIDR, costPriceIDR, diamonds int, description string) error {
+func (m *mockProductRepo) CreateFromDigiflazz(ctx context.Context, sku, name, game, productType string, priceIDR, costPriceIDR, itemQty int, description string) error {
 	return nil
 }
 

@@ -47,7 +47,7 @@ func TestProductsAPI(t *testing.T) {
 	// Seed test products
 	ctx := t.Context()
 	_, err := ts.Pool.Exec(ctx, `
-		INSERT INTO products (game, name, description, price_idr, diamonds, sku, cost_price_idr, product_type, stock)
+		INSERT INTO products (game, name, description, price_idr, item_qty, sku, cost_price_idr, product_type, stock)
 		VALUES ('free_fire', 'Test Diamonds', 'Test', 1000, 100, 'test-ff-100', 0, 'diamond', -1)
 		ON CONFLICT (sku) DO NOTHING
 	`)
@@ -87,7 +87,7 @@ func TestOrderFlow(t *testing.T) {
 
 	// Seed a product
 	_, err := ts.Pool.Exec(ctx, `
-		INSERT INTO products (id, game, name, description, price_idr, diamonds, sku, cost_price_idr, product_type, stock)
+		INSERT INTO products (id, game, name, description, price_idr, item_qty, sku, cost_price_idr, product_type, stock)
 		VALUES ('550e8400-e29b-41d4-a716-446655440000', 'free_fire', 'Test 100 Diamonds', 'Test', 15000, 100, 'test-order-100', 0, 'diamond', 10)
 		ON CONFLICT (sku) DO NOTHING
 	`)
@@ -231,7 +231,7 @@ func BenchmarkCreateOrder(b *testing.B) {
 
 	ctx := context.Background()
 	_, err := ts.Pool.Exec(ctx, `
-		INSERT INTO products (id, game, name, description, price_idr, diamonds, sku, cost_price_idr, product_type, stock)
+		INSERT INTO products (id, game, name, description, price_idr, item_qty, sku, cost_price_idr, product_type, stock)
 		VALUES ('550e8400-e29b-41d4-a716-446655440001', 'free_fire', 'Bench 100', 'Bench', 15000, 100, 'bench-100', 0, 'diamond', 1000)
 		ON CONFLICT (sku) DO NOTHING
 	`)

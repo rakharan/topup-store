@@ -9,7 +9,7 @@ type Product struct {
 	Description      string     `json:"description"`
 	PriceIDR         int        `json:"price_idr"`
 	CostPriceIDR     int        `json:"cost_price_idr"`
-	Diamonds         int        `json:"diamonds"`
+	ItemQty          int        `json:"item_qty"`
 	ProductType      string     `json:"product_type"`
 	SKU              string     `json:"sku"`
 	CustomerNoFormat string     `json:"customer_no_format"`

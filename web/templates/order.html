@@ -291,11 +291,11 @@
                 const opt = document.createElement("option");
                 opt.value = p.id;
                 const stockLabel = p.stock === 0 ? ' (Stok Habis)' : (p.stock > 0 ? ` (Stok: ${p.stock})` : '');
-                const qtyLabel = p.diamonds > 0 ? ` (${p.diamonds} item)` : '';
+                const qtyLabel = p.item_qty > 0 ? ` (${p.item_qty} item)` : '';
                 opt.textContent = `${p.name}${qtyLabel} - Rp ${p.price_idr.toLocaleString("id-ID")}${stockLabel}`;
                 opt.dataset.amount = p.price_idr;
                 opt.dataset.name = p.name;
-                opt.dataset.diamonds = p.diamonds;
+                opt.dataset.itemQty = p.item_qty;
                 opt.dataset.stock = p.stock;
                 if (p.stock === 0) {
                     opt.disabled = true;
@@ -461,8 +461,8 @@
         document.getElementById("phone").disabled = true;
 
         const selectedOption = productSelect.options[productSelect.selectedIndex];
-        const diamonds = parseInt(selectedOption?.dataset.diamonds || '0', 10);
-        const body = { game, product_id: productSelect.value, diamonds, game_uid: gameUid, game_server: gameServer, phone };
+        const itemQty = parseInt(selectedOption?.dataset.itemQty || '0', 10);
+        const body = { game, product_id: productSelect.value, item_qty: itemQty, game_uid: gameUid, game_server: gameServer, phone };
         try {
             const res = await fetch("/api/orders", {
                 method: "POST",
