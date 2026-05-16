@@ -88,6 +88,14 @@ func (s *TopupService) ProcessOrder(ctx context.Context, orderID string) error {
 		if getErr == nil && current.Status == constants.StatusSuccess {
 			return nil
 		}
+		if strings.Contains(err.Error(), "rc=41") {
+			s.logger.Warn("digiflazz topup returned rc=41; leaving order in processing state for webhook/poller resolution",
+				slog.String("order_id", orderID),
+				slog.String("error", err.Error()),
+			)
+			s.orderRepo.InsertStatusHistory(ctx, orderID, constants.StatusProcessing, constants.StatusProcessing, err.Error())
+			return nil
+		}
 		s.orderRepo.InsertStatusHistory(ctx, orderID, constants.StatusProcessing, constants.StatusProcessing, err.Error())
 		return fmt.Errorf("digiflazz topup: %w", err)
 	}
@@ -144,7 +152,7 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 	if refID == "" {
 		refID = order.ID
 	}
-	sign := s.generateSign(refID)
+	sign, raw := s.generateSignDebug(refID)
 
 	s.logger.Info("digiflazz topup request",
 		slog.String("order_id", order.ID),
@@ -155,7 +163,8 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 		slog.Bool("testing", s.digiflazzTest),
 		slog.Int("username_len", len(s.digiflazzUser)),
 		slog.Int("api_key_len", len(s.digiflazzAPIKey)),
-		slog.String("sign_prefix", signPrefix(sign)),
+		slog.String("sign", sign),
+		slog.String("sign_raw", raw),
 	)
 
 	payload := map[string]any{
@@ -194,6 +203,21 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		var errBody struct {
+			Data struct {
+				RC      string `json:"rc"`
+				Message string `json:"message"`
+			} `json:"data"`
+		}
+		_ = json.Unmarshal(respBody, &errBody)
+		if errBody.Data.RC == "41" {
+			s.logger.Warn("digiflazz signature mismatch (rc=41) — transaction may still be processed by Digiflazz backend; leaving order in processing state for webhook/poller to resolve",
+				slog.String("order_id", order.ID),
+				slog.String("ref_id", refID),
+				slog.String("message", errBody.Data.Message),
+			)
+			return nil, fmt.Errorf("digiflazz signature mismatch (rc=41): %s", errBody.Data.Message)
+		}
 		return nil, fmt.Errorf("digiflazz returned status %d: %s", resp.StatusCode, string(respBody))
 	}
 
@@ -246,6 +270,14 @@ func (s *TopupService) generateSign(refID string) string {
 	return hex.EncodeToString(hash[:])
 }
 
+// generateSignDebug returns the sign plus the raw concatenated string for diagnostics.
+func (s *TopupService) generateSignDebug(refID string) (sign, raw string) {
+	raw = s.digiflazzUser + s.digiflazzAPIKey + refID
+	hash := md5.Sum([]byte(raw))
+	sign = hex.EncodeToString(hash[:])
+	return sign, raw
+}
+
 func normalizeDigiflazzStatus(status string) string {
 	switch strings.ToLower(status) {
 	case "sukses", constants.StatusSuccess:
@@ -287,12 +319,13 @@ func (s *TopupService) CheckTransactionStatus(orderID string) (status string, sn
 	}
 	sign := s.generateSign(refID)
 
-	payload := map[string]string{
+	payload := map[string]any{
 		"username":       s.digiflazzUser,
 		"buyer_sku_code": product.SKU,
 		"customer_no":    customerNo,
 		"ref_id":         refID,
 		"sign":           sign,
+		"testing":        s.digiflazzTest,
 	}
 
 	body, err := json.Marshal(payload)
@@ -379,7 +412,7 @@ type DigiflazzPrice struct {
 }
 
 func (s *TopupService) FetchDigiflazzPrices(ctx context.Context) ([]DigiflazzPrice, error) {
-	sign := s.generateSign("")
+	sign := s.generateSign("pricelist")
 
 	payload := map[string]string{
 		"username": s.digiflazzUser,
