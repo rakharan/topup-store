@@ -95,6 +95,15 @@
         expired: "Kadaluarsa",
         cancelled: "Dibatalkan",
     };
+    const statusMessages = {
+        pending: "Pembayaran belum selesai. Gunakan tombol checkout selama order masih aktif.",
+        paid: "Pembayaran sudah diterima. Top up akan segera diproses.",
+        processing: "Transaksi sedang dikirim ke supplier.",
+        success: "Top up berhasil. Simpan serial number jika tersedia.",
+        failed: "Top up gagal diproses. Hubungi admin untuk pengecekan atau refund.",
+        expired: "Order sudah melewati batas bayar.",
+        cancelled: "Order sudah dibatalkan.",
+    };
     const statusSteps = ['pending', 'paid', 'processing', 'success'];
 
     let refreshInterval = null;
@@ -220,6 +229,7 @@
             const order = json.data || json;
             const badgeClass = statusColors[order.status] || "bg-white/10 text-white";
             const label = statusLabels[order.status] || order.status;
+            const statusMessage = statusMessages[order.status] || '';
 
             result.classList.remove("hidden");
             const rawOrderId = String(order.id || lookupId);
@@ -244,6 +254,7 @@
                     <div class="space-y-3 mb-6" aria-label="Order status timeline">
                         ${renderTimeline(order.status)}
                     </div>
+                    ${statusMessage ? `<div class="bg-white/5 border border-white/10 rounded-lg p-3 text-sm text-white/70 mb-4">${safeText(statusMessage)}</div>` : ''}
                     <div class="space-y-2 text-sm border-t border-white/10 pt-4">
                         <div class="flex justify-between"><span class="text-white/70">Game UID</span><span>${gameUid}${gameServer ? ' (' + gameServer + ')' : ''}</span></div>
                         <div class="flex justify-between"><span class="text-white/70">Total</span><span>Rp ${amount}</span></div>
@@ -337,7 +348,7 @@
         if (!pendingCancelOrderId) return;
         const orderId = pendingCancelOrderId;
         closeConfirmModal();
-        const btn = document.querySelector('#result button[onclick^="openCancelModal"]');
+        const btn = document.querySelector('#result button[onclick^="cancelOrder"]');
         if (btn) {
             btn.disabled = true;
             btn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin mr-2"></span>Membatalkan...';

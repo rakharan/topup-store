@@ -90,7 +90,11 @@ type PageHandler struct {
 
 type adminOrderView struct {
 	models.Order
-	NetProfitIDR int
+	ProductName    string
+	ProductGame    string
+	CostPriceIDR   int
+	MidtransFeeIDR int
+	NetProfitIDR   int
 }
 
 func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass, adminPath, midtransClientKey string, midtransIsProd, cookieSecure bool, logger *slog.Logger) *PageHandler {
@@ -243,21 +247,34 @@ func (h *PageHandler) Admin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	adminOrders := make([]adminOrderView, 0, len(orders))
-	productCosts := make(map[string]int)
+	products := make(map[string]*models.Product)
 	for _, order := range orders {
-		cost, ok := productCosts[order.ProductID]
+		product, ok := products[order.ProductID]
 		if !ok {
-			product, err := h.topupSvc.GetProduct(r.Context(), order.ProductID)
+			fetched, err := h.topupSvc.GetProduct(r.Context(), order.ProductID)
 			if err != nil {
 				h.logger.Warn("admin: failed to load product cost", slog.String("product_id", order.ProductID), slog.String("error", err.Error()))
 			} else {
-				cost = product.CostPriceIDR
+				product = fetched
 			}
-			productCosts[order.ProductID] = cost
+			products[order.ProductID] = product
 		}
+		productName := order.ProductID
+		productGame := ""
+		cost := 0
+		if product != nil {
+			productName = product.Name
+			productGame = product.Game
+			cost = product.CostPriceIDR
+		}
+		midtransFee := midtransFeeIDR(order.AmountIDR)
 		adminOrders = append(adminOrders, adminOrderView{
-			Order:        order,
-			NetProfitIDR: order.AmountIDR - cost - midtransFeeIDR(order.AmountIDR),
+			Order:          order,
+			ProductName:    productName,
+			ProductGame:    productGame,
+			CostPriceIDR:   cost,
+			MidtransFeeIDR: midtransFee,
+			NetProfitIDR:   order.AmountIDR - cost - midtransFee,
 		})
 	}
 	data["Orders"] = adminOrders

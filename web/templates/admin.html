@@ -34,6 +34,7 @@
                 <input type="text" id="searchInput" placeholder="Cari order ID, phone, UID..." class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-white/30 focus:border-primary focus:outline-none focus-ring">
                 <select id="statusFilter" class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     <option value="">Semua Status</option>
+                    <option value="need_action">Need Action</option>
                     <option value="pending">Pending</option>
                     <option value="paid">Paid</option>
                     <option value="processing">Processing</option>
@@ -50,12 +51,14 @@
                     <thead>
                         <tr class="border-b border-white/10 text-left text-white/70">
                             <th scope="col" class="pb-3 pr-4">Order Number</th>
-                            <th scope="col" class="pb-3 pr-4">Game</th>
+                            <th scope="col" class="pb-3 pr-4">Product</th>
                             <th scope="col" class="pb-3 pr-4">UID</th>
                             <th scope="col" class="pb-3 pr-4">Phone</th>
                             <th scope="col" class="pb-3 pr-4">Amount</th>
+                            <th scope="col" class="pb-3 pr-4">Cost</th>
+                            <th scope="col" class="pb-3 pr-4">Fee</th>
+                            <th scope="col" class="pb-3 pr-4">Profit</th>
                             <th scope="col" class="pb-3 pr-4">Status</th>
-                            <th scope="col" class="pb-3 pr-4">Serial No.</th>
                             <th scope="col" class="pb-3 pr-4">Created</th>
                             <th scope="col" class="pb-3">Action</th>
                         </tr>
@@ -63,19 +66,25 @@
                     <tbody id="ordersTableBody">
                         {{if not .Orders}}
                         <tr>
-                            <td colspan="9" class="py-12 text-center text-white/40">
+                            <td colspan="11" class="py-12 text-center text-white/40">
                                 <div class="text-4xl mb-3" aria-hidden="true">&#128230;</div>
                                 <p class="text-sm">Belum ada order.</p>
                             </td>
                         </tr>
                         {{end}}
                         {{range .Orders}}
-                        <tr class="border-b border-white/5 hover:bg-white/5 order-row cursor-pointer" data-order-id="{{.ID}}" data-net-profit="{{.NetProfitIDR}}" data-status="{{.Status}}" data-search="{{.OrderNumber}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
+                        <tr class="border-b border-white/5 hover:bg-white/5 order-row cursor-pointer" data-order-id="{{.ID}}" data-net-profit="{{.NetProfitIDR}}" data-status="{{.Status}}" data-search="{{.OrderNumber}} {{.ProductName}} {{.ProductGame}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
                             <td class="py-3 pr-4 font-mono text-xs">{{.OrderNumber}}</td>
-                            <td class="py-3 pr-4">{{.ProductID}}</td>
+                            <td class="py-3 pr-4">
+                                <div class="max-w-[180px] truncate">{{.ProductName}}</div>
+                                <div class="text-xs text-white/40">{{if .ProductGame}}{{.ProductGame}}{{else}}{{.ProductID}}{{end}}</div>
+                            </td>
                             <td class="py-3 pr-4">{{.GameUID}}{{if .GameServer}} ({{.GameServer}}){{end}}</td>
                             <td class="py-3 pr-4">{{.UserPhone}}</td>
                             <td class="py-3 pr-4">Rp {{.AmountIDR}}</td>
+                            <td class="py-3 pr-4 text-white/60">Rp {{.CostPriceIDR}}</td>
+                            <td class="py-3 pr-4 text-red-300">Rp {{.MidtransFeeIDR}}</td>
+                            <td class="py-3 pr-4 {{if lt .NetProfitIDR 0}}text-red-400{{else}}text-green-400{{end}}">Rp {{.NetProfitIDR}}</td>
                             <td class="py-3 pr-4">
                                 {{if eq .Status "success"}}<span class="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">Berhasil</span>
                                 {{else if eq .Status "failed"}}<span class="px-2 py-1 rounded-full text-xs bg-red-500/20 text-red-400">Gagal</span>
@@ -85,7 +94,6 @@
                                 {{else if eq .Status "cancelled"}}<span class="px-2 py-1 rounded-full text-xs bg-gray-500/20 text-gray-400">Dibatalkan</span>
                                 {{else}}<span class="px-2 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-400">Pending</span>{{end}}
                             </td>
-                            <td class="py-3 pr-4 font-mono text-xs">{{if .SerialNumber}}{{.SerialNumber}}{{else}}-{{end}}</td>
                             <td class="py-3 text-white/40">{{formatWIB .CreatedAt}}</td>
                             <td class="py-3">
                                 {{if eq .Status "pending"}}
@@ -100,14 +108,14 @@
                             </td>
                         </tr>
                         {{else}}
-                        <tr><td colspan="10" class="py-8 text-center text-white/40">Belum ada order.</td></tr>
+                        <tr><td colspan="11" class="py-8 text-center text-white/40">Belum ada order.</td></tr>
                         {{end}}
                     </tbody>
                 </table>
             </div>
             <div id="ordersMobileCards" class="md:hidden space-y-3">
                 {{range .Orders}}
-                <div class="bg-white/5 border border-white/10 rounded-xl p-4 order-row cursor-pointer" data-order-id="{{.ID}}" data-net-profit="{{.NetProfitIDR}}" data-status="{{.Status}}" data-search="{{.OrderNumber}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
+                <div class="bg-white/5 border border-white/10 rounded-xl p-4 order-row cursor-pointer" data-order-id="{{.ID}}" data-net-profit="{{.NetProfitIDR}}" data-status="{{.Status}}" data-search="{{.OrderNumber}} {{.ProductName}} {{.ProductGame}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
                     <div class="flex items-center justify-between mb-2">
                         <span class="font-mono text-xs text-white/60">{{.OrderNumber}}</span>
                         {{if eq .Status "success"}}<span class="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">Berhasil</span>
@@ -118,9 +126,14 @@
                         {{else if eq .Status "cancelled"}}<span class="px-2 py-1 rounded-full text-xs bg-gray-500/20 text-gray-400">Dibatalkan</span>
                         {{else}}<span class="px-2 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-400">Pending</span>{{end}}
                     </div>
-                    <div class="text-sm mb-1"><span class="text-white/40">Game:</span> <span class="text-white/70">{{.ProductID}}</span></div>
+                    <div class="text-sm mb-1"><span class="text-white/40">Produk:</span> <span class="text-white/70">{{.ProductName}}</span></div>
                     <div class="text-sm mb-1"><span class="text-white/40">UID:</span> <span class="text-white/70">{{.GameUID}}{{if .GameServer}} ({{.GameServer}}){{end}}</span></div>
                     <div class="text-sm mb-2"><span class="text-white/40">Total:</span> <span class="text-primary font-semibold">Rp {{.AmountIDR}}</span></div>
+                    <div class="grid grid-cols-3 gap-2 text-xs mb-3">
+                        <div class="bg-white/5 rounded-lg p-2"><div class="text-white/40">Cost</div><div>Rp {{.CostPriceIDR}}</div></div>
+                        <div class="bg-white/5 rounded-lg p-2"><div class="text-white/40">Fee</div><div class="text-red-300">Rp {{.MidtransFeeIDR}}</div></div>
+                        <div class="bg-white/5 rounded-lg p-2"><div class="text-white/40">Profit</div><div class="{{if lt .NetProfitIDR 0}}text-red-400{{else}}text-green-400{{end}}">Rp {{.NetProfitIDR}}</div></div>
+                    </div>
                     <div class="flex gap-2">
                         {{if eq .Status "pending"}}
                         <button onclick="processOrder('{{.ID}}')" class="flex-1 bg-primary/20 hover:bg-primary/30 text-primary text-sm font-medium py-2 rounded-lg transition focus-ring">Process</button>
@@ -280,6 +293,7 @@
                             <th scope="col" class="pb-3 pr-4">SKU</th>
                             <th scope="col" class="pb-3 pr-4">Cost</th>
                             <th scope="col" class="pb-3 pr-4">Price</th>
+                            <th scope="col" class="pb-3 pr-4">Profit</th>
                             <th scope="col" class="pb-3 pr-4">Qty</th>
                             <th scope="col" class="pb-3 pr-4">Type</th>
                             <th scope="col" class="pb-3 pr-4">Format</th>
@@ -288,9 +302,9 @@
                         </tr>
                     </thead>
                     <tbody id="productsTableBody">
-                        <tr><td colspan="11" class="py-4"><div class="skeleton rounded h-8"></div></td></tr>
-                        <tr><td colspan="11" class="py-4"><div class="skeleton rounded h-8"></div></td></tr>
-                        <tr><td colspan="11" class="py-4"><div class="skeleton rounded h-8"></div></td></tr>
+                        <tr><td colspan="12" class="py-4"><div class="skeleton rounded h-8"></div></td></tr>
+                        <tr><td colspan="12" class="py-4"><div class="skeleton rounded h-8"></div></td></tr>
+                        <tr><td colspan="12" class="py-4"><div class="skeleton rounded h-8"></div></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -478,18 +492,35 @@
         return { sellingPrice, tier };
     }
 
+    function calcMidtransFee(amount) {
+        return Math.ceil((parseInt(amount, 10) || 0) * 0.02);
+    }
+
+    function calcNetProfit(price, cost) {
+        const sellingPrice = parseInt(price, 10) || 0;
+        const costPrice = parseInt(cost, 10) || 0;
+        return sellingPrice - costPrice - calcMidtransFee(sellingPrice);
+    }
+
     function updateMarginInfo(cost, price) {
         const info = document.getElementById('priceMarginInfo');
         if (!cost || !price) { info.textContent = ''; return; }
-        const margin = price - cost;
-        const pct = cost > 0 ? Math.round((margin / cost) * 100) : 0;
+        const fee = calcMidtransFee(price);
+        const netProfit = calcNetProfit(price, cost);
+        const grossMargin = price - cost;
+        const pct = cost > 0 ? Math.round((grossMargin / cost) * 100) : 0;
         const marginType = document.getElementById('prodMarginType').value;
         const marginPercent = parseInt(document.getElementById('prodMarginValue').value) || 10;
         const { sellingPrice, tier } = calcTieredPrice(cost, marginType, marginPercent);
         const auto = price === sellingPrice;
-        info.innerHTML = auto
-            ? `<span class="text-green-400">Auto: Rp ${sellingPrice.toLocaleString('id-ID')} margin (+${pct}%) [${tier}]</span>`
-            : `<span class="text-yellow-400">Override: Rp ${price.toLocaleString('id-ID')} (+${pct}%) — auto would be Rp ${sellingPrice.toLocaleString('id-ID')}</span>`;
+        const profitClass = netProfit <= 0 ? 'text-red-400' : 'text-green-400';
+        const baseText = auto
+            ? `Auto: Rp ${sellingPrice.toLocaleString('id-ID')} gross margin (+${pct}%) [${tier}]`
+            : `Override: Rp ${price.toLocaleString('id-ID')} (+${pct}%) - auto would be Rp ${sellingPrice.toLocaleString('id-ID')}`;
+        info.innerHTML = `
+            <div class="${auto ? 'text-green-400' : 'text-yellow-400'}">${baseText}</div>
+            <div class="${profitClass}">Net profit after Midtrans fee Rp ${fee.toLocaleString('id-ID')}: Rp ${netProfit.toLocaleString('id-ID')}</div>
+        `;
     }
 
     function recalcSellingPrice() {
@@ -681,7 +712,8 @@
         const statusFilter = document.getElementById('statusFilter')?.value || '';
         const search = (row.dataset.search || '').toLowerCase();
         const matchesSearch = !query || search.includes(query);
-        const matchesStatus = !statusFilter || row.dataset.status === statusFilter;
+        const needsAction = ['paid', 'processing', 'failed'].includes(row.dataset.status);
+        const matchesStatus = !statusFilter || (statusFilter === 'need_action' ? needsAction : row.dataset.status === statusFilter);
         return matchesSearch && matchesStatus;
     }
 
@@ -864,14 +896,17 @@
         const tbody = document.getElementById('productsTableBody');
         const mobileCards = document.getElementById('productsMobileCards');
         if (!filtered.length) {
-            tbody.innerHTML = '<tr><td colspan="11" class="py-8 text-center text-white/40">No products found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" class="py-8 text-center text-white/40">No products found.</td></tr>';
             mobileCards.innerHTML = '<div class="text-center py-8 text-white/40">No products found.</div>';
             return;
         }
         const gameLabels = { free_fire: 'FF', mobile_legends: 'ML', pubg_mobile: 'PUBG', genshin_impact: 'Genshin', honkai_star_rail: 'HSR', zenless_zone_zero: 'ZZZ', honkai_impact_3: 'HI3' };
         const typeLabels = { diamond: 'Currency/Item', subscription: 'Subscription', other: 'Other' };
         const typeColors = { diamond: 'bg-green-500/20 text-green-400', subscription: 'bg-blue-500/20 text-blue-400', other: 'bg-gray-500/20 text-gray-400' };
-        tbody.innerHTML = filtered.map(p => `
+        tbody.innerHTML = filtered.map(p => {
+            const profit = calcNetProfit(p.price_idr, p.cost_price_idr);
+            const profitClass = profit <= 0 ? 'text-red-400' : 'text-green-400';
+            return `
             <tr class="border-b border-white/5 hover:bg-white/5" data-id="${escapeHtml(p.id)}">
                 <td class="py-3 pr-4 font-mono text-xs">${escapeHtml(p.id.substring(0, 8))}...</td>
                 <td class="py-3 pr-4">${escapeHtml(gameLabels[p.game] || p.game)}</td>
@@ -879,6 +914,7 @@
                 <td class="py-3 pr-4 font-mono text-xs">${escapeHtml(p.sku)}</td>
                 <td class="py-3 pr-4">Rp ${(p.cost_price_idr || 0).toLocaleString('id-ID')}</td>
                 <td class="py-3 pr-4">Rp ${p.price_idr.toLocaleString('id-ID')}</td>
+                <td class="py-3 pr-4 ${profitClass}">Rp ${profit.toLocaleString('id-ID')}</td>
                 <td class="py-3 pr-4">${p.item_qty || '-'}</td>
                 <td class="py-3 pr-4"><span class="px-2 py-1 rounded-full text-xs ${typeColors[p.product_type] || typeColors.other}">${escapeHtml(typeLabels[p.product_type] || 'Other')}</span></td>
                 <td class="py-3 pr-4 text-xs text-white/60">${escapeHtml(customerNoFormatDisplay(p.customer_no_format, p.game))}</td>
@@ -888,8 +924,11 @@
                     <button onclick="deleteProduct('${escapeHtml(p.id)}')" class="text-red-400 hover:text-red-300 text-sm focus-ring">Delete</button>
                 </td>
             </tr>
-        `).join('');
-        mobileCards.innerHTML = filtered.map(p => `
+        `}).join('');
+        mobileCards.innerHTML = filtered.map(p => {
+            const profit = calcNetProfit(p.price_idr, p.cost_price_idr);
+            const profitClass = profit <= 0 ? 'text-red-400' : 'text-green-400';
+            return `
             <div class="bg-white/5 border border-white/10 rounded-xl p-4" data-id="${escapeHtml(p.id)}">
                 <div class="flex items-center justify-between mb-2">
                     <span class="font-semibold text-sm">${escapeHtml(p.name)}</span>
@@ -897,13 +936,16 @@
                 </div>
                 <div class="text-xs text-white/50 mb-1">${escapeHtml(gameLabels[p.game] || p.game)} &middot; ${escapeHtml(p.sku)}</div>
                 <div class="text-xs text-white/40 mb-1">${escapeHtml(customerNoFormatDisplay(p.customer_no_format, p.game))}</div>
-                <div class="text-sm text-primary font-semibold mb-3">Rp ${p.price_idr.toLocaleString('id-ID')}</div>
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-sm text-primary font-semibold">Rp ${p.price_idr.toLocaleString('id-ID')}</div>
+                    <div class="text-sm ${profitClass}">Profit Rp ${profit.toLocaleString('id-ID')}</div>
+                </div>
                 <div class="flex gap-2">
                     <button onclick="editProduct('${escapeHtml(p.id)}')" class="flex-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-sm font-medium py-2 rounded-lg transition focus-ring">Edit</button>
                     <button onclick="deleteProduct('${escapeHtml(p.id)}')" class="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-medium py-2 rounded-lg transition focus-ring">Delete</button>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     }
 
     function renderProducts() {
@@ -951,7 +993,7 @@
         document.getElementById('prodSku').value = p.sku;
         document.getElementById('prodCostPrice').value = p.cost_price_idr || '';
         document.getElementById('prodPrice').value = p.price_idr;
-        document.getElementById('prodItemQty').value = p.diamonds;
+        document.getElementById('prodItemQty').value = p.item_qty || 0;
         document.getElementById('prodType').value = p.product_type || 'diamond';
         document.getElementById('prodCustomerNoFormat').value = p.customer_no_format || '';
         document.getElementById('prodDesc').value = p.description || '';

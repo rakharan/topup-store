@@ -92,7 +92,19 @@
                 <span id="phoneError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
                 <p class="text-xs text-white/40 mt-1" id="phoneHint">Format: 628xxx atau 08xxx (tanpa + atau spasi)</p>
             </div>
-            <button type="submit" id="submitBtn" class="w-full bg-primary hover:bg-orange-600 disabled:bg-white/20 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 focus-ring">
+            <div id="orderPreview" class="hidden bg-white/5 border border-white/10 rounded-xl p-4 text-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="font-semibold">Ringkasan</span>
+                    <span class="text-xs text-white/40">Midtrans Checkout</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between gap-4"><span class="text-white/60">Paket</span><span id="previewProduct" class="text-right"></span></div>
+                    <div class="flex justify-between gap-4"><span class="text-white/60">Tujuan</span><span id="previewTarget" class="text-right font-mono"></span></div>
+                    <div class="flex justify-between gap-4"><span class="text-white/60">WhatsApp</span><span id="previewPhone" class="text-right"></span></div>
+                    <div class="flex justify-between gap-4 pt-2 border-t border-white/10"><span class="text-white/60">Total Bayar</span><span id="previewTotal" class="text-primary font-bold"></span></div>
+                </div>
+            </div>
+            <button type="submit" id="submitBtn" class="w-full sticky bottom-4 z-30 md:static bg-primary hover:bg-orange-600 disabled:bg-white/20 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 focus-ring shadow-lg shadow-primary/20">
                 <span id="submitText">Lanjut ke Checkout Midtrans</span>
                 <svg id="submitSpinner" class="hidden animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
             </button>
@@ -264,19 +276,41 @@
         return true;
     }
 
+    function updateOrderPreview() {
+        const preview = document.getElementById('orderPreview');
+        const opt = productSelect.options[productSelect.selectedIndex];
+        const productName = opt?.dataset?.name || '';
+        const amount = parseInt(opt?.dataset?.amount || '0', 10);
+        const uid = document.getElementById("gameUid").value.trim();
+        const server = document.getElementById("gameServer").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+        if (!productSelect.value && !uid && !phone) {
+            preview.classList.add('hidden');
+            return;
+        }
+        document.getElementById('previewProduct').textContent = productName || '-';
+        document.getElementById('previewTarget').textContent = uid ? uid + (serverGroup.classList.contains('hidden') || !server ? '' : ' (' + server + ')') : '-';
+        document.getElementById('previewPhone').textContent = phone || '-';
+        document.getElementById('previewTotal').textContent = amount ? 'Rp ' + amount.toLocaleString('id-ID') : '-';
+        preview.classList.remove('hidden');
+    }
+
     document.getElementById("gameUid").addEventListener("blur", validateGameUid);
     document.getElementById("gameUid").addEventListener("input", () => {
         if (document.getElementById("gameUid").value.trim()) validateGameUid();
+        updateOrderPreview();
     });
     document.getElementById("gameServer").addEventListener("blur", validateGameServer);
     document.getElementById("gameServer").addEventListener("input", () => {
         if (document.getElementById("gameServer").value.trim()) validateGameServer();
+        updateOrderPreview();
     });
     document.getElementById("phone").addEventListener("blur", validatePhone);
     document.getElementById("phone").addEventListener("input", () => {
         const phoneInput = document.getElementById("phone");
         phoneInput.value = phoneInput.value.replace(/[+\s]/g, '');
         if (phoneInput.value.trim()) validatePhone();
+        updateOrderPreview();
     });
     gameSelect.addEventListener("blur", validateGame);
     productSelect.addEventListener("blur", validateProduct);
@@ -342,8 +376,14 @@
         } else {
             uidGuide.classList.add("hidden");
         }
-        if (!game) return;
+        if (!game) {
+            productSelect.innerHTML = '<option value="">Pilih game terlebih dahulu</option>';
+            productSelect.disabled = true;
+            updateOrderPreview();
+            return;
+        }
         await loadProductsForGame(game);
+        updateOrderPreview();
     });
 
     const params = new URLSearchParams(window.location.search);
@@ -365,12 +405,13 @@
         if (opt && opt.value) {
             selectedProduct = {
                 name: opt.dataset.name,
-                diamonds: opt.dataset.diamonds,
+                itemQty: opt.dataset.itemQty,
                 price: opt.dataset.amount
             };
         } else {
             selectedProduct = null;
         }
+        updateOrderPreview();
     });
 
     let modalTriggerEl = null;
