@@ -122,12 +122,13 @@ func main() {
 
 	retrySvc := services.NewWebhookRetryService(pool, logger)
 
+	blockedIdentityRepo := repositories.NewBlockedIdentityRepository(pool)
 	pages := handlers.NewPageHandler(orderRepo, topupSvc, paymentSvc, notifySvc, cfg.WhatsappNumber, cfg.AdminPassword, cfg.AdminPath, cfg.MidtransClientKey, cfg.MidtransIsProd, cfg.MidtransIsProd, cfg.AnnouncementText, cfg.AnnouncementLevel, logger)
-	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, pool, rootCtx, logger)
+	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, blockedIdentityRepo, pool, rootCtx, logger)
 	products := handlers.NewProductHandler(topupSvc, cacheStore, logger)
 	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, webhookRepo, cfg.MidtransServerKey, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzWebhookSecret, rootCtx, logger)
 	auditRepo := repositories.NewAuditLogRepository(pool)
-	admin := handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, auditRepo, cacheStore, retrySvc, cfg.AdminPassword, logger)
+	admin := handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, blockedIdentityRepo, auditRepo, cacheStore, retrySvc, cfg.AdminPassword, logger)
 	csrfStore := middleware.NewCSRFStore(pool)
 	csrfMW := middleware.CSRFMiddleware(csrfStore)
 
@@ -222,9 +223,19 @@ func main() {
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware).Get(cfg.AdminPath+"/retry-queue/stats", admin.GetRetryQueueStats)
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware).Get(cfg.AdminPath+"/retry-queue/dead", admin.ListDeadItems)
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post(cfg.AdminPath+"/retry-queue/{id}/retry", admin.RetryDeadItem)
+	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware).Get(cfg.AdminPath+"/supplier-status", admin.GetSupplierStatus)
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware).Get(cfg.AdminPath+"/webhooks", admin.ListWebhookLogs)
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware).Get(cfg.AdminPath+"/orders/{id}", admin.GetOrderDetail)
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post(cfg.AdminPath+"/override-status", admin.OverrideOrderStatus)
+
+	r.Route(cfg.AdminPath+"/blocked-identities", func(r chi.Router) {
+		r.Use(middleware.AdminAuth(cfg.AdminPassword))
+		r.Use(adminRateLimiter.Middleware)
+		r.Use(csrfMW)
+		r.Get("/", admin.ListBlockedIdentities)
+		r.Post("/", admin.CreateBlockedIdentity)
+		r.Delete("/{id}", admin.DeleteBlockedIdentity)
+	})
 
 	fs := http.FileServer(http.Dir("web/static"))
 	r.Handle("/static/*", http.StripPrefix("/static/", newStaticFileHandler(fs)))
@@ -470,8 +481,10 @@ func startFailedOrderRetryTicker(ctx context.Context, orderRepo repositories.Ord
 					if err := orderRepo.IncrementRetryCount(ctx, o.ID); err != nil {
 						logger.Error("failed order retry: failed to increment count", slog.String("order_id", o.ID), slog.String("error", err.Error()))
 					}
+					orderRepo.InsertStatusHistory(ctx, o.ID, constants.StatusFailed, constants.StatusPaid, "auto retry: resetting for reprocessing")
 					if err := topupSvc.ProcessOrder(ctx, o.ID); err != nil {
 						logger.Error("failed order retry: process failed", slog.String("order_id", o.ID), slog.String("error", err.Error()))
+						orderRepo.InsertStatusHistory(ctx, o.ID, constants.StatusProcessing, constants.StatusFailed, "auto retry failed: "+err.Error())
 						return
 					}
 					logger.Info("failed order retry: success", slog.String("order_id", o.ID))

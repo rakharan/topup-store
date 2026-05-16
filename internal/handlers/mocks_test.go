@@ -155,6 +155,10 @@ func (m *mockTopupService) GetBalance() int {
 	return 100000
 }
 
+func (m *mockTopupService) GetSupplierStatus() map[string]any {
+	return map[string]any{"digiflazz": map[string]any{"healthy": true}}
+}
+
 func (m *mockTopupService) DecrementProductStock(ctx context.Context, productID string) (bool, error) {
 	return true, nil
 }

@@ -37,6 +37,7 @@ type TopupServiceInterface interface {
 	FetchDigiflazzPrices(ctx context.Context) ([]DigiflazzPrice, error)
 	SyncPricesWithAutoCreate(ctx context.Context, marginType string, marginValue int, recalculatePrices bool) ([]SyncResult, int, int, int, error)
 	GetBalance() int
+	GetSupplierStatus() map[string]any
 	DecrementProductStock(ctx context.Context, productID string) (bool, error)
 	IncrementProductStock(ctx context.Context, productID string) error
 }

@@ -19,26 +19,29 @@ import (
 	"github.com/topup-store/internal/constants"
 	"github.com/topup-store/internal/middleware"
 	"github.com/topup-store/internal/models"
+	"github.com/topup-store/internal/repositories"
 	"github.com/topup-store/internal/services"
 )
 
 type OrderHandler struct {
-	paymentSvc services.PaymentServiceInterface
-	topupSvc   services.TopupServiceInterface
-	notifySvc  services.NotifyServiceInterface
-	pool       *pgxpool.Pool
-	rootCtx    context.Context
-	logger     *slog.Logger
+	paymentSvc       services.PaymentServiceInterface
+	topupSvc         services.TopupServiceInterface
+	notifySvc        services.NotifyServiceInterface
+	blockedIdentityRepo repositories.BlockedIdentityRepository
+	pool             *pgxpool.Pool
+	rootCtx          context.Context
+	logger           *slog.Logger
 }
 
-func NewOrderHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, pool *pgxpool.Pool, rootCtx context.Context, logger *slog.Logger) *OrderHandler {
+func NewOrderHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, blockedIdentityRepo repositories.BlockedIdentityRepository, pool *pgxpool.Pool, rootCtx context.Context, logger *slog.Logger) *OrderHandler {
 	return &OrderHandler{
-		paymentSvc: paymentSvc,
-		topupSvc:   topupSvc,
-		notifySvc:  notifySvc,
-		pool:       pool,
-		rootCtx:    rootCtx,
-		logger:     logger,
+		paymentSvc:       paymentSvc,
+		topupSvc:         topupSvc,
+		notifySvc:        notifySvc,
+		blockedIdentityRepo: blockedIdentityRepo,
+		pool:             pool,
+		rootCtx:          rootCtx,
+		logger:           logger,
 	}
 }
 
@@ -66,6 +69,22 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		slog.String("product_id", req.ProductID),
 		slog.String("request_id", middleware.GetRequestID(r.Context())),
 	)
+
+	if h.blockedIdentityRepo != nil {
+		blocked, reason, err := h.blockedIdentityRepo.IsBlocked(r.Context(), req.Phone, req.GameUID, r.RemoteAddr)
+		if err != nil {
+			h.logger.Error("blocked identity check failed", slog.String("error", err.Error()))
+		} else if blocked {
+			h.logger.Warn("blocked identity attempted order",
+				slog.String("phone", req.Phone),
+				slog.String("game_uid", req.GameUID),
+				slog.String("ip", r.RemoteAddr),
+				slog.String("reason", reason),
+			)
+			apperrors.WriteError(w, http.StatusForbidden, apperrors.FieldError("account", "account blocked: "+reason), middleware.GetRequestID(r.Context()))
+			return
+		}
+	}
 
 	if err := validateOrderInput(struct {
 		Game       string `json:"game"`

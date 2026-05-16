@@ -71,6 +71,13 @@ type AuditLogEntry struct {
 	AdminUA    string
 }
 
+type BlockedIdentityRepository interface {
+	Create(ctx context.Context, b *models.BlockedIdentity) error
+	Delete(ctx context.Context, id string) error
+	List(ctx context.Context) ([]models.BlockedIdentity, error)
+	IsBlocked(ctx context.Context, phone, gameUID, ipAddress string) (bool, string, error)
+}
+
 type AuditLogRepository interface {
 	Log(ctx context.Context, entry *AuditLogEntry) error
 }

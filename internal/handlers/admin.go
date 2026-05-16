@@ -22,32 +22,34 @@ import (
 )
 
 type AdminHandler struct {
-	paymentSvc  services.PaymentServiceInterface
-	topupSvc    services.TopupServiceInterface
-	notifySvc   services.NotifyServiceInterface
-	productRepo repositories.ProductRepository
-	webhookRepo repositories.WebhookRepository
-	orderRepo   repositories.OrderRepository
-	auditRepo   repositories.AuditLogRepository
-	cache       *cache.Cache
-	retrySvc    *services.WebhookRetryService
-	adminPass   string
-	logger      *slog.Logger
+	paymentSvc          services.PaymentServiceInterface
+	topupSvc            services.TopupServiceInterface
+	notifySvc           services.NotifyServiceInterface
+	productRepo         repositories.ProductRepository
+	webhookRepo         repositories.WebhookRepository
+	orderRepo           repositories.OrderRepository
+	blockedIdentityRepo repositories.BlockedIdentityRepository
+	auditRepo           repositories.AuditLogRepository
+	cache               *cache.Cache
+	retrySvc            *services.WebhookRetryService
+	adminPass           string
+	logger              *slog.Logger
 }
 
-func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, productRepo repositories.ProductRepository, webhookRepo repositories.WebhookRepository, orderRepo repositories.OrderRepository, auditRepo repositories.AuditLogRepository, cache *cache.Cache, retrySvc *services.WebhookRetryService, adminPass string, logger *slog.Logger) *AdminHandler {
+func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, productRepo repositories.ProductRepository, webhookRepo repositories.WebhookRepository, orderRepo repositories.OrderRepository, blockedIdentityRepo repositories.BlockedIdentityRepository, auditRepo repositories.AuditLogRepository, cache *cache.Cache, retrySvc *services.WebhookRetryService, adminPass string, logger *slog.Logger) *AdminHandler {
 	return &AdminHandler{
-		paymentSvc:  paymentSvc,
-		topupSvc:    topupSvc,
-		notifySvc:   notifySvc,
-		productRepo: productRepo,
-		webhookRepo: webhookRepo,
-		orderRepo:   orderRepo,
-		auditRepo:   auditRepo,
-		cache:       cache,
-		retrySvc:    retrySvc,
-		adminPass:   adminPass,
-		logger:      logger,
+		paymentSvc:          paymentSvc,
+		topupSvc:            topupSvc,
+		notifySvc:           notifySvc,
+		productRepo:         productRepo,
+		webhookRepo:         webhookRepo,
+		orderRepo:           orderRepo,
+		blockedIdentityRepo: blockedIdentityRepo,
+		auditRepo:           auditRepo,
+		cache:               cache,
+		retrySvc:            retrySvc,
+		adminPass:           adminPass,
+		logger:              logger,
 	}
 }
 
@@ -740,4 +742,84 @@ func validProductType(productType string) bool {
 	default:
 		return false
 	}
+}
+
+func (h *AdminHandler) GetSupplierStatus(w http.ResponseWriter, r *http.Request) {
+	status := h.topupSvc.GetSupplierStatus()
+	apperrors.WriteSuccess(w, http.StatusOK, status, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) ListBlockedIdentities(w http.ResponseWriter, r *http.Request) {
+	if h.blockedIdentityRepo == nil {
+		apperrors.WriteError(w, http.StatusServiceUnavailable, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	list, err := h.blockedIdentityRepo.List(r.Context())
+	if err != nil {
+		h.logger.Error("list blocked identities", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	apperrors.WriteSuccess(w, http.StatusOK, list, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) CreateBlockedIdentity(w http.ResponseWriter, r *http.Request) {
+	if h.blockedIdentityRepo == nil {
+		apperrors.WriteError(w, http.StatusServiceUnavailable, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	var req struct {
+		Phone     *string `json:"phone"`
+		GameUID   *string `json:"game_uid"`
+		IPAddress *string `json:"ip_address"`
+		Reason    string  `json:"reason"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		io.Copy(io.Discard, r.Body)
+		r.Body.Close()
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
+		return
+	}
+	if req.Phone == nil && req.GameUID == nil && req.IPAddress == nil {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("input", "at least one of phone, game_uid, or ip_address is required"), middleware.GetRequestID(r.Context()))
+		return
+	}
+	if req.Reason == "" {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("reason", "reason is required"), middleware.GetRequestID(r.Context()))
+		return
+	}
+	b := &models.BlockedIdentity{
+		ID:        uuid.New().String(),
+		Phone:     req.Phone,
+		GameUID:   req.GameUID,
+		IPAddress: req.IPAddress,
+		Reason:    req.Reason,
+		BlockedBy: "admin",
+	}
+	if err := h.blockedIdentityRepo.Create(r.Context(), b); err != nil {
+		h.logger.Error("create blocked identity", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	h.logAudit(r.Context(), r, "block_identity", "blocked_identity", b.ID, "", req.Reason)
+	apperrors.WriteSuccess(w, http.StatusCreated, b, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) DeleteBlockedIdentity(w http.ResponseWriter, r *http.Request) {
+	if h.blockedIdentityRepo == nil {
+		apperrors.WriteError(w, http.StatusServiceUnavailable, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	id := r.PathValue("id")
+	if id == "" {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("id", "id is required"), middleware.GetRequestID(r.Context()))
+		return
+	}
+	if err := h.blockedIdentityRepo.Delete(r.Context(), id); err != nil {
+		h.logger.Error("delete blocked identity", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	h.logAudit(r.Context(), r, "unblock_identity", "blocked_identity", id, "", "")
+	apperrors.WriteSuccess(w, http.StatusOK, map[string]string{"status": "ok"}, middleware.GetRequestID(r.Context()))
 }

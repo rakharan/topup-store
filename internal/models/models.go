@@ -66,6 +66,16 @@ type OrderStatusHistory struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+type BlockedIdentity struct {
+	ID        string    `json:"id"`
+	Phone     *string   `json:"phone,omitempty"`
+	GameUID   *string   `json:"game_uid,omitempty"`
+	IPAddress *string   `json:"ip_address,omitempty"`
+	Reason    string    `json:"reason"`
+	BlockedBy string    `json:"blocked_by"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type WebhookLog struct {
 	ID        string    `json:"id"`
 	Source    string    `json:"source"`

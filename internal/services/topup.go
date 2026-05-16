@@ -31,6 +31,7 @@ type TopupService struct {
 	httpClient      *http.Client
 	logger          *slog.Logger
 	balance         atomic.Int64
+	supplierTracker *SupplierStatusTracker
 }
 
 func NewTopupService(orderRepo repositories.OrderRepository, productRepo repositories.ProductRepository, user, apiKey, digiflazzURL string, testing bool, logger *slog.Logger) *TopupService {
@@ -48,7 +49,8 @@ func NewTopupService(orderRepo repositories.OrderRepository, productRepo reposit
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-		logger: logger,
+		logger:          logger,
+		supplierTracker: NewSupplierStatusTracker(50),
 	}
 }
 
@@ -223,7 +225,13 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 				slog.String("ref_id", refID),
 				slog.String("message", errBody.Data.Message),
 			)
+			if s.supplierTracker != nil {
+				s.supplierTracker.RecordError("digiflazz", "topup", "rc=41 signature mismatch")
+			}
 			return nil, fmt.Errorf("digiflazz signature mismatch (rc=41): %s", errBody.Data.Message)
+		}
+		if s.supplierTracker != nil {
+			s.supplierTracker.RecordError("digiflazz", "topup", fmt.Sprintf("status %d: %s", resp.StatusCode, string(respBody)))
 		}
 		return nil, fmt.Errorf("digiflazz returned status %d: %s", resp.StatusCode, string(respBody))
 	}
@@ -403,6 +411,9 @@ func (s *TopupService) CheckTransactionStatus(orderID string) (status string, sn
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		respBody, _ := io.ReadAll(resp.Body)
+		if s.supplierTracker != nil {
+			s.supplierTracker.RecordError("digiflazz", "status-check", fmt.Sprintf("status %d: %s", resp.StatusCode, string(respBody)))
+		}
 		return "", "", fmt.Errorf("digiflazz returned status %d: %s", resp.StatusCode, string(respBody))
 	}
 
@@ -504,6 +515,9 @@ func (s *TopupService) FetchDigiflazzPrices(ctx context.Context) ([]DigiflazzPri
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		respBody, _ := io.ReadAll(resp.Body)
+		if s.supplierTracker != nil {
+			s.supplierTracker.RecordError("digiflazz", "price-list", fmt.Sprintf("status %d: %s", resp.StatusCode, string(respBody)))
+		}
 		return nil, fmt.Errorf("digiflazz returned status %d: %s", resp.StatusCode, string(respBody))
 	}
 
@@ -558,6 +572,20 @@ func (s *TopupService) FetchDigiflazzPrices(ctx context.Context) ([]DigiflazzPri
 
 func (s *TopupService) GetBalance() int {
 	return int(s.balance.Load())
+}
+
+func (s *TopupService) GetSupplierStatus() map[string]any {
+	if s.supplierTracker == nil {
+		return map[string]any{"digiflazz": map[string]any{"healthy": true, "recent_errors": []SupplierError{}}}
+	}
+	errors := s.supplierTracker.RecentErrors()
+	isHealthy := s.supplierTracker.IsHealthy("digiflazz", 5*time.Minute)
+	return map[string]any{
+		"digiflazz": map[string]any{
+			"healthy":       isHealthy,
+			"recent_errors": errors,
+		},
+	}
 }
 
 func (s *TopupService) CompleteOrder(ctx context.Context, orderID, sn string) error {
