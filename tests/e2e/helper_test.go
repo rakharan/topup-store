@@ -91,9 +91,10 @@ func SetupTestServer(t testing.TB) *TestServer {
 	cacheStore, _ := cache.New("", logger)
 
 	blockedIdentityRepo := repositories.NewBlockedIdentityRepository(pool)
-	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, blockedIdentityRepo, pool, ctx, logger)
+	referralCodeRepo := repositories.NewReferralCodeRepository(pool)
+	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, blockedIdentityRepo, referralCodeRepo, pool, ctx, logger)
 	products := handlers.NewProductHandler(topupSvc, cacheStore, logger)
-	_ = handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, blockedIdentityRepo, nil, cacheStore, webhookRetrySvc, "test-admin-pass", logger)
+	_ = handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, blockedIdentityRepo, referralCodeRepo, nil, cacheStore, webhookRetrySvc, "test-admin-pass", logger)
 	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, webhookRepo, "", "", "", "", ctx, logger)
 	pages := handlers.NewPageHandler(orderRepo, topupSvc, paymentSvc, notifySvc, "", "test-admin-pass", "/admin", "", false, false, "", "info", logger)
 

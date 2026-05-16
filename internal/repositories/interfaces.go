@@ -81,3 +81,12 @@ type BlockedIdentityRepository interface {
 type AuditLogRepository interface {
 	Log(ctx context.Context, entry *AuditLogEntry) error
 }
+
+type ReferralCodeRepository interface {
+	Create(ctx context.Context, code *models.ReferralCode) error
+	GetByCode(ctx context.Context, code string) (*models.ReferralCode, error)
+	List(ctx context.Context) ([]models.ReferralCode, error)
+	Delete(ctx context.Context, id string) error
+	IncrementUsage(ctx context.Context, id string) error
+	ApplyToOrder(ctx context.Context, orderID, codeID string, discount int) error
+}

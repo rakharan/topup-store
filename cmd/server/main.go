@@ -123,12 +123,13 @@ func main() {
 	retrySvc := services.NewWebhookRetryService(pool, logger)
 
 	blockedIdentityRepo := repositories.NewBlockedIdentityRepository(pool)
+	referralCodeRepo := repositories.NewReferralCodeRepository(pool)
 	pages := handlers.NewPageHandler(orderRepo, topupSvc, paymentSvc, notifySvc, cfg.WhatsappNumber, cfg.AdminPassword, cfg.AdminPath, cfg.MidtransClientKey, cfg.MidtransIsProd, cfg.MidtransIsProd, cfg.AnnouncementText, cfg.AnnouncementLevel, logger)
-	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, blockedIdentityRepo, pool, rootCtx, logger)
+	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, blockedIdentityRepo, referralCodeRepo, pool, rootCtx, logger)
 	products := handlers.NewProductHandler(topupSvc, cacheStore, logger)
 	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, webhookRepo, cfg.MidtransServerKey, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzWebhookSecret, rootCtx, logger)
 	auditRepo := repositories.NewAuditLogRepository(pool)
-	admin := handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, blockedIdentityRepo, auditRepo, cacheStore, retrySvc, cfg.AdminPassword, logger)
+	admin := handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, blockedIdentityRepo, referralCodeRepo, auditRepo, cacheStore, retrySvc, cfg.AdminPassword, logger)
 	csrfStore := middleware.NewCSRFStore(pool)
 	csrfMW := middleware.CSRFMiddleware(csrfStore)
 
@@ -235,6 +236,15 @@ func main() {
 		r.Get("/", admin.ListBlockedIdentities)
 		r.Post("/", admin.CreateBlockedIdentity)
 		r.Delete("/{id}", admin.DeleteBlockedIdentity)
+	})
+
+	r.Route(cfg.AdminPath+"/referral-codes", func(r chi.Router) {
+		r.Use(middleware.AdminAuth(cfg.AdminPassword))
+		r.Use(adminRateLimiter.Middleware)
+		r.Use(csrfMW)
+		r.Get("/", admin.ListReferralCodes)
+		r.Post("/", admin.CreateReferralCode)
+		r.Delete("/{id}", admin.DeleteReferralCode)
 	})
 
 	fs := http.FileServer(http.Dir("web/static"))

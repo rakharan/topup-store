@@ -25,6 +25,7 @@
             <button id="tabProducts" onclick="switchTab('products')" class="tab-btn px-4 py-2 text-white/70 hover:text-white transition focus-ring">Products</button>
             <button id="tabAnalytics" onclick="switchTab('analytics')" class="tab-btn px-4 py-2 text-white/70 hover:text-white transition focus-ring">Analytics</button>
             <button id="tabWebhooks" onclick="switchTab('webhooks')" class="tab-btn px-4 py-2 text-white/70 hover:text-white transition focus-ring">Webhooks</button>
+            <button id="tabGrowth" onclick="switchTab('growth')" class="tab-btn px-4 py-2 text-white/70 hover:text-white transition focus-ring">Growth</button>
         </div>
 
         <div id="ordersTab">
@@ -395,6 +396,37 @@
                     </thead>
                     <tbody id="webhooksTableBody">
                         <tr><td colspan="6" class="py-8 text-center text-white/40">Loading webhook logs...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="growthTab" class="hidden">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold">Growth Tools</h2>
+            </div>
+            <div class="bg-white/5 border border-white/10 rounded-xl p-5 mb-6">
+                <h3 class="font-semibold mb-4">Referral Codes</h3>
+                <form id="referralForm" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <input type="text" id="referralCode" placeholder="Code" maxlength="32" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white uppercase focus:border-primary focus:outline-none focus-ring">
+                    <input type="number" id="referralDiscount" placeholder="Discount IDR" min="1" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                    <input type="number" id="referralMaxUses" placeholder="Max uses (0 unlimited)" min="0" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                    <button type="submit" class="bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">Create Code</button>
+                </form>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-white/10 text-left text-white/70">
+                            <th scope="col" class="pb-3 pr-4">Code</th>
+                            <th scope="col" class="pb-3 pr-4">Discount</th>
+                            <th scope="col" class="pb-3 pr-4">Used</th>
+                            <th scope="col" class="pb-3 pr-4">Created</th>
+                            <th scope="col" class="pb-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="referralCodesBody">
+                        <tr><td colspan="5" class="py-8 text-center text-white/40">Open Growth tab to load referral codes.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -884,7 +916,8 @@
         document.getElementById('productsTab').classList.toggle('hidden', tab !== 'products');
         document.getElementById('analyticsTab').classList.toggle('hidden', tab !== 'analytics');
         document.getElementById('webhooksTab').classList.toggle('hidden', tab !== 'webhooks');
-        ['Orders', 'Products', 'Analytics', 'Webhooks'].forEach(t => {
+        document.getElementById('growthTab').classList.toggle('hidden', tab !== 'growth');
+        ['Orders', 'Products', 'Analytics', 'Webhooks', 'Growth'].forEach(t => {
             const btn = document.getElementById('tab' + t);
             const isActive = t.toLowerCase() === tab;
             btn.classList.toggle('text-primary', isActive);
@@ -895,9 +928,91 @@
         if (tab === 'products') loadProducts();
         if (tab === 'analytics') loadAnalytics(30);
         if (tab === 'webhooks') loadWebhooks();
+        if (tab === 'growth') loadReferralCodes();
     }
 
     let products = [];
+
+    async function loadReferralCodes() {
+        const tbody = document.getElementById('referralCodesBody');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-white/40">Loading referral codes...</td></tr>';
+        try {
+            const res = await fetchWithCSRF(ADMIN_PATH + '/referral-codes');
+            const json = await res.json();
+            if (!res.ok) {
+                showToast(json.error?.message || 'Failed to load referral codes', 'error');
+                return;
+            }
+            const codes = json.data || [];
+            if (!codes.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-white/40">No referral codes yet.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = codes.map(c => {
+                const limit = c.max_uses > 0 ? c.max_uses : 'Unlimited';
+                return `<tr class="border-b border-white/5 hover:bg-white/5">
+                    <td class="py-3 pr-4 font-mono">${escapeHtml(c.code)}</td>
+                    <td class="py-3 pr-4">Rp ${(c.discount_idr || 0).toLocaleString('id-ID')}</td>
+                    <td class="py-3 pr-4">${c.used_count || 0} / ${limit}</td>
+                    <td class="py-3 pr-4 text-white/50">${formatDate(c.created_at)}</td>
+                    <td class="py-3"><button onclick="deleteReferralCode('${escapeHtml(c.id)}')" class="text-red-400 hover:text-red-300 text-sm focus-ring">Delete</button></td>
+                </tr>`;
+            }).join('');
+        } catch (e) {
+            showToast('Failed to load referral codes', 'error');
+        }
+    }
+
+    document.getElementById('referralForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const code = document.getElementById('referralCode').value.trim().toUpperCase();
+        const discount = parseInt(document.getElementById('referralDiscount').value || '0', 10);
+        const maxUses = parseInt(document.getElementById('referralMaxUses').value || '0', 10);
+        if (!code || discount <= 0) {
+            showToast('Referral code and discount are required', 'warning');
+            return;
+        }
+        try {
+            const res = await fetchWithCSRF(ADMIN_PATH + '/referral-codes', {
+                method: 'POST',
+                body: JSON.stringify({ code, discount_idr: discount, max_uses: maxUses }),
+            });
+            const json = await res.json();
+            if (res.ok) {
+                document.getElementById('referralForm').reset();
+                showToast('Referral code created', 'success');
+                loadReferralCodes();
+            } else {
+                showToast(json.error?.message || 'Failed to create referral code', 'error');
+            }
+        } catch (err) {
+            showToast('Failed to create referral code', 'error');
+        }
+    });
+
+    async function deleteReferralCode(id) {
+        const ok = await showConfirmModal({
+            title: 'Delete referral code',
+            message: 'Delete this referral code?',
+            actionText: 'Delete',
+            actionClass: 'bg-red-600 hover:bg-red-700',
+            icon: '!'
+        });
+        if (!ok) return;
+        try {
+            const res = await fetchWithCSRF(`${ADMIN_PATH}/referral-codes/${id}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (res.ok) {
+                showToast('Referral code deleted', 'success');
+                loadReferralCodes();
+            } else {
+                showToast(json.error?.message || 'Failed to delete referral code', 'error');
+            }
+        } catch (err) {
+            showToast('Failed to delete referral code', 'error');
+        }
+    }
 
     async function loadProducts() {
         try {

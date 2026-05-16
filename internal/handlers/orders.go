@@ -24,24 +24,26 @@ import (
 )
 
 type OrderHandler struct {
-	paymentSvc       services.PaymentServiceInterface
-	topupSvc         services.TopupServiceInterface
-	notifySvc        services.NotifyServiceInterface
+	paymentSvc          services.PaymentServiceInterface
+	topupSvc            services.TopupServiceInterface
+	notifySvc           services.NotifyServiceInterface
 	blockedIdentityRepo repositories.BlockedIdentityRepository
-	pool             *pgxpool.Pool
-	rootCtx          context.Context
-	logger           *slog.Logger
+	referralCodeRepo    repositories.ReferralCodeRepository
+	pool                *pgxpool.Pool
+	rootCtx             context.Context
+	logger              *slog.Logger
 }
 
-func NewOrderHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, blockedIdentityRepo repositories.BlockedIdentityRepository, pool *pgxpool.Pool, rootCtx context.Context, logger *slog.Logger) *OrderHandler {
+func NewOrderHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, blockedIdentityRepo repositories.BlockedIdentityRepository, referralCodeRepo repositories.ReferralCodeRepository, pool *pgxpool.Pool, rootCtx context.Context, logger *slog.Logger) *OrderHandler {
 	return &OrderHandler{
-		paymentSvc:       paymentSvc,
-		topupSvc:         topupSvc,
-		notifySvc:        notifySvc,
+		paymentSvc:          paymentSvc,
+		topupSvc:            topupSvc,
+		notifySvc:           notifySvc,
 		blockedIdentityRepo: blockedIdentityRepo,
-		pool:             pool,
-		rootCtx:          rootCtx,
-		logger:           logger,
+		referralCodeRepo:    referralCodeRepo,
+		pool:                pool,
+		rootCtx:             rootCtx,
+		logger:              logger,
 	}
 }
 
@@ -334,7 +336,7 @@ func (h *OrderHandler) calculateCouponDiscount(ctx context.Context, code, game s
 	`, code).Scan(&discountType, &discountValue, &minOrder, &maxDiscount, &maxUses, &usedCount, &couponGame)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return 0, "", fmt.Errorf("coupon not found or inactive")
+			return h.calculateReferralDiscount(ctx, code, subtotal)
 		}
 		return 0, "", fmt.Errorf("coupon check failed")
 	}
@@ -364,6 +366,30 @@ func (h *OrderHandler) calculateCouponDiscount(ctx context.Context, code, game s
 	return discount, code, nil
 }
 
+func (h *OrderHandler) calculateReferralDiscount(ctx context.Context, code string, subtotal int) (int, string, error) {
+	if h.referralCodeRepo == nil {
+		return 0, "", fmt.Errorf("coupon not found or inactive")
+	}
+	referral, err := h.referralCodeRepo.GetByCode(ctx, code)
+	if err != nil {
+		return 0, "", fmt.Errorf("referral code check failed")
+	}
+	if referral == nil {
+		return 0, "", fmt.Errorf("coupon not found or inactive")
+	}
+	if referral.MaxUses > 0 && referral.UsedCount >= referral.MaxUses {
+		return 0, "", fmt.Errorf("referral code usage limit reached")
+	}
+	discount := referral.DiscountIDR
+	if discount <= 0 {
+		return 0, "", fmt.Errorf("referral code discount is invalid")
+	}
+	if discount >= subtotal {
+		discount = subtotal - 1000
+	}
+	return discount, code, nil
+}
+
 func (h *OrderHandler) recordCouponUsage(ctx context.Context, orderID, code string, subtotal, discount int) error {
 	if h.pool == nil || code == "" {
 		return nil
@@ -373,6 +399,18 @@ func (h *OrderHandler) recordCouponUsage(ctx context.Context, orderID, code stri
 	`, subtotal, discount, code, orderID)
 	if err != nil {
 		return err
+	}
+	if h.referralCodeRepo != nil {
+		referral, err := h.referralCodeRepo.GetByCode(ctx, code)
+		if err != nil {
+			return err
+		}
+		if referral != nil {
+			if err := h.referralCodeRepo.ApplyToOrder(ctx, orderID, referral.ID, discount); err != nil {
+				return err
+			}
+			return h.referralCodeRepo.IncrementUsage(ctx, referral.ID)
+		}
 	}
 	_, err = h.pool.Exec(ctx, `UPDATE coupons SET used_count = used_count + 1, updated_at = NOW() WHERE code = $1`, code)
 	return err

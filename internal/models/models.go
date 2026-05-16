@@ -87,3 +87,21 @@ type WebhookLog struct {
 	Error     *string   `json:"error"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type ReferralCode struct {
+	ID          string    `json:"id"`
+	Code        string    `json:"code"`
+	DiscountIDR int       `json:"discount_idr"`
+	MaxUses     int       `json:"max_uses"`
+	UsedCount   int       `json:"used_count"`
+	IsActive    bool      `json:"is_active"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type OrderReferral struct {
+	ID        string    `json:"id"`
+	OrderID   string    `json:"order_id"`
+	CodeID    string    `json:"code_id"`
+	Discount  int       `json:"discount_idr"`
+	CreatedAt time.Time `json:"created_at"`
+}

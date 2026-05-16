@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,6 +30,7 @@ type AdminHandler struct {
 	webhookRepo         repositories.WebhookRepository
 	orderRepo           repositories.OrderRepository
 	blockedIdentityRepo repositories.BlockedIdentityRepository
+	referralCodeRepo    repositories.ReferralCodeRepository
 	auditRepo           repositories.AuditLogRepository
 	cache               *cache.Cache
 	retrySvc            *services.WebhookRetryService
@@ -36,7 +38,7 @@ type AdminHandler struct {
 	logger              *slog.Logger
 }
 
-func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, productRepo repositories.ProductRepository, webhookRepo repositories.WebhookRepository, orderRepo repositories.OrderRepository, blockedIdentityRepo repositories.BlockedIdentityRepository, auditRepo repositories.AuditLogRepository, cache *cache.Cache, retrySvc *services.WebhookRetryService, adminPass string, logger *slog.Logger) *AdminHandler {
+func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, productRepo repositories.ProductRepository, webhookRepo repositories.WebhookRepository, orderRepo repositories.OrderRepository, blockedIdentityRepo repositories.BlockedIdentityRepository, referralCodeRepo repositories.ReferralCodeRepository, auditRepo repositories.AuditLogRepository, cache *cache.Cache, retrySvc *services.WebhookRetryService, adminPass string, logger *slog.Logger) *AdminHandler {
 	return &AdminHandler{
 		paymentSvc:          paymentSvc,
 		topupSvc:            topupSvc,
@@ -45,6 +47,7 @@ func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc servi
 		webhookRepo:         webhookRepo,
 		orderRepo:           orderRepo,
 		blockedIdentityRepo: blockedIdentityRepo,
+		referralCodeRepo:    referralCodeRepo,
 		auditRepo:           auditRepo,
 		cache:               cache,
 		retrySvc:            retrySvc,
@@ -821,5 +824,79 @@ func (h *AdminHandler) DeleteBlockedIdentity(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	h.logAudit(r.Context(), r, "unblock_identity", "blocked_identity", id, "", "")
+	apperrors.WriteSuccess(w, http.StatusOK, map[string]string{"status": "ok"}, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) ListReferralCodes(w http.ResponseWriter, r *http.Request) {
+	if h.referralCodeRepo == nil {
+		apperrors.WriteError(w, http.StatusServiceUnavailable, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	codes, err := h.referralCodeRepo.List(r.Context())
+	if err != nil {
+		h.logger.Error("list referral codes", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	apperrors.WriteSuccess(w, http.StatusOK, codes, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) CreateReferralCode(w http.ResponseWriter, r *http.Request) {
+	if h.referralCodeRepo == nil {
+		apperrors.WriteError(w, http.StatusServiceUnavailable, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	var req struct {
+		Code        string `json:"code"`
+		DiscountIDR int    `json:"discount_idr"`
+		MaxUses     int    `json:"max_uses"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("body", "invalid JSON"), middleware.GetRequestID(r.Context()))
+		return
+	}
+	if req.Code == "" {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("code", "code is required"), middleware.GetRequestID(r.Context()))
+		return
+	}
+	req.Code = strings.ToUpper(strings.TrimSpace(req.Code))
+	if req.DiscountIDR <= 0 {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("discount_idr", "discount must be positive"), middleware.GetRequestID(r.Context()))
+		return
+	}
+	if req.MaxUses <= 0 {
+		req.MaxUses = 0
+	}
+	rc := &models.ReferralCode{
+		Code:        req.Code,
+		DiscountIDR: req.DiscountIDR,
+		MaxUses:     req.MaxUses,
+		IsActive:    true,
+	}
+	if err := h.referralCodeRepo.Create(r.Context(), rc); err != nil {
+		h.logger.Error("create referral code", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	h.logAudit(r.Context(), r, "create_referral_code", "referral_code", rc.ID, "", req.Code)
+	apperrors.WriteSuccess(w, http.StatusCreated, rc, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) DeleteReferralCode(w http.ResponseWriter, r *http.Request) {
+	if h.referralCodeRepo == nil {
+		apperrors.WriteError(w, http.StatusServiceUnavailable, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	id := r.PathValue("id")
+	if id == "" {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("id", "id is required"), middleware.GetRequestID(r.Context()))
+		return
+	}
+	if err := h.referralCodeRepo.Delete(r.Context(), id); err != nil {
+		h.logger.Error("delete referral code", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	h.logAudit(r.Context(), r, "delete_referral_code", "referral_code", id, "", "")
 	apperrors.WriteSuccess(w, http.StatusOK, map[string]string{"status": "ok"}, middleware.GetRequestID(r.Context()))
 }
