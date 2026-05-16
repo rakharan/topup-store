@@ -235,8 +235,8 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	if req.ProductType == "" {
 		req.ProductType = "diamond"
 	}
-	if req.ProductType != "diamond" && req.ProductType != "subscription" && req.ProductType != "other" {
-		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product_type", "must be diamond, subscription, or other"), middleware.GetRequestID(r.Context()))
+	if !validProductType(req.ProductType) {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product_type", "must be diamond, subscription, other, or validation"), middleware.GetRequestID(r.Context()))
 		return
 	}
 	if !validCustomerNoFormat(req.CustomerNoFormat) {
@@ -320,8 +320,8 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	if req.ProductType == "" {
 		req.ProductType = "diamond"
 	}
-	if req.ProductType != "diamond" && req.ProductType != "subscription" && req.ProductType != "other" {
-		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product_type", "must be diamond, subscription, or other"), middleware.GetRequestID(r.Context()))
+	if !validProductType(req.ProductType) {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product_type", "must be diamond, subscription, other, or validation"), middleware.GetRequestID(r.Context()))
 		return
 	}
 	if !validCustomerNoFormat(req.CustomerNoFormat) {
@@ -709,6 +709,15 @@ func (h *AdminHandler) OverrideOrderStatus(w http.ResponseWriter, r *http.Reques
 func validCustomerNoFormat(format string) bool {
 	switch format {
 	case "", "uid", "uid_server_pipe", "uid_server_concat", "uid_server_space":
+		return true
+	default:
+		return false
+	}
+}
+
+func validProductType(productType string) bool {
+	switch productType {
+	case constants.ProductTypeDiamond, constants.ProductTypeSubscription, constants.ProductTypeOther, constants.ProductTypeValidation:
 		return true
 	default:
 		return false

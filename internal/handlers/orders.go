@@ -85,10 +85,26 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product_id", "product not found"), middleware.GetRequestID(r.Context()))
 		return
 	}
+	if product.ProductType == constants.ProductTypeValidation {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product_id", "product not available for purchase"), middleware.GetRequestID(r.Context()))
+		return
+	}
 
 	if product.Stock == 0 {
 		h.logger.Warn("create order: product out of stock", slog.String("product_id", product.ID))
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product", "product is out of stock"), middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	validation, err := h.topupSvc.ValidateCustomer(r.Context(), req.Game, req.GameUID, req.GameServer)
+	if err != nil {
+		h.logger.Warn("create order: customer validation failed",
+			slog.String("game", req.Game),
+			slog.String("uid", req.GameUID),
+			slog.String("server", req.GameServer),
+			slog.String("error", err.Error()),
+		)
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("game_uid", "UID/server tidak valid"), middleware.GetRequestID(r.Context()))
 		return
 	}
 
@@ -196,6 +212,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		"snap_token":        snapToken,
 		"snap_redirect_url": snapRedirectURL,
 		"expiry_time":       expiryTime,
+		"validation":        validation,
 	}, middleware.GetRequestID(r.Context()))
 }
 

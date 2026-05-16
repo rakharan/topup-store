@@ -192,6 +192,7 @@
                     <option value="diamond">Currency/Item</option>
                     <option value="subscription">Subscription</option>
                     <option value="other">Other</option>
+                    <option value="validation">Validation/Internal</option>
                 </select>
                 <select id="productActiveFilter" class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     <option value="">Semua Status</option>
@@ -258,6 +259,7 @@
                             <option value="diamond">Currency/Item</option>
                             <option value="subscription">Subscription</option>
                             <option value="other">Other</option>
+                            <option value="validation">Validation/Internal</option>
                         </select>
                     </div>
                     <div>
@@ -907,8 +909,8 @@
             return;
         }
         const gameLabels = { free_fire: 'FF', mobile_legends: 'ML', pubg_mobile: 'PUBG', genshin_impact: 'Genshin', honkai_star_rail: 'HSR', zenless_zone_zero: 'ZZZ', honkai_impact_3: 'HI3' };
-        const typeLabels = { diamond: 'Currency/Item', subscription: 'Subscription', other: 'Other' };
-        const typeColors = { diamond: 'bg-green-500/20 text-green-400', subscription: 'bg-blue-500/20 text-blue-400', other: 'bg-gray-500/20 text-gray-400' };
+        const typeLabels = { diamond: 'Currency/Item', subscription: 'Subscription', other: 'Other', validation: 'Validation/Internal' };
+        const typeColors = { diamond: 'bg-green-500/20 text-green-400', subscription: 'bg-blue-500/20 text-blue-400', other: 'bg-gray-500/20 text-gray-400', validation: 'bg-purple-500/20 text-purple-400' };
         tbody.innerHTML = filtered.map(p => {
             const profit = calcNetProfit(p.price_idr, p.cost_price_idr);
             const profitClass = profit <= 0 ? 'text-red-400' : 'text-green-400';

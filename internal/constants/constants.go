@@ -26,6 +26,13 @@ const (
 )
 
 const (
+	ProductTypeDiamond      = "diamond"
+	ProductTypeSubscription = "subscription"
+	ProductTypeOther        = "other"
+	ProductTypeValidation   = "validation"
+)
+
+const (
 	DigiflazzAPIURL = "https://api.digiflazz.com/v1/transaction"
 )
 

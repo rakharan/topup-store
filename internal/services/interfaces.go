@@ -33,6 +33,7 @@ type TopupServiceInterface interface {
 	ListProducts(ctx context.Context, game string) ([]models.Product, error)
 	ListAllProducts(ctx context.Context) ([]models.Product, error)
 	ProcessOrder(ctx context.Context, orderID string) error
+	ValidateCustomer(ctx context.Context, game, gameUID, gameServer string) (*CustomerValidationResult, error)
 	FetchDigiflazzPrices(ctx context.Context) ([]DigiflazzPrice, error)
 	SyncPricesWithAutoCreate(ctx context.Context, marginType string, marginValue int, recalculatePrices bool) ([]SyncResult, int, int, int, error)
 	GetBalance() int

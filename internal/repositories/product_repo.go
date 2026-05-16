@@ -32,8 +32,8 @@ func (r *PGProductRepository) GetByGameAndDiamonds(ctx context.Context, game str
 	var p models.Product
 	err := r.pool.QueryRow(ctx, `
 		SELECT id, game, name, description, price_idr, cost_price_idr, item_qty, product_type, sku, customer_no_format, is_active, stock, created_at, updated_at, deleted_at
-		FROM products WHERE game = $1 AND item_qty = $2 AND is_active = true AND deleted_at IS NULL
-	`, game, itemQty).Scan(&p.ID, &p.Game, &p.Name, &p.Description, &p.PriceIDR, &p.CostPriceIDR, &p.ItemQty, &p.ProductType, &p.SKU, &p.CustomerNoFormat, &p.IsActive, &p.Stock, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt)
+		FROM products WHERE game = $1 AND item_qty = $2 AND product_type != $3 AND is_active = true AND deleted_at IS NULL
+		`, game, itemQty, constants.ProductTypeValidation).Scan(&p.ID, &p.Game, &p.Name, &p.Description, &p.PriceIDR, &p.CostPriceIDR, &p.ItemQty, &p.ProductType, &p.SKU, &p.CustomerNoFormat, &p.IsActive, &p.Stock, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -43,8 +43,8 @@ func (r *PGProductRepository) GetByGameAndDiamonds(ctx context.Context, game str
 func (r *PGProductRepository) ListByGame(ctx context.Context, game string) ([]models.Product, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, game, name, description, price_idr, cost_price_idr, item_qty, product_type, sku, customer_no_format, is_active, stock, created_at, updated_at, deleted_at
-		FROM products WHERE game = $1 AND is_active = true AND deleted_at IS NULL ORDER BY price_idr
-	`, game)
+		FROM products WHERE game = $1 AND product_type != $2 AND is_active = true AND deleted_at IS NULL ORDER BY price_idr
+	`, game, constants.ProductTypeValidation)
 	if err != nil {
 		return nil, err
 	}

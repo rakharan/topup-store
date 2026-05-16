@@ -139,6 +139,10 @@ func (m *mockTopupService) ProcessOrder(ctx context.Context, orderID string) err
 	return m.processOrderErr
 }
 
+func (m *mockTopupService) ValidateCustomer(ctx context.Context, game, gameUID, gameServer string) (*services.CustomerValidationResult, error) {
+	return nil, nil
+}
+
 func (m *mockTopupService) FetchDigiflazzPrices(ctx context.Context) ([]services.DigiflazzPrice, error) {
 	return nil, nil
 }

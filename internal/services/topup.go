@@ -146,6 +146,13 @@ type digiflazzTopupData struct {
 	Price          int    `json:"price"`
 }
 
+type CustomerValidationResult struct {
+	Checked bool   `json:"checked"`
+	Valid   bool   `json:"valid"`
+	Message string `json:"message,omitempty"`
+	SN      string `json:"sn,omitempty"`
+}
+
 func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *models.Order, product *models.Product) (*digiflazzTopupData, error) {
 	customerNo := s.buildCustomerNo(order, product)
 	refID := order.DigiflazzRefID
@@ -237,6 +244,55 @@ func (s *TopupService) processTopupViaDigiflazz(ctx context.Context, order *mode
 		}
 	}
 	return &result.Data, nil
+}
+
+func (s *TopupService) ValidateCustomer(ctx context.Context, game, gameUID, gameServer string) (*CustomerValidationResult, error) {
+	product, err := s.getValidationProduct(ctx, game)
+	if err != nil {
+		return nil, err
+	}
+	if product == nil {
+		return &CustomerValidationResult{Checked: false, Valid: true}, nil
+	}
+
+	order := &models.Order{
+		ID:             "validation-" + strconv.FormatInt(time.Now().UnixNano(), 10),
+		GameUID:        gameUID,
+		GameServer:     gameServer,
+		DigiflazzRefID: "validation-" + strconv.FormatInt(time.Now().UnixNano(), 10),
+	}
+	result, err := s.processTopupViaDigiflazz(ctx, order, product)
+	if err != nil {
+		return nil, fmt.Errorf("validate customer: %w", err)
+	}
+
+	normalizedStatus := normalizeDigiflazzStatus(result.Status)
+	validation := &CustomerValidationResult{
+		Checked: true,
+		Valid:   normalizedStatus != constants.StatusFailed,
+		Message: result.Message,
+		SN:      result.SN,
+	}
+	if !validation.Valid {
+		if validation.Message == "" {
+			validation.Message = "UID atau server tidak valid"
+		}
+		return validation, fmt.Errorf("%s", validation.Message)
+	}
+	return validation, nil
+}
+
+func (s *TopupService) getValidationProduct(ctx context.Context, game string) (*models.Product, error) {
+	products, err := s.productRepo.ListAll(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list validation products: %w", err)
+	}
+	for _, product := range products {
+		if product.Game == game && product.ProductType == constants.ProductTypeValidation && product.IsActive && product.DeletedAt == nil {
+			return &product, nil
+		}
+	}
+	return nil, nil
 }
 
 func (s *TopupService) buildCustomerNo(order *models.Order, product *models.Product) string {
@@ -391,7 +447,17 @@ func (s *TopupService) ListProducts(ctx context.Context, game string) ([]models.
 }
 
 func (s *TopupService) ListAllProducts(ctx context.Context) ([]models.Product, error) {
-	return s.productRepo.ListAll(ctx)
+	products, err := s.productRepo.ListAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	publicProducts := make([]models.Product, 0, len(products))
+	for _, product := range products {
+		if product.ProductType != constants.ProductTypeValidation {
+			publicProducts = append(publicProducts, product)
+		}
+	}
+	return publicProducts, nil
 }
 
 func (s *TopupService) DecrementProductStock(ctx context.Context, productID string) (bool, error) {
@@ -733,13 +799,19 @@ func extractItemQtyFromName(name string) int {
 }
 
 var subscriptionKeywords = []string{"weekly", "monthly", "membership", "season pass", "diamond pass", "twilight pass", "starlight pass", "starlight", "welkin", "express supply", "inter-knot membership", "monthly card"}
+var validationKeywords = []string{"cek id", "check id", "validasi", "validation", "nickname"}
 
 func detectProductType(name string) string {
 	nameLower := strings.ToLower(name)
-	for _, keyword := range subscriptionKeywords {
+	for _, keyword := range validationKeywords {
 		if strings.Contains(nameLower, keyword) {
-			return "subscription"
+			return constants.ProductTypeValidation
 		}
 	}
-	return "diamond"
+	for _, keyword := range subscriptionKeywords {
+		if strings.Contains(nameLower, keyword) {
+			return constants.ProductTypeSubscription
+		}
+	}
+	return constants.ProductTypeDiamond
 }
