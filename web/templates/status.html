@@ -10,7 +10,7 @@
     {{template "head"}}
 </head>
 <body class="bg-dark text-white min-h-screen">
-    {{template "nav" (dict "ActivePage" "status")}}
+    {{template "nav" .Nav}}
 
     <main id="main-content" class="max-w-lg mx-auto px-4 py-12">
         <h1 class="text-3xl font-bold mb-8 text-center">Cek Status Order</h1>

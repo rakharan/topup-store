@@ -122,7 +122,7 @@ func main() {
 
 	retrySvc := services.NewWebhookRetryService(pool, logger)
 
-	pages := handlers.NewPageHandler(orderRepo, topupSvc, paymentSvc, notifySvc, cfg.WhatsappNumber, cfg.AdminPassword, cfg.AdminPath, cfg.MidtransClientKey, cfg.MidtransIsProd, cfg.MidtransIsProd, logger)
+	pages := handlers.NewPageHandler(orderRepo, topupSvc, paymentSvc, notifySvc, cfg.WhatsappNumber, cfg.AdminPassword, cfg.AdminPath, cfg.MidtransClientKey, cfg.MidtransIsProd, cfg.MidtransIsProd, cfg.AnnouncementText, cfg.AnnouncementLevel, logger)
 	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, pool, rootCtx, logger)
 	products := handlers.NewProductHandler(topupSvc, cacheStore, logger)
 	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, webhookRepo, cfg.MidtransServerKey, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzWebhookSecret, rootCtx, logger)
@@ -149,6 +149,7 @@ func main() {
 	r.Use(rateLimiter.Middleware)
 	r.Use(middleware.MaxBodyMiddleware(1 << 20)) // 1MB
 	r.Use(middleware.SecurityHeaders)
+	r.Use(middleware.MaintenanceMode(cfg.MaintenanceMode, cfg.AdminPath, cfg.MaintenanceMessage))
 
 	r.Get("/health", healthHandler(pool))
 	r.Get("/ready", readyHandler(pool, cacheStore, cfg))

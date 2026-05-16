@@ -276,6 +276,7 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.logAudit(r.Context(), r, "create_product", "product", product.ID, "", product.SKU)
 	h.cache.DeleteByPrefix(r.Context(), "product")
 
 	apperrors.WriteSuccess(w, http.StatusCreated, product, middleware.GetRequestID(r.Context()))
@@ -361,6 +362,7 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.logAudit(r.Context(), r, "update_product", "product", product.ID, existing.SKU, product.SKU)
 	h.cache.DeleteByPrefix(r.Context(), "product")
 
 	apperrors.WriteSuccess(w, http.StatusOK, product, middleware.GetRequestID(r.Context()))
@@ -368,10 +370,16 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 
 func (h *AdminHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
+	product, _ := h.productRepo.GetByID(r.Context(), id)
 	if err := h.productRepo.Delete(r.Context(), id); err != nil {
 		apperrors.WriteError(w, http.StatusNotFound, apperrors.ErrNotFound, middleware.GetRequestID(r.Context()))
 		return
 	}
+	oldValue := ""
+	if product != nil {
+		oldValue = product.SKU
+	}
+	h.logAudit(r.Context(), r, "delete_product", "product", id, oldValue, "")
 	h.cache.DeleteByPrefix(r.Context(), "product")
 	apperrors.WriteSuccess(w, http.StatusOK, map[string]string{"status": "ok", "message": "product deleted"}, middleware.GetRequestID(r.Context()))
 }
@@ -433,6 +441,7 @@ func (h *AdminHandler) SyncPrices(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	h.logAudit(r.Context(), r, "sync_prices", "product", "bulk", "", fmt.Sprintf("updated=%d skipped=%d total=%d", updated, skipped, len(req.Prices)))
 	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
 		"updated":  updated,
 		"skipped":  skipped,
@@ -462,6 +471,7 @@ func (h *AdminHandler) SyncPricesFromDigiflazz(w http.ResponseWriter, r *http.Re
 	}
 
 	h.cache.DeleteByPrefix(r.Context(), "product")
+	h.logAudit(r.Context(), r, "sync_digiflazz", "product", "bulk", "", fmt.Sprintf("updated=%d created=%d skipped=%d", updated, created, skipped))
 
 	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
 		"updated":  updated,

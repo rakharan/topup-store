@@ -34,6 +34,10 @@ type Config struct {
 	RedisURL                     string
 	AutoMigrate                  bool
 	LogFormat                    string
+	MaintenanceMode              bool
+	MaintenanceMessage           string
+	AnnouncementText             string
+	AnnouncementLevel            string
 }
 
 func Load() (*Config, error) {
@@ -66,6 +70,10 @@ func Load() (*Config, error) {
 		RedisURL:                     getEnv("REDIS_URL", ""),
 		AutoMigrate:                  getEnv("AUTO_MIGRATE", "false") == "true",
 		LogFormat:                    getEnv("LOG_FORMAT", "text"),
+		MaintenanceMode:              getEnv("MAINTENANCE_MODE", "false") == "true",
+		MaintenanceMessage:           getEnv("MAINTENANCE_MESSAGE", "Layanan sedang maintenance. Silakan coba lagi sebentar lagi."),
+		AnnouncementText:             getEnv("ANNOUNCEMENT_TEXT", ""),
+		AnnouncementLevel:            getEnv("ANNOUNCEMENT_LEVEL", "info"),
 	}
 
 	var missing []string

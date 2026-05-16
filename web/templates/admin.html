@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
 </head>
 <body class="bg-dark text-white min-h-screen">
-    {{template "nav" (dict "ActivePage" "admin")}}
+    {{template "nav" .Nav}}
 
     {{if .Authenticated}}
     <main id="main-content" class="max-w-6xl mx-auto px-4 py-8">

@@ -94,7 +94,7 @@ func SetupTestServer(t testing.TB) *TestServer {
 	products := handlers.NewProductHandler(topupSvc, cacheStore, logger)
 	_ = handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, nil, cacheStore, webhookRetrySvc, "test-admin-pass", logger)
 	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, webhookRepo, "", "", "", "", ctx, logger)
-	pages := handlers.NewPageHandler(orderRepo, topupSvc, paymentSvc, notifySvc, "", "test-admin-pass", "/admin", "", false, false, logger)
+	pages := handlers.NewPageHandler(orderRepo, topupSvc, paymentSvc, notifySvc, "", "test-admin-pass", "/admin", "", false, false, "", "info", logger)
 
 	r := chi.NewRouter()
 	r.Use(chimiddleware.RequestID)

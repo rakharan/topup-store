@@ -88,6 +88,8 @@ type PageHandler struct {
 	midtransClientKey string
 	midtransIsProd    bool
 	cookieSecure      bool
+	announcementText  string
+	announcementLevel string
 	logger            *slog.Logger
 }
 
@@ -100,7 +102,7 @@ type adminOrderView struct {
 	NetProfitIDR   int
 }
 
-func NewPageHandler(orderRepo repositories.OrderRepository, topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass, adminPath, midtransClientKey string, midtransIsProd, cookieSecure bool, logger *slog.Logger) *PageHandler {
+func NewPageHandler(orderRepo repositories.OrderRepository, topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass, adminPath, midtransClientKey string, midtransIsProd, cookieSecure bool, announcementText, announcementLevel string, logger *slog.Logger) *PageHandler {
 	templates, err := parseTemplates()
 	if err != nil {
 		logger.Error("Failed to parse templates", slog.String("error", err.Error()))
@@ -118,7 +120,17 @@ func NewPageHandler(orderRepo repositories.OrderRepository, topupSvc services.To
 		midtransClientKey: midtransClientKey,
 		midtransIsProd:    midtransIsProd,
 		cookieSecure:      cookieSecure,
+		announcementText:  announcementText,
+		announcementLevel: announcementLevel,
 		logger:            logger,
+	}
+}
+
+func (h *PageHandler) navData(activePage string) map[string]any {
+	return map[string]any{
+		"ActivePage":        activePage,
+		"AnnouncementText":  h.announcementText,
+		"AnnouncementLevel": h.announcementLevel,
 	}
 }
 
@@ -139,6 +151,7 @@ func (h *PageHandler) Home(w http.ResponseWriter, r *http.Request) {
 	if err := h.templates.ExecuteTemplate(w, "index.html", map[string]any{
 		"WhatsappNumber": h.waNumber,
 		"SuccessCount":   successCount,
+		"Nav":            h.navData("home"),
 	}); err != nil {
 		h.logger.Error("template error (index.html)", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -151,6 +164,7 @@ func (h *PageHandler) OrderForm(w http.ResponseWriter, r *http.Request) {
 		"CSRFToken":         middleware.GetCSRFToken(r.Context()),
 		"MidtransClientKey": h.midtransClientKey,
 		"MidtransIsProd":    h.midtransIsProd,
+		"Nav":               h.navData("order"),
 	}); err != nil {
 		h.logger.Error("template error (order.html)", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -160,6 +174,7 @@ func (h *PageHandler) OrderForm(w http.ResponseWriter, r *http.Request) {
 func (h *PageHandler) Status(w http.ResponseWriter, r *http.Request) {
 	if err := h.templates.ExecuteTemplate(w, "status.html", map[string]any{
 		"CSRFToken": middleware.GetCSRFToken(r.Context()),
+		"Nav":       h.navData("status"),
 	}); err != nil {
 		h.logger.Error("template error (status.html)", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -167,14 +182,14 @@ func (h *PageHandler) Status(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PageHandler) Terms(w http.ResponseWriter, r *http.Request) {
-	if err := h.templates.ExecuteTemplate(w, "terms.html", nil); err != nil {
+	if err := h.templates.ExecuteTemplate(w, "terms.html", map[string]any{"Nav": h.navData("terms")}); err != nil {
 		h.logger.Error("template error (terms.html)", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
 
 func (h *PageHandler) Refund(w http.ResponseWriter, r *http.Request) {
-	if err := h.templates.ExecuteTemplate(w, "refund.html", nil); err != nil {
+	if err := h.templates.ExecuteTemplate(w, "refund.html", map[string]any{"Nav": h.navData("refund")}); err != nil {
 		h.logger.Error("template error (refund.html)", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
@@ -184,6 +199,7 @@ func (h *PageHandler) Admin(w http.ResponseWriter, r *http.Request) {
 	data := map[string]any{
 		"CSRFToken": middleware.GetCSRFToken(r.Context()),
 		"AdminPath": h.adminPath,
+		"Nav":       h.navData("admin"),
 	}
 
 	if r.Method == http.MethodPost {
