@@ -70,7 +70,7 @@
                         </tr>
                         {{end}}
                         {{range .Orders}}
-                        <tr class="border-b border-white/5 hover:bg-white/5 order-row cursor-pointer" data-status="{{.Status}}" data-search="{{.OrderNumber}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
+                        <tr class="border-b border-white/5 hover:bg-white/5 order-row cursor-pointer" data-order-id="{{.ID}}" data-amount="{{.AmountIDR}}" data-status="{{.Status}}" data-search="{{.OrderNumber}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
                             <td class="py-3 pr-4 font-mono text-xs">{{.OrderNumber}}</td>
                             <td class="py-3 pr-4">{{.ProductID}}</td>
                             <td class="py-3 pr-4">{{.GameUID}}{{if .GameServer}} ({{.GameServer}}){{end}}</td>
@@ -107,7 +107,7 @@
             </div>
             <div id="ordersMobileCards" class="md:hidden space-y-3">
                 {{range .Orders}}
-                <div class="bg-white/5 border border-white/10 rounded-xl p-4 order-row cursor-pointer" data-status="{{.Status}}" data-search="{{.OrderNumber}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
+                <div class="bg-white/5 border border-white/10 rounded-xl p-4 order-row cursor-pointer" data-order-id="{{.ID}}" data-amount="{{.AmountIDR}}" data-status="{{.Status}}" data-search="{{.OrderNumber}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
                     <div class="flex items-center justify-between mb-2">
                         <span class="font-mono text-xs text-white/60">{{.OrderNumber}}</span>
                         {{if eq .Status "success"}}<span class="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">Berhasil</span>
@@ -677,19 +677,30 @@
         });
     }
 
-    document.getElementById('searchInput')?.addEventListener('input', filterOrders);
-    document.getElementById('statusFilter')?.addEventListener('change', filterOrders);
+    document.getElementById('searchInput')?.addEventListener('input', () => filterOrders());
+    document.getElementById('statusFilter')?.addEventListener('change', () => filterOrders());
 
     function updateStats() {
-        const rows = Array.from(document.querySelectorAll('.order-row')).filter(r => r.style.display !== 'none');
+        const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
+        const statusFilter = document.getElementById('statusFilter')?.value || '';
+        const seen = new Set();
+        const rows = Array.from(document.querySelectorAll('.order-row')).filter(row => {
+            const orderId = row.dataset.orderId;
+            if (!orderId || seen.has(orderId)) return false;
+            const matchesSearch = !query || (row.dataset.search || '').toLowerCase().includes(query);
+            const matchesStatus = !statusFilter || row.dataset.status === statusFilter;
+            if (!matchesSearch || !matchesStatus) return false;
+            seen.add(orderId);
+            return true;
+        });
         const stats = { total: rows.length, pending: 0, success: 0, revenue: 0 };
         rows.forEach(row => {
             const status = row.dataset.status;
             if (status === 'pending') stats.pending++;
-            if (status === 'success') stats.success++;
-            const amountEl = row.querySelector('td:nth-child(5)') || row.querySelector('.text-primary.font-semibold');
-            const amountText = amountEl?.textContent?.replace('Rp ', '').replace(/,/g, '') || '0';
-            stats.revenue += parseInt(amountText) || 0;
+            if (status === 'success') {
+                stats.success++;
+                stats.revenue += parseInt(row.dataset.amount || '0', 10) || 0;
+            }
         });
 
         const statsEl = document.getElementById('stats');
@@ -745,6 +756,7 @@
         if (origFilterOrders) origFilterOrders();
         ordersPage = 1;
         paginateOrders();
+        updateStats();
     };
 
     document.getElementById('refreshBtn')?.addEventListener('click', () => location.reload());
