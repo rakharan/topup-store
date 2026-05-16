@@ -143,7 +143,7 @@ func (m *mockTopupService) FetchDigiflazzPrices(ctx context.Context) ([]services
 	return nil, nil
 }
 
-func (m *mockTopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType string, marginValue int) ([]services.SyncResult, int, int, int, error) {
+func (m *mockTopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType string, marginValue int, recalculatePrices bool) ([]services.SyncResult, int, int, int, error) {
 	return nil, 0, 0, 0, nil
 }
 

@@ -443,8 +443,9 @@ func (h *AdminHandler) SyncPrices(w http.ResponseWriter, r *http.Request) {
 
 func (h *AdminHandler) SyncPricesFromDigiflazz(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		MarginType  string `json:"margin_type"`
-		MarginValue int    `json:"margin_value"`
+		MarginType        string `json:"margin_type"`
+		MarginValue       int    `json:"margin_value"`
+		RecalculatePrices bool   `json:"recalculate_prices"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		io.Copy(io.Discard, r.Body)
@@ -453,7 +454,7 @@ func (h *AdminHandler) SyncPricesFromDigiflazz(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	results, updated, created, skipped, err := h.topupSvc.SyncPricesWithAutoCreate(r.Context(), req.MarginType, req.MarginValue)
+	results, updated, created, skipped, err := h.topupSvc.SyncPricesWithAutoCreate(r.Context(), req.MarginType, req.MarginValue, req.RecalculatePrices)
 	if err != nil {
 		h.logger.Error("sync prices from digiflazz: failed", slog.String("error", err.Error()))
 		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.FieldError("digiflazz", err.Error()), middleware.GetRequestID(r.Context()))

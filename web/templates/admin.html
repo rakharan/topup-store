@@ -165,8 +165,12 @@
         <div id="productsTab" class="hidden">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xl font-bold">Product Management</h2>
-                <div class="flex gap-2">
-                    <button onclick="syncFromDigiflazz()" id="syncBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">Sync from Digiflazz</button>
+                <div class="flex flex-wrap items-center justify-end gap-2">
+                    <label class="flex items-center gap-2 text-xs text-white/60 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+                        <input type="checkbox" id="recalculatePricesOnSync" class="rounded border-white/20 bg-white/10 text-primary focus:ring-primary">
+                        Recalculate prices
+                    </label>
+                    <button onclick="syncFromDigiflazz()" id="syncBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">Sync cost from Digiflazz</button>
                     <button onclick="showAddProductForm()" class="bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">+ Add Product</button>
                 </div>
             </div>
@@ -824,16 +828,18 @@
 
     async function syncFromDigiflazz() {
         const btn = document.getElementById('syncBtn');
+        const recalculatePrices = document.getElementById('recalculatePricesOnSync')?.checked || false;
         btn.disabled = true;
         btn.textContent = 'Syncing...';
         try {
             const res = await fetchWithCSRF(ADMIN_PATH + '/products/sync-all', {
                 method: 'POST',
-                body: JSON.stringify({ margin_type: 'tiered', margin_value: 0 }),
+                body: JSON.stringify({ margin_type: 'tiered', margin_value: 0, recalculate_prices: recalculatePrices }),
             });
             const json = await res.json();
             if (res.ok) {
-                showToast(`Synced: ${json.data?.updated || 0} updated, ${json.data?.created || 0} created`, 'success');
+                const mode = recalculatePrices ? 'prices recalculated' : 'manual prices kept';
+                showToast(`Synced: ${json.data?.updated || 0} updated, ${json.data?.created || 0} created (${mode})`, 'success');
                 loadProducts();
             } else {
                 showToast(json.error?.message || 'Sync failed', 'error');
@@ -842,7 +848,7 @@
             showToast('Sync failed', 'error');
         } finally {
             btn.disabled = false;
-            btn.textContent = 'Sync from Digiflazz';
+            btn.textContent = 'Sync cost from Digiflazz';
         }
     }
 

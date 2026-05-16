@@ -524,7 +524,7 @@ type SyncResult struct {
 	ItemQty     int    `json:"item_qty,omitempty"`
 }
 
-func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType string, marginValue int) ([]SyncResult, int, int, int, error) {
+func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType string, marginValue int, recalculatePrices bool) ([]SyncResult, int, int, int, error) {
 	if marginType == "" {
 		marginType = "tiered"
 	}
@@ -538,6 +538,16 @@ func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType 
 	updated := 0
 	created := 0
 	skipped := 0
+	currentProductsBySKU := map[string]models.Product{}
+	if !recalculatePrices {
+		currentProducts, err := s.productRepo.ListAll(ctx)
+		if err != nil {
+			return nil, 0, 0, 0, fmt.Errorf("list current products: %w", err)
+		}
+		for _, product := range currentProducts {
+			currentProductsBySKU[product.SKU] = product
+		}
+	}
 
 	for _, p := range prices {
 		if p.Price <= 0 || p.SKU == "" {
@@ -591,20 +601,43 @@ func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType 
 			continue
 		}
 
-		if err := s.productRepo.SyncPrice(ctx, p.SKU, costPrice, sellingPrice); err != nil {
-			s.logger.Warn("sync: failed to update price", slog.String("sku", p.SKU), slog.String("error", err.Error()))
+		if recalculatePrices {
+			if err := s.productRepo.SyncPrice(ctx, p.SKU, costPrice, sellingPrice); err != nil {
+				s.logger.Warn("sync: failed to update price", slog.String("sku", p.SKU), slog.String("error", err.Error()))
+				skipped++
+				continue
+			}
+
+			updated++
+			results = append(results, SyncResult{
+				SKU:    p.SKU,
+				Name:   p.Name,
+				Cost:   costPrice,
+				Price:  sellingPrice,
+				Margin: sellingPrice - costPrice,
+				Tier:   tier,
+			})
+			continue
+		}
+
+		if err := s.productRepo.UpdateCostPrice(ctx, p.SKU, costPrice); err != nil {
+			s.logger.Warn("sync: failed to update cost price", slog.String("sku", p.SKU), slog.String("error", err.Error()))
 			skipped++
 			continue
 		}
 
+		currentPrice := 0
+		if product, ok := currentProductsBySKU[p.SKU]; ok {
+			currentPrice = product.PriceIDR
+		}
 		updated++
 		results = append(results, SyncResult{
 			SKU:    p.SKU,
 			Name:   p.Name,
 			Cost:   costPrice,
-			Price:  sellingPrice,
-			Margin: sellingPrice - costPrice,
-			Tier:   tier,
+			Price:  currentPrice,
+			Margin: currentPrice - costPrice,
+			Tier:   "manual_price_preserved",
 		})
 	}
 
