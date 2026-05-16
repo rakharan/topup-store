@@ -267,6 +267,7 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		SKU:              req.SKU,
 		CustomerNoFormat: req.CustomerNoFormat,
 		IsActive:         req.IsActive,
+		Stock:            -1,
 	}
 
 	if err := h.productRepo.Create(r.Context(), product); err != nil {
@@ -351,6 +352,7 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		SKU:              req.SKU,
 		CustomerNoFormat: req.CustomerNoFormat,
 		IsActive:         req.IsActive,
+		Stock:            existing.Stock,
 	}
 
 	if err := h.productRepo.Update(r.Context(), product); err != nil {

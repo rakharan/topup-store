@@ -29,6 +29,7 @@
 :root:not(.dark) .bg-white\/5 { background-color: rgba(255,255,255,0.9) !important; }
 :root:not(.dark) .bg-white\/10 { background-color: rgba(255,255,255,0.85) !important; }
 :root:not(.dark) .text-white { color: var(--text-primary) !important; }
+:root:not(.dark) .text-white\/80,
 :root:not(.dark) .text-white\/70,
 :root:not(.dark) .text-white\/60,
 :root:not(.dark) .text-white\/50,
@@ -53,7 +54,9 @@
 :root:not(.dark) code.bg-white\/10 { background-color: var(--code-bg) !important; color: var(--text-primary) !important; }
 
 /* Game card text */
+:root:not(.dark) .game-card .text-white\/80 { color: var(--text-primary) !important; }
 :root:not(.dark) .game-card .text-white\/60 { color: var(--text-secondary) !important; }
+:root:not(.dark) .game-card .text-white\/40 { color: var(--text-muted) !important; }
 
 /* Keep primary orange always visible */
 .text-primary { color: #F97316 !important; }
