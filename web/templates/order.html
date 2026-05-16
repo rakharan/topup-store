@@ -92,6 +92,11 @@
                 <span id="phoneError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
                 <p class="text-xs text-white/40 mt-1" id="phoneHint">Format: 628xxx atau 08xxx (tanpa + atau spasi)</p>
             </div>
+            <div>
+                <label class="block text-sm font-medium text-white/70 mb-1" for="couponCode">Kode Promo</label>
+                <input type="text" id="couponCode" name="coupon_code" placeholder="Opsional" autocomplete="off" autocapitalize="characters" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
+                <p class="text-xs text-white/40 mt-1">Kosongkan jika tidak punya kode promo.</p>
+            </div>
             <div id="orderPreview" class="hidden bg-white/5 border border-white/10 rounded-xl p-4 text-sm">
                 <div class="flex items-center justify-between mb-3">
                     <span class="font-semibold">Ringkasan</span>
@@ -315,6 +320,7 @@
         const uid = document.getElementById("gameUid").value.trim();
         const server = document.getElementById("gameServer").value.trim();
         const phone = document.getElementById("phone").value.trim();
+        const coupon = document.getElementById("couponCode").value.trim().toUpperCase();
         if (!productSelect.value && !uid && !phone) {
             preview.classList.add('hidden');
             return;
@@ -322,7 +328,7 @@
         document.getElementById('previewProduct').textContent = productName || '-';
         document.getElementById('previewTarget').textContent = uid ? uid + (serverGroup.classList.contains('hidden') || !server ? '' : ' (' + server + ')') : '-';
         document.getElementById('previewPhone').textContent = phone || '-';
-        document.getElementById('previewTotal').textContent = amount ? 'Rp ' + amount.toLocaleString('id-ID') : '-';
+        document.getElementById('previewTotal').textContent = amount ? 'Rp ' + amount.toLocaleString('id-ID') + (coupon ? ' (promo dicek saat checkout)' : '') : '-';
         preview.classList.remove('hidden');
     }
 
@@ -345,6 +351,11 @@
         validatePhone();
         updateOrderPreview();
         updateSubmitButton();
+    });
+    document.getElementById("couponCode").addEventListener("input", () => {
+        const couponInput = document.getElementById("couponCode");
+        couponInput.value = couponInput.value.replace(/\s/g, '').toUpperCase();
+        updateOrderPreview();
     });
     gameSelect.addEventListener("change", () => { validateGame(); updateSubmitButton(); });
     gameSelect.addEventListener("blur", () => { validateGame(); updateSubmitButton(); });
@@ -530,6 +541,7 @@
         const gameUid = document.getElementById("gameUid").value.trim();
         const gameServer = document.getElementById("gameServer").value.trim();
         const phone = document.getElementById("phone").value.trim();
+        const couponCode = document.getElementById("couponCode").value.trim().toUpperCase();
 
         submitBtn.disabled = true;
         submitText.textContent = 'Memproses...';
@@ -539,10 +551,11 @@
         document.getElementById("gameUid").disabled = true;
         document.getElementById("gameServer").disabled = true;
         document.getElementById("phone").disabled = true;
+        document.getElementById("couponCode").disabled = true;
 
         const selectedOption = productSelect.options[productSelect.selectedIndex];
         const itemQty = parseInt(selectedOption?.dataset.itemQty || '0', 10);
-        const body = { game, product_id: productSelect.value, item_qty: itemQty, game_uid: gameUid, game_server: gameServer, phone };
+        const body = { game, product_id: productSelect.value, item_qty: itemQty, game_uid: gameUid, game_server: gameServer, phone, coupon_code: couponCode };
         try {
             const res = await fetch("/api/orders", {
                 method: "POST",
@@ -557,6 +570,8 @@
                 const orderNumber = escapeHtml(orderData.order_number || orderData.order_id);
                 const orderId = escapeHtml(orderData.order_id);
                 const amount = parseInt(orderData.amount_idr || 0).toLocaleString("id-ID");
+                const discount = parseInt(orderData.discount_idr || 0, 10);
+                const discountHTML = discount > 0 ? `<p class="text-green-400 text-sm">Diskon promo: Rp ${discount.toLocaleString("id-ID")}</p>` : '';
                 const qrString = orderData.qr_string || '';
                 const snapToken = orderData.snap_token || '';
                 const snapRedirectURL = orderData.snap_redirect_url || '';
@@ -613,6 +628,7 @@
                             </button>
                         </div>
                         <p class="text-2xl font-bold text-primary my-4">Rp ${amount}</p>
+                        ${discountHTML}
                         ${qrisHTML}
                         ${snapButtonHTML}
                         <div id="countdown" class="mt-4 text-sm text-white/40"></div>
@@ -732,6 +748,7 @@
             document.getElementById("gameUid").disabled = false;
             document.getElementById("gameServer").disabled = false;
             document.getElementById("phone").disabled = false;
+            document.getElementById("couponCode").disabled = false;
             if (productSelect.value) {
                 productSelect.disabled = false;
             }

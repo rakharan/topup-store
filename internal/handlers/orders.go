@@ -3,14 +3,17 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/topup-store/internal/apperrors"
 	"github.com/topup-store/internal/constants"
@@ -47,6 +50,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		ProductID  string `json:"product_id"`
 		ItemQty    int    `json:"item_qty"`
 		Phone      string `json:"phone"`
+		CouponCode string `json:"coupon_code"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -63,7 +67,14 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		slog.String("request_id", middleware.GetRequestID(r.Context())),
 	)
 
-	if err := validateOrderInput(req); err != nil {
+	if err := validateOrderInput(struct {
+		Game       string `json:"game"`
+		GameUID    string `json:"game_uid"`
+		GameServer string `json:"game_server"`
+		ProductID  string `json:"product_id"`
+		ItemQty    int    `json:"item_qty"`
+		Phone      string `json:"phone"`
+	}{Game: req.Game, GameUID: req.GameUID, GameServer: req.GameServer, ProductID: req.ProductID, ItemQty: req.ItemQty, Phone: req.Phone}); err != nil {
 		h.logger.Warn("create order: validation error", slog.String("error", err.Error()))
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("input", err.Error()), middleware.GetRequestID(r.Context()))
 		return
@@ -93,6 +104,18 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	if product.Stock == 0 {
 		h.logger.Warn("create order: product out of stock", slog.String("product_id", product.ID))
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product", "product is out of stock"), middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	subtotalIDR := product.PriceIDR
+	discountIDR, couponCode, err := h.calculateCouponDiscount(r.Context(), req.CouponCode, req.Game, subtotalIDR)
+	if err != nil {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("coupon_code", err.Error()), middleware.GetRequestID(r.Context()))
+		return
+	}
+	amountIDR := subtotalIDR - discountIDR
+	if amountIDR < 1000 {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("coupon_code", "discount makes payment amount too low"), middleware.GetRequestID(r.Context()))
 		return
 	}
 
@@ -143,7 +166,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		UserPhone:      req.Phone,
 		GameUID:        req.GameUID,
 		GameServer:     req.GameServer,
-		AmountIDR:      product.PriceIDR,
+		AmountIDR:      amountIDR,
 		Status:         constants.StatusPending,
 		Channel:        constants.ChannelWeb,
 		DigiflazzRefID: orderID,
@@ -154,6 +177,11 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error("create order", slog.String("error", err.Error()))
 		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
 		return
+	}
+	if couponCode != "" {
+		if err := h.recordCouponUsage(r.Context(), order.ID, couponCode, subtotalIDR, discountIDR); err != nil {
+			h.logger.Warn("create order: failed to record coupon usage", slog.String("order_id", order.ID), slog.String("coupon_code", couponCode), slog.String("error", err.Error()))
+		}
 	}
 
 	// Try Snap first (snap token does not conflict with Core API)
@@ -207,6 +235,9 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		"order_id":          orderID,
 		"order_number":      orderNumber,
 		"amount_idr":        order.AmountIDR,
+		"subtotal_idr":      subtotalIDR,
+		"discount_idr":      discountIDR,
+		"coupon_code":       couponCode,
 		"qr_string":         qrString,
 		"qris_url":          qrisURL,
 		"snap_token":        snapToken,
@@ -262,6 +293,74 @@ func (h *OrderHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	apperrors.WriteSuccess(w, http.StatusOK, orders, middleware.GetRequestID(r.Context()))
+}
+
+func (h *OrderHandler) calculateCouponDiscount(ctx context.Context, code, game string, subtotal int) (int, string, error) {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	if code == "" {
+		return 0, "", nil
+	}
+	if h.pool == nil {
+		return 0, "", nil
+	}
+
+	var discountType, couponGame string
+	var discountValue, minOrder, maxDiscount, maxUses, usedCount int
+	err := h.pool.QueryRow(ctx, `
+		SELECT discount_type, discount_value, min_order_idr, max_discount_idr, max_uses, used_count, game
+		FROM coupons
+		WHERE code = $1 AND is_active = true
+		  AND (starts_at IS NULL OR starts_at <= NOW())
+		  AND (expires_at IS NULL OR expires_at >= NOW())
+	`, code).Scan(&discountType, &discountValue, &minOrder, &maxDiscount, &maxUses, &usedCount, &couponGame)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return 0, "", fmt.Errorf("coupon not found or inactive")
+		}
+		return 0, "", fmt.Errorf("coupon check failed")
+	}
+	if couponGame != "" && couponGame != game {
+		return 0, "", fmt.Errorf("coupon is not valid for this game")
+	}
+	if subtotal < minOrder {
+		return 0, "", fmt.Errorf("minimum order for coupon is Rp %s", formatIDR(minOrder))
+	}
+	if maxUses > 0 && usedCount >= maxUses {
+		return 0, "", fmt.Errorf("coupon usage limit reached")
+	}
+
+	discount := discountValue
+	if discountType == "percent" {
+		discount = subtotal * discountValue / 100
+		if maxDiscount > 0 && discount > maxDiscount {
+			discount = maxDiscount
+		}
+	}
+	if discount <= 0 {
+		return 0, "", fmt.Errorf("coupon discount is invalid")
+	}
+	if discount >= subtotal {
+		discount = subtotal - 1000
+	}
+	return discount, code, nil
+}
+
+func (h *OrderHandler) recordCouponUsage(ctx context.Context, orderID, code string, subtotal, discount int) error {
+	if h.pool == nil || code == "" {
+		return nil
+	}
+	_, err := h.pool.Exec(ctx, `
+		UPDATE orders SET subtotal_idr = $1, discount_idr = $2, coupon_code = $3 WHERE id = $4
+	`, subtotal, discount, code, orderID)
+	if err != nil {
+		return err
+	}
+	_, err = h.pool.Exec(ctx, `UPDATE coupons SET used_count = used_count + 1, updated_at = NOW() WHERE code = $1`, code)
+	return err
+}
+
+func formatIDR(amount int) string {
+	return strconv.FormatInt(int64(amount), 10)
 }
 
 func (h *OrderHandler) LookupOrder(w http.ResponseWriter, r *http.Request) {

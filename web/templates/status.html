@@ -262,6 +262,11 @@
                         ${paymentExpiryLabel ? `<div class="flex justify-between"><span class="text-white/70">Batas Bayar</span><span class="${paymentExpired ? 'text-red-400' : 'text-yellow-400'}">${safeText(paymentExpiryLabel)}</span></div>` : ''}
                         ${serialNumber ? `<div class="flex justify-between"><span class="text-white/70">Serial Number</span><span class="font-mono">${serialNumber}</span></div>` : ''}
                     </div>
+                    ${order.status === 'success' ? `
+                        <div class="mt-4 pt-4 border-t border-white/10 text-center">
+                            <button onclick="window.print()" class="inline-block bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-2 rounded-lg transition focus-ring">Cetak / Simpan PDF Invoice</button>
+                        </div>
+                    ` : ''}
                     ${order.status === 'pending' && paymentExpired ? `
                         <div class="mt-4 pt-4 border-t border-white/10 text-center">
                             <p class="text-red-400 font-medium mb-2">Masa pembayaran sudah habis.</p>

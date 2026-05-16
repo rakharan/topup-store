@@ -200,6 +200,22 @@
                     <option value="false">Inactive</option>
                 </select>
             </div>
+            <div class="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
+                <div class="flex flex-col md:flex-row gap-3 md:items-end">
+                    <div>
+                        <label class="block text-xs text-white/50 mb-1" for="bulkAdjustType">Bulk Price</label>
+                        <select id="bulkAdjustType" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                            <option value="percent">Naik/Turun %</option>
+                            <option value="fixed">Naik/Turun Rupiah</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-white/50 mb-1" for="bulkAdjustValue">Value</label>
+                        <input type="number" id="bulkAdjustValue" value="0" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                    </div>
+                    <button onclick="applyBulkPriceAdjustment()" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">Apply to Filtered Products</button>
+                </div>
+            </div>
 
             <div id="productForm" class="hidden bg-white/5 border border-white/10 rounded-xl p-6 mb-6">
                 <h3 id="productFormTitle" class="text-lg font-semibold mb-4">Add New Product</h3>
@@ -249,6 +265,10 @@
                         <div id="priceMarginInfo" class="text-xs text-white/40 mt-1"></div>
                     </div>
                     <div>
+                        <label class="block text-sm text-white/70 mb-1" for="prodCompetitorPrice">Competitor Price (IDR)</label>
+                        <input type="number" id="prodCompetitorPrice" min="0" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                    </div>
+                    <div>
                         <label class="block text-sm text-white/70 mb-1" for="prodItemQty">Item Qty</label>
                         <input type="number" id="prodItemQty" required min="0" aria-describedby="prodItemQtyHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                         <span id="prodItemQtyHint" class="sr-only">Jumlah item, currency, diamond, crystal, atau paket yang didapat pelanggan</span>
@@ -278,6 +298,10 @@
                         <input type="text" id="prodDesc" aria-describedby="prodDescHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                         <span id="prodDescHint" class="sr-only">Deskripsi opsional untuk produk</span>
                     </div>
+                    <div>
+                        <label class="block text-sm text-white/70 mb-1" for="prodBenchmarkNote">Benchmark Note</label>
+                        <input type="text" id="prodBenchmarkNote" placeholder="Contoh: Codashop WDP Rp27.550" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                    </div>
                     <div class="flex items-center gap-2 md:col-span-2">
                         <input type="checkbox" id="prodActive" checked class="w-4 h-4">
                         <label for="prodActive" class="text-sm text-white/70">Active</label>
@@ -300,6 +324,7 @@
                             <th scope="col" class="pb-3 pr-4">Cost</th>
                             <th scope="col" class="pb-3 pr-4">Price</th>
                             <th scope="col" class="pb-3 pr-4">Profit</th>
+                            <th scope="col" class="pb-3 pr-4">Benchmark</th>
                             <th scope="col" class="pb-3 pr-4">Qty</th>
                             <th scope="col" class="pb-3 pr-4">Type</th>
                             <th scope="col" class="pb-3 pr-4">Format</th>
@@ -904,7 +929,7 @@
         const tbody = document.getElementById('productsTableBody');
         const mobileCards = document.getElementById('productsMobileCards');
         if (!filtered.length) {
-            tbody.innerHTML = '<tr><td colspan="12" class="py-8 text-center text-white/40">No products found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="13" class="py-8 text-center text-white/40">No products found.</td></tr>';
             mobileCards.innerHTML = '<div class="text-center py-8 text-white/40">No products found.</div>';
             return;
         }
@@ -923,6 +948,7 @@
                 <td class="py-3 pr-4">Rp ${(p.cost_price_idr || 0).toLocaleString('id-ID')}</td>
                 <td class="py-3 pr-4">Rp ${p.price_idr.toLocaleString('id-ID')}</td>
                 <td class="py-3 pr-4 ${profitClass}">Rp ${profit.toLocaleString('id-ID')}</td>
+                <td class="py-3 pr-4 text-xs">${p.competitor_price_idr ? 'Rp ' + p.competitor_price_idr.toLocaleString('id-ID') : '-'}${p.benchmark_note ? '<div class="text-white/40">' + escapeHtml(p.benchmark_note) + '</div>' : ''}</td>
                 <td class="py-3 pr-4">${p.item_qty || '-'}</td>
                 <td class="py-3 pr-4"><span class="px-2 py-1 rounded-full text-xs ${typeColors[p.product_type] || typeColors.other}">${escapeHtml(typeLabels[p.product_type] || 'Other')}</span></td>
                 <td class="py-3 pr-4 text-xs text-white/60">${escapeHtml(customerNoFormatDisplay(p.customer_no_format, p.game))}</td>
@@ -944,6 +970,7 @@
                 </div>
                 <div class="text-xs text-white/50 mb-1">${escapeHtml(gameLabels[p.game] || p.game)} &middot; ${escapeHtml(p.sku)}</div>
                 <div class="text-xs text-white/40 mb-1">${escapeHtml(customerNoFormatDisplay(p.customer_no_format, p.game))}</div>
+                ${p.competitor_price_idr ? `<div class="text-xs text-white/50 mb-1">Benchmark Rp ${p.competitor_price_idr.toLocaleString('id-ID')}</div>` : ''}
                 <div class="flex items-center justify-between mb-3">
                     <div class="text-sm text-primary font-semibold">Rp ${p.price_idr.toLocaleString('id-ID')}</div>
                     <div class="text-sm ${profitClass}">Profit Rp ${profit.toLocaleString('id-ID')}</div>
@@ -958,6 +985,57 @@
 
     function renderProducts() {
         filterAndRenderProducts();
+    }
+
+    function currentFilteredProducts() {
+        const search = (document.getElementById('productSearch')?.value || '').toLowerCase();
+        const gameFilter = document.getElementById('productGameFilter')?.value || '';
+        const typeFilter = document.getElementById('productTypeFilter')?.value || '';
+        const activeFilter = document.getElementById('productActiveFilter')?.value || '';
+        return products.filter(p => {
+            if (search && !p.name.toLowerCase().includes(search) && !p.sku.toLowerCase().includes(search)) return false;
+            if (gameFilter && p.game !== gameFilter) return false;
+            if (typeFilter && p.product_type !== typeFilter) return false;
+            if (activeFilter !== '' && String(p.is_active) !== activeFilter) return false;
+            return true;
+        });
+    }
+
+    async function applyBulkPriceAdjustment() {
+        const targetProducts = currentFilteredProducts();
+        if (!targetProducts.length) {
+            showToast('No filtered products to update', 'warning');
+            return;
+        }
+        const type = document.getElementById('bulkAdjustType').value;
+        const value = parseInt(document.getElementById('bulkAdjustValue').value || '0', 10);
+        if (!value) {
+            showToast('Bulk value cannot be zero', 'warning');
+            return;
+        }
+        const ok = await showConfirmModal({
+            title: 'Bulk Price Update',
+            message: `Update ${targetProducts.length} filtered products?`,
+            actionText: 'Update',
+            actionClass: 'bg-primary hover:bg-orange-600',
+            icon: 'Rp'
+        });
+        if (!ok) return;
+
+        let updated = 0;
+        for (const p of targetProducts) {
+            const nextPrice = type === 'percent'
+                ? Math.max(1000, Math.round((p.price_idr * (100 + value) / 100) / 100) * 100)
+                : Math.max(1000, p.price_idr + value);
+            const body = { ...p, price_idr: nextPrice };
+            const res = await fetchWithCSRF(`${ADMIN_PATH}/products/${p.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(body),
+            });
+            if (res.ok) updated++;
+        }
+        showToast(`Bulk updated ${updated}/${targetProducts.length} products`, updated === targetProducts.length ? 'success' : 'warning');
+        loadProducts();
     }
 
     document.getElementById('productSearch')?.addEventListener('input', renderProducts);
@@ -977,10 +1055,12 @@
         document.getElementById('prodMarginValue').value = '10';
         document.getElementById('marginValueWrap').classList.add('hidden');
         document.getElementById('prodPrice').value = '';
+        document.getElementById('prodCompetitorPrice').value = '';
         document.getElementById('prodItemQty').value = '';
         document.getElementById('prodType').value = 'diamond';
         document.getElementById('prodCustomerNoFormat').value = defaultCustomerNoFormat('free_fire');
         document.getElementById('prodDesc').value = '';
+        document.getElementById('prodBenchmarkNote').value = '';
         document.getElementById('prodActive').checked = true;
         document.getElementById('priceMarginInfo').textContent = '';
         updateCustomerNoFormatHint();
@@ -1001,10 +1081,12 @@
         document.getElementById('prodSku').value = p.sku;
         document.getElementById('prodCostPrice').value = p.cost_price_idr || '';
         document.getElementById('prodPrice').value = p.price_idr;
+        document.getElementById('prodCompetitorPrice').value = p.competitor_price_idr || '';
         document.getElementById('prodItemQty').value = p.item_qty || 0;
         document.getElementById('prodType').value = p.product_type || 'diamond';
         document.getElementById('prodCustomerNoFormat').value = p.customer_no_format || '';
         document.getElementById('prodDesc').value = p.description || '';
+        document.getElementById('prodBenchmarkNote').value = p.benchmark_note || '';
         document.getElementById('prodActive').checked = p.is_active;
         updateMarginInfo(p.cost_price_idr || 0, p.price_idr);
         updateCustomerNoFormatHint();
@@ -1036,10 +1118,12 @@
             sku: document.getElementById('prodSku').value,
             cost_price_idr: parseInt(document.getElementById('prodCostPrice').value),
             price_idr: parseInt(document.getElementById('prodPrice').value),
+            competitor_price_idr: parseInt(document.getElementById('prodCompetitorPrice').value || '0'),
             item_qty: parseInt(document.getElementById('prodItemQty').value),
             product_type: document.getElementById('prodType').value,
             customer_no_format: document.getElementById('prodCustomerNoFormat').value,
             description: document.getElementById('prodDesc').value,
+            benchmark_note: document.getElementById('prodBenchmarkNote').value,
             is_active: document.getElementById('prodActive').checked,
         };
 

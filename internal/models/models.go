@@ -13,6 +13,8 @@ type Product struct {
 	ProductType      string     `json:"product_type"`
 	SKU              string     `json:"sku"`
 	CustomerNoFormat string     `json:"customer_no_format"`
+	CompetitorPrice  int        `json:"competitor_price_idr"`
+	BenchmarkNote    string     `json:"benchmark_note"`
 	IsActive         bool       `json:"is_active"`
 	Stock            int        `json:"stock"`
 	CreatedAt        time.Time  `json:"created_at"`

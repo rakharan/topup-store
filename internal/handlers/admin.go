@@ -214,6 +214,8 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		ProductType      string `json:"product_type"`
 		SKU              string `json:"sku"`
 		CustomerNoFormat string `json:"customer_no_format"`
+		CompetitorPrice  int    `json:"competitor_price_idr"`
+		BenchmarkNote    string `json:"benchmark_note"`
 		IsActive         bool   `json:"is_active"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -266,6 +268,8 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		ProductType:      req.ProductType,
 		SKU:              req.SKU,
 		CustomerNoFormat: req.CustomerNoFormat,
+		CompetitorPrice:  req.CompetitorPrice,
+		BenchmarkNote:    req.BenchmarkNote,
 		IsActive:         req.IsActive,
 		Stock:            -1,
 	}
@@ -300,6 +304,8 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		ProductType      string `json:"product_type"`
 		SKU              string `json:"sku"`
 		CustomerNoFormat string `json:"customer_no_format"`
+		CompetitorPrice  int    `json:"competitor_price_idr"`
+		BenchmarkNote    string `json:"benchmark_note"`
 		IsActive         bool   `json:"is_active"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -352,6 +358,8 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		ProductType:      req.ProductType,
 		SKU:              req.SKU,
 		CustomerNoFormat: req.CustomerNoFormat,
+		CompetitorPrice:  req.CompetitorPrice,
+		BenchmarkNote:    req.BenchmarkNote,
 		IsActive:         req.IsActive,
 		Stock:            existing.Stock,
 	}
