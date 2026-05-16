@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/topup-store/internal/middleware"
+	"github.com/topup-store/internal/models"
 	"github.com/topup-store/internal/services"
 )
 
@@ -85,6 +86,11 @@ type PageHandler struct {
 	midtransIsProd    bool
 	cookieSecure      bool
 	logger            *slog.Logger
+}
+
+type adminOrderView struct {
+	models.Order
+	NetProfitIDR int
 }
 
 func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass, adminPath, midtransClientKey string, midtransIsProd, cookieSecure bool, logger *slog.Logger) *PageHandler {
@@ -235,11 +241,37 @@ func (h *PageHandler) Admin(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logger.Error("admin: failed to list orders", slog.String("error", err.Error()))
 	}
-	data["Orders"] = orders
+
+	adminOrders := make([]adminOrderView, 0, len(orders))
+	productCosts := make(map[string]int)
+	for _, order := range orders {
+		cost, ok := productCosts[order.ProductID]
+		if !ok {
+			product, err := h.topupSvc.GetProduct(r.Context(), order.ProductID)
+			if err != nil {
+				h.logger.Warn("admin: failed to load product cost", slog.String("product_id", order.ProductID), slog.String("error", err.Error()))
+			} else {
+				cost = product.CostPriceIDR
+			}
+			productCosts[order.ProductID] = cost
+		}
+		adminOrders = append(adminOrders, adminOrderView{
+			Order:        order,
+			NetProfitIDR: order.AmountIDR - cost - midtransFeeIDR(order.AmountIDR),
+		})
+	}
+	data["Orders"] = adminOrders
 	if err := h.templates.ExecuteTemplate(w, "admin.html", data); err != nil {
 		h.logger.Error("template error (admin.html)", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
+}
+
+func midtransFeeIDR(amount int) int {
+	if amount <= 0 {
+		return 0
+	}
+	return (amount*2 + 99) / 100
 }
 
 func (h *PageHandler) NotFound(w http.ResponseWriter, r *http.Request) {

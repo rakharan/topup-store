@@ -505,11 +505,14 @@ func TestOrderRepository_AnalyticsUseNetProfit(t *testing.T) {
 		if err != nil {
 			t.Fatalf("overall stats: %v", err)
 		}
-		if stats.TotalRevenue != 3000 {
-			t.Fatalf("total_revenue = %d; want 3000", stats.TotalRevenue)
+		if stats.TotalRevenue != 2780 {
+			t.Fatalf("total_revenue = %d; want 2780", stats.TotalRevenue)
 		}
-		if stats.AvgOrderValue != 3000 {
-			t.Fatalf("avg_order_value = %v; want 3000", stats.AvgOrderValue)
+		if stats.TotalMidtransFee != 220 {
+			t.Fatalf("total_midtrans_fee = %d; want 220", stats.TotalMidtransFee)
+		}
+		if stats.AvgOrderValue != 2780 {
+			t.Fatalf("avg_order_value = %v; want 2780", stats.AvgOrderValue)
 		}
 
 		daily, err := repo.GetDailyRevenue(ctx, start, end)
@@ -519,8 +522,8 @@ func TestOrderRepository_AnalyticsUseNetProfit(t *testing.T) {
 		if len(daily) != 1 {
 			t.Fatalf("daily len = %d; want 1", len(daily))
 		}
-		if daily[0].Orders != 1 || daily[0].Revenue != 3000 {
-			t.Fatalf("daily = orders %d revenue %d; want orders 1 revenue 3000", daily[0].Orders, daily[0].Revenue)
+		if daily[0].Orders != 1 || daily[0].Revenue != 2780 {
+			t.Fatalf("daily = orders %d revenue %d; want orders 1 revenue 2780", daily[0].Orders, daily[0].Revenue)
 		}
 
 		games, err := repo.GetTopGamesByRevenue(ctx, start, end)
@@ -530,8 +533,8 @@ func TestOrderRepository_AnalyticsUseNetProfit(t *testing.T) {
 		if len(games) != 1 {
 			t.Fatalf("games len = %d; want 1", len(games))
 		}
-		if games[0].Game != "free_fire" || games[0].Orders != 1 || games[0].Revenue != 3000 {
-			t.Fatalf("game stats = %+v; want free_fire orders 1 revenue 3000", games[0])
+		if games[0].Game != "free_fire" || games[0].Orders != 1 || games[0].Revenue != 2780 {
+			t.Fatalf("game stats = %+v; want free_fire orders 1 revenue 2780", games[0])
 		}
 	})
 }

@@ -70,7 +70,7 @@
                         </tr>
                         {{end}}
                         {{range .Orders}}
-                        <tr class="border-b border-white/5 hover:bg-white/5 order-row cursor-pointer" data-order-id="{{.ID}}" data-amount="{{.AmountIDR}}" data-status="{{.Status}}" data-search="{{.OrderNumber}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
+                        <tr class="border-b border-white/5 hover:bg-white/5 order-row cursor-pointer" data-order-id="{{.ID}}" data-net-profit="{{.NetProfitIDR}}" data-status="{{.Status}}" data-search="{{.OrderNumber}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
                             <td class="py-3 pr-4 font-mono text-xs">{{.OrderNumber}}</td>
                             <td class="py-3 pr-4">{{.ProductID}}</td>
                             <td class="py-3 pr-4">{{.GameUID}}{{if .GameServer}} ({{.GameServer}}){{end}}</td>
@@ -107,7 +107,7 @@
             </div>
             <div id="ordersMobileCards" class="md:hidden space-y-3">
                 {{range .Orders}}
-                <div class="bg-white/5 border border-white/10 rounded-xl p-4 order-row cursor-pointer" data-order-id="{{.ID}}" data-amount="{{.AmountIDR}}" data-status="{{.Status}}" data-search="{{.OrderNumber}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
+                <div class="bg-white/5 border border-white/10 rounded-xl p-4 order-row cursor-pointer" data-order-id="{{.ID}}" data-net-profit="{{.NetProfitIDR}}" data-status="{{.Status}}" data-search="{{.OrderNumber}} {{.UserPhone}} {{.GameUID}}" onclick="if(!event.target.closest('button'))showOrderDetail('{{.ID}}')">
                     <div class="flex items-center justify-between mb-2">
                         <span class="font-mono text-xs text-white/60">{{.OrderNumber}}</span>
                         {{if eq .Status "success"}}<span class="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">Berhasil</span>
@@ -306,7 +306,8 @@
                     <button onclick="loadAnalytics(90)" class="analytics-period bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-sm transition focus-ring" data-days="90">90D</button>
                 </div>
             </div>
-            <div id="analyticsStats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div id="analyticsStats" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 animate-pulse"><div class="h-8 bg-white/10 rounded w-1/2 mb-2"></div><div class="h-4 bg-white/10 rounded w-2/3"></div></div>
                 <div class="bg-white/5 rounded-xl p-4 border border-white/10 animate-pulse"><div class="h-8 bg-white/10 rounded w-1/2 mb-2"></div><div class="h-4 bg-white/10 rounded w-2/3"></div></div>
                 <div class="bg-white/5 rounded-xl p-4 border border-white/10 animate-pulse"><div class="h-8 bg-white/10 rounded w-1/2 mb-2"></div><div class="h-4 bg-white/10 rounded w-2/3"></div></div>
                 <div class="bg-white/5 rounded-xl p-4 border border-white/10 animate-pulse"><div class="h-8 bg-white/10 rounded w-1/2 mb-2"></div><div class="h-4 bg-white/10 rounded w-2/3"></div></div>
@@ -667,39 +668,43 @@
     }
 
     function filterOrders() {
-        const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
-        const status = document.getElementById('statusFilter')?.value || '';
-        document.querySelectorAll('.order-row').forEach(row => {
-            const search = row.dataset.search.toLowerCase();
-            const matchesSearch = !query || search.includes(query);
-            const matchesStatus = !status || row.dataset.status === status;
-            row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
-        });
+        ordersPage = 1;
+        paginateOrders();
+        updateStats();
     }
 
     document.getElementById('searchInput')?.addEventListener('input', () => filterOrders());
     document.getElementById('statusFilter')?.addEventListener('change', () => filterOrders());
 
-    function updateStats() {
+    function orderMatchesFilters(row) {
         const query = document.getElementById('searchInput')?.value.toLowerCase() || '';
         const statusFilter = document.getElementById('statusFilter')?.value || '';
+        const search = (row.dataset.search || '').toLowerCase();
+        const matchesSearch = !query || search.includes(query);
+        const matchesStatus = !statusFilter || row.dataset.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    }
+
+    function getFilteredOrderRows() {
         const seen = new Set();
-        const rows = Array.from(document.querySelectorAll('.order-row')).filter(row => {
+        return Array.from(document.querySelectorAll('.order-row')).filter(row => {
             const orderId = row.dataset.orderId;
             if (!orderId || seen.has(orderId)) return false;
-            const matchesSearch = !query || (row.dataset.search || '').toLowerCase().includes(query);
-            const matchesStatus = !statusFilter || row.dataset.status === statusFilter;
-            if (!matchesSearch || !matchesStatus) return false;
+            if (!orderMatchesFilters(row)) return false;
             seen.add(orderId);
             return true;
         });
+    }
+
+    function updateStats() {
+        const rows = getFilteredOrderRows();
         const stats = { total: rows.length, pending: 0, success: 0, revenue: 0 };
         rows.forEach(row => {
             const status = row.dataset.status;
             if (status === 'pending') stats.pending++;
             if (status === 'success') {
                 stats.success++;
-                stats.revenue += parseInt(row.dataset.amount || '0', 10) || 0;
+                stats.revenue += parseInt(row.dataset.netProfit || '0', 10) || 0;
             }
         });
 
@@ -709,7 +714,7 @@
                 <div class="bg-white/5 rounded-xl p-4 border border-white/10"><div class="text-2xl font-bold">${stats.total}</div><div class="text-sm text-white/70">Total Orders</div></div>
                 <div class="bg-yellow-500/10 rounded-xl p-4 border border-yellow-500/20"><div class="text-2xl font-bold text-yellow-400">${stats.pending}</div><div class="text-sm text-white/70">Pending</div></div>
                 <div class="bg-green-500/10 rounded-xl p-4 border border-green-500/20"><div class="text-2xl font-bold text-green-400">${stats.success}</div><div class="text-sm text-white/70">Success</div></div>
-                <div class="bg-primary/10 rounded-xl p-4 border border-primary/20"><div class="text-2xl font-bold text-primary">Rp ${stats.revenue.toLocaleString('id-ID')}</div><div class="text-sm text-white/70">Revenue</div></div>
+                <div class="bg-primary/10 rounded-xl p-4 border border-primary/20"><div class="text-2xl font-bold text-primary">Rp ${stats.revenue.toLocaleString('id-ID')}</div><div class="text-sm text-white/70">Net Profit</div></div>
             `;
         }
     }
@@ -718,13 +723,16 @@
     let ordersPerPage = 20;
 
     function paginateOrders() {
-        const rows = Array.from(document.querySelectorAll('.order-row')).filter(r => r.style.display !== 'none');
+        const rows = getFilteredOrderRows();
         const total = rows.length;
+        const maxPage = Math.max(1, Math.ceil(total / ordersPerPage));
+        ordersPage = Math.max(1, Math.min(maxPage, ordersPage));
         const start = (ordersPage - 1) * ordersPerPage;
         const end = start + ordersPerPage;
+        const visibleOrderIds = new Set(rows.slice(start, end).map(row => row.dataset.orderId));
 
-        rows.forEach((row, i) => {
-            row.style.display = (i >= start && i < end) ? '' : 'none';
+        document.querySelectorAll('.order-row').forEach(row => {
+            row.style.display = visibleOrderIds.has(row.dataset.orderId) ? '' : 'none';
         });
 
         const paginationEl = document.getElementById('ordersPagination');
@@ -744,20 +752,11 @@
     }
 
     function changeOrdersPage(delta) {
-        const rows = Array.from(document.querySelectorAll('.order-row')).filter(r => r.style.display !== 'none' || getComputedStyle(r).display !== 'none');
-        const total = rows.filter(r => !r.classList.contains('filtered-out')).length;
-        const maxPage = Math.ceil(total / ordersPerPage);
+        const total = getFilteredOrderRows().length;
+        const maxPage = Math.max(1, Math.ceil(total / ordersPerPage));
         ordersPage = Math.max(1, Math.min(maxPage, ordersPage + delta));
         paginateOrders();
     }
-
-    const origFilterOrders = filterOrders;
-    filterOrders = function() {
-        if (origFilterOrders) origFilterOrders();
-        ordersPage = 1;
-        paginateOrders();
-        updateStats();
-    };
 
     document.getElementById('refreshBtn')?.addEventListener('click', () => location.reload());
     updateStats();
@@ -1065,6 +1064,7 @@
                 <div class="bg-green-500/10 rounded-xl p-4 border border-green-500/20"><div class="text-2xl font-bold text-green-400">${overall.success_orders || 0}</div><div class="text-sm text-white/70">Success</div></div>
                 <div class="bg-primary/10 rounded-xl p-4 border border-primary/20"><div class="text-2xl font-bold text-primary">${(overall.conversion_rate || 0).toFixed(1)}%</div><div class="text-sm text-white/70">Conversion</div></div>
                 <div class="bg-blue-500/10 rounded-xl p-4 border border-blue-500/20"><div class="text-2xl font-bold text-blue-400">Rp ${(overall.total_revenue || 0).toLocaleString('id-ID')}</div><div class="text-sm text-white/70">Net Profit</div></div>
+                <div class="bg-red-500/10 rounded-xl p-4 border border-red-500/20"><div class="text-2xl font-bold text-red-400">Rp ${(overall.total_midtrans_fee || 0).toLocaleString('id-ID')}</div><div class="text-sm text-white/70">Midtrans Fee</div></div>
             `;
 
             if (revenueChartInstance) revenueChartInstance.destroy();

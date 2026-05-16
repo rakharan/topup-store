@@ -422,18 +422,19 @@ type GameStats struct {
 }
 
 type OverallStats struct {
-	TotalOrders    int     `json:"total_orders"`
-	SuccessOrders  int     `json:"success_orders"`
-	ConversionRate float64 `json:"conversion_rate"`
-	TotalRevenue   int     `json:"total_revenue"`
-	AvgOrderValue  float64 `json:"avg_order_value"`
+	TotalOrders      int     `json:"total_orders"`
+	SuccessOrders    int     `json:"success_orders"`
+	ConversionRate   float64 `json:"conversion_rate"`
+	TotalRevenue     int     `json:"total_revenue"`
+	TotalMidtransFee int     `json:"total_midtrans_fee"`
+	AvgOrderValue    float64 `json:"avg_order_value"`
 }
 
 func (r *PGOrderRepository) GetDailyRevenue(ctx context.Context, startDate, endDate time.Time) ([]DailyRevenue, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT DATE(o.created_at)::text as date,
 		       COUNT(*) FILTER (WHERE o.status = 'success') as orders,
-		       COALESCE(SUM(CASE WHEN o.status = 'success' THEN o.amount_idr - COALESCE(p.cost_price_idr, 0) ELSE 0 END), 0) as revenue
+		       COALESCE(SUM(CASE WHEN o.status = 'success' THEN o.amount_idr - COALESCE(p.cost_price_idr, 0) - ((o.amount_idr * 2 + 99) / 100) ELSE 0 END), 0) as revenue
 		FROM orders o
 		JOIN products p ON o.product_id = p.id
 		WHERE o.created_at >= $1 AND o.created_at < $2
@@ -463,7 +464,7 @@ func (r *PGOrderRepository) GetTopGamesByRevenue(ctx context.Context, startDate,
 	rows, err := r.pool.Query(ctx, `
 		SELECT p.game,
 		       COUNT(*) as orders,
-		       COALESCE(SUM(o.amount_idr - COALESCE(p.cost_price_idr, 0)), 0) as revenue
+		       COALESCE(SUM(o.amount_idr - COALESCE(p.cost_price_idr, 0) - ((o.amount_idr * 2 + 99) / 100)), 0) as revenue
 		FROM orders o
 		JOIN products p ON o.product_id = p.id
 		WHERE o.created_at >= $1 AND o.created_at < $2 AND o.status = 'success'
@@ -494,11 +495,12 @@ func (r *PGOrderRepository) GetOverallStats(ctx context.Context, startDate, endD
 	err := r.pool.QueryRow(ctx, `
 		SELECT COUNT(*) as total_orders,
 		       COALESCE(SUM(CASE WHEN o.status = 'success' THEN 1 ELSE 0 END), 0) as success_orders,
-		       COALESCE(SUM(CASE WHEN o.status = 'success' THEN o.amount_idr - COALESCE(p.cost_price_idr, 0) ELSE 0 END), 0) as total_revenue
+		       COALESCE(SUM(CASE WHEN o.status = 'success' THEN o.amount_idr - COALESCE(p.cost_price_idr, 0) - ((o.amount_idr * 2 + 99) / 100) ELSE 0 END), 0) as total_revenue,
+		       COALESCE(SUM(CASE WHEN o.status = 'success' THEN ((o.amount_idr * 2 + 99) / 100) ELSE 0 END), 0) as total_midtrans_fee
 		FROM orders o
 		LEFT JOIN products p ON o.product_id = p.id
 		WHERE o.created_at >= $1 AND o.created_at < $2
-	`, startDate, endDate).Scan(&stats.TotalOrders, &stats.SuccessOrders, &stats.TotalRevenue)
+	`, startDate, endDate).Scan(&stats.TotalOrders, &stats.SuccessOrders, &stats.TotalRevenue, &stats.TotalMidtransFee)
 	if err != nil {
 		return nil, err
 	}
