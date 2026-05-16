@@ -122,7 +122,7 @@ func main() {
 
 	retrySvc := services.NewWebhookRetryService(pool, logger)
 
-	pages := handlers.NewPageHandler(topupSvc, paymentSvc, notifySvc, cfg.WhatsappNumber, cfg.AdminPassword, cfg.AdminPath, cfg.MidtransClientKey, cfg.MidtransIsProd, cfg.MidtransIsProd, logger)
+	pages := handlers.NewPageHandler(orderRepo, topupSvc, paymentSvc, notifySvc, cfg.WhatsappNumber, cfg.AdminPassword, cfg.AdminPath, cfg.MidtransClientKey, cfg.MidtransIsProd, cfg.MidtransIsProd, logger)
 	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, pool, rootCtx, logger)
 	products := handlers.NewProductHandler(topupSvc, cacheStore, logger)
 	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, webhookRepo, cfg.MidtransServerKey, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzWebhookSecret, rootCtx, logger)

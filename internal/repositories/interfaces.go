@@ -35,6 +35,7 @@ type OrderRepository interface {
 	GetOverallStats(ctx context.Context, startDate, endDate time.Time) (*OverallStats, error)
 	ListFailedForRetry(ctx context.Context, maxRetries int) ([]models.Order, error)
 	IncrementRetryCount(ctx context.Context, id string) error
+	CountSuccessOrders(ctx context.Context) (int, error)
 }
 
 type ProductRepository interface {

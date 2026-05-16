@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/topup-store/internal/middleware"
 	"github.com/topup-store/internal/models"
+	"github.com/topup-store/internal/repositories"
 	"github.com/topup-store/internal/services"
 )
 
@@ -75,6 +77,7 @@ func parseTemplates() (*template.Template, error) {
 }
 
 type PageHandler struct {
+	orderRepo         repositories.OrderRepository
 	topupSvc          services.TopupServiceInterface
 	paymentSvc        services.PaymentServiceInterface
 	notifySvc         services.NotifyServiceInterface
@@ -97,13 +100,14 @@ type adminOrderView struct {
 	NetProfitIDR   int
 }
 
-func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass, adminPath, midtransClientKey string, midtransIsProd, cookieSecure bool, logger *slog.Logger) *PageHandler {
+func NewPageHandler(orderRepo repositories.OrderRepository, topupSvc services.TopupServiceInterface, paymentSvc services.PaymentServiceInterface, notifySvc services.NotifyServiceInterface, waNumber, adminPass, adminPath, midtransClientKey string, midtransIsProd, cookieSecure bool, logger *slog.Logger) *PageHandler {
 	templates, err := parseTemplates()
 	if err != nil {
 		logger.Error("Failed to parse templates", slog.String("error", err.Error()))
 		panic(err)
 	}
 	return &PageHandler{
+		orderRepo:         orderRepo,
 		topupSvc:          topupSvc,
 		paymentSvc:        paymentSvc,
 		notifySvc:         notifySvc,
@@ -119,8 +123,22 @@ func NewPageHandler(topupSvc services.TopupServiceInterface, paymentSvc services
 }
 
 func (h *PageHandler) Home(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
+	successCount := 0
+	if h.orderRepo != nil {
+		count, err := h.orderRepo.CountSuccessOrders(ctx)
+		if err != nil {
+			h.logger.Warn("failed to count success orders", slog.String("error", err.Error()))
+		} else {
+			successCount = count
+		}
+	}
+
 	if err := h.templates.ExecuteTemplate(w, "index.html", map[string]any{
 		"WhatsappNumber": h.waNumber,
+		"SuccessCount":   successCount,
 	}); err != nil {
 		h.logger.Error("template error (index.html)", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

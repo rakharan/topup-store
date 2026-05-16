@@ -127,6 +127,10 @@ func (m *mockOrderRepo) ListFailedForRetry(ctx context.Context, maxRetries int) 
 	return nil, nil
 }
 
+func (m *mockOrderRepo) CountSuccessOrders(ctx context.Context) (int, error) {
+	return 0, nil
+}
+
 func (m *mockOrderRepo) IncrementRetryCount(ctx context.Context, id string) error {
 	return nil
 }

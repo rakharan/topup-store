@@ -161,7 +161,7 @@
         }
         if (inputEl) {
             inputEl.classList.add('border-red-500');
-            inputEl.classList.remove('border-white/10');
+            inputEl.classList.remove('border-green-500', 'border-white/10');
             inputEl.setAttribute('aria-invalid', 'true');
             const hintId = inputEl.getAttribute('aria-describedby');
             if (hintId && !hintId.includes(fieldId + 'Error')) {
@@ -169,6 +169,15 @@
             } else if (!hintId) {
                 inputEl.setAttribute('aria-describedby', fieldId + 'Error');
             }
+        }
+    }
+
+    function showFieldValid(fieldId) {
+        const inputEl = document.getElementById(fieldId);
+        if (inputEl && inputEl.value.trim()) {
+            inputEl.classList.remove('border-red-500', 'border-white/10');
+            inputEl.classList.add('border-green-500');
+            inputEl.removeAttribute('aria-invalid');
         }
     }
 
@@ -180,7 +189,7 @@
             errorEl.classList.add('hidden');
         }
         if (inputEl) {
-            inputEl.classList.remove('border-red-500');
+            inputEl.classList.remove('border-red-500', 'border-green-500');
             inputEl.classList.add('border-white/10');
             inputEl.removeAttribute('aria-invalid');
             const hintId = inputEl.getAttribute('aria-describedby');
@@ -205,7 +214,7 @@
             showFieldError('gameUid', 'UID minimal 4 digit');
             return false;
         }
-        clearFieldError('gameUid');
+        showFieldValid('gameUid');
         return true;
     }
 
@@ -225,6 +234,8 @@
                 showFieldError('gameServer', 'Server harus 2-32 huruf/angka, underscore, atau dash');
                 return false;
             }
+            showFieldValid('gameServer');
+            return true;
         }
         clearFieldError('gameServer');
         return true;
@@ -248,7 +259,7 @@
             document.getElementById('phoneCheck').classList.add('hidden');
             return false;
         }
-        clearFieldError('phone');
+        showFieldValid('phone');
         document.getElementById('phoneCheck').classList.remove('hidden');
         return true;
     }
@@ -258,7 +269,7 @@
             showFieldError('game', 'Pilih game terlebih dahulu');
             return false;
         }
-        clearFieldError('game');
+        showFieldValid('game');
         return true;
     }
 
@@ -272,8 +283,28 @@
             showFieldError('product', 'Produk ini stok habis, silakan pilih produk lain');
             return false;
         }
-        clearFieldError('product');
+        showFieldValid('product');
         return true;
+    }
+
+    function isFormValid() {
+        const gameValid = !!gameSelect.value;
+        const productValid = !!productSelect.value && productSelect.options[productSelect.selectedIndex]?.dataset.stock !== '0';
+        const uid = document.getElementById("gameUid").value.trim();
+        const uidValid = /^\d{4,}$/.test(uid);
+        const server = document.getElementById("gameServer").value.trim();
+        const serverValid = serverGroup.classList.contains('hidden') || (
+            gameSelect.value === "mobile_legends" ? /^\d+$/.test(server) :
+            hoyoGames.has(gameSelect.value) ? /^[A-Za-z0-9_-]{2,32}$/.test(server) :
+            !!server
+        );
+        const phone = document.getElementById("phone").value.replace(/[+\s]/g, '').trim();
+        const phoneValid = /^\d{8,20}$/.test(phone);
+        return gameValid && productValid && uidValid && serverValid && phoneValid;
+    }
+
+    function updateSubmitButton() {
+        submitBtn.disabled = !isFormValid();
     }
 
     function updateOrderPreview() {
@@ -295,25 +326,30 @@
         preview.classList.remove('hidden');
     }
 
-    document.getElementById("gameUid").addEventListener("blur", validateGameUid);
+    document.getElementById("gameUid").addEventListener("blur", () => { validateGameUid(); updateSubmitButton(); });
     document.getElementById("gameUid").addEventListener("input", () => {
-        if (document.getElementById("gameUid").value.trim()) validateGameUid();
+        validateGameUid();
         updateOrderPreview();
+        updateSubmitButton();
     });
-    document.getElementById("gameServer").addEventListener("blur", validateGameServer);
+    document.getElementById("gameServer").addEventListener("blur", () => { validateGameServer(); updateSubmitButton(); });
     document.getElementById("gameServer").addEventListener("input", () => {
-        if (document.getElementById("gameServer").value.trim()) validateGameServer();
+        validateGameServer();
         updateOrderPreview();
+        updateSubmitButton();
     });
-    document.getElementById("phone").addEventListener("blur", validatePhone);
+    document.getElementById("phone").addEventListener("blur", () => { validatePhone(); updateSubmitButton(); });
     document.getElementById("phone").addEventListener("input", () => {
         const phoneInput = document.getElementById("phone");
         phoneInput.value = phoneInput.value.replace(/[+\s]/g, '');
-        if (phoneInput.value.trim()) validatePhone();
+        validatePhone();
         updateOrderPreview();
+        updateSubmitButton();
     });
-    gameSelect.addEventListener("blur", validateGame);
-    productSelect.addEventListener("blur", validateProduct);
+    gameSelect.addEventListener("change", () => { validateGame(); updateSubmitButton(); });
+    gameSelect.addEventListener("blur", () => { validateGame(); updateSubmitButton(); });
+    productSelect.addEventListener("change", () => { validateProduct(); updateSubmitButton(); });
+    productSelect.addEventListener("blur", () => { validateProduct(); updateSubmitButton(); });
 
     async function loadProductsForGame(game) {
         try {
@@ -380,10 +416,12 @@
             productSelect.innerHTML = '<option value="">Pilih game terlebih dahulu</option>';
             productSelect.disabled = true;
             updateOrderPreview();
+            updateSubmitButton();
             return;
         }
         await loadProductsForGame(game);
         updateOrderPreview();
+        updateSubmitButton();
     });
 
     const params = new URLSearchParams(window.location.search);
@@ -412,6 +450,7 @@
             selectedProduct = null;
         }
         updateOrderPreview();
+        updateSubmitButton();
     });
 
     let modalTriggerEl = null;
@@ -698,6 +737,8 @@
             }
         }
     }
+
+    updateSubmitButton();
 
     document.getElementById("orderForm").addEventListener("submit", (e) => {
         e.preventDefault();

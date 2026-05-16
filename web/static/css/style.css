@@ -23,3 +23,20 @@ html {
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(249, 115, 22, 0.7);
 }
+
+/* FAQ Accordion */
+#faqAccordion details > summary::-webkit-details-marker {
+    display: none;
+}
+
+#faqAccordion details > summary {
+    list-style: none;
+}
+
+#faqAccordion details > summary span[aria-hidden="true"] {
+    transition: transform 0.2s ease;
+}
+
+#faqAccordion details[open] > summary span[aria-hidden="true"] {
+    transform: rotate(180deg);
+}

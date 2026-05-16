@@ -19,6 +19,36 @@
         <a href="/order" class="inline-block bg-primary hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-lg transition text-lg focus-ring">Order Sekarang</a>
     </main>
 
+    <section class="max-w-6xl mx-auto px-4 pb-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white/5 rounded-xl p-4 border border-white/10 text-center">
+                <div class="text-2xl font-bold text-primary mb-1">{{.SuccessCount}}+</div>
+                <div class="text-xs text-white/60">Order Berhasil</div>
+            </div>
+            <div class="bg-white/5 rounded-xl p-4 border border-white/10 text-center">
+                <div class="text-2xl font-bold text-primary mb-1">1-3 Menit</div>
+                <div class="text-xs text-white/60">Proses Instan</div>
+            </div>
+            <div class="bg-white/5 rounded-xl p-4 border border-white/10 text-center">
+                <div class="text-2xl font-bold text-primary mb-1">24/7</div>
+                <div class="text-xs text-white/60">Layanan Aktif</div>
+            </div>
+            <div class="bg-white/5 rounded-xl p-4 border border-white/10 text-center">
+                <div class="text-2xl font-bold text-primary mb-1">100%</div>
+                <div class="text-xs text-white/60">Pembayaran Aman</div>
+            </div>
+        </div>
+        <div class="flex items-center justify-center gap-6 mb-8 opacity-60">
+            <span class="text-xs text-white/40">Partner Pembayaran:</span>
+            <div class="flex items-center gap-4">
+                <span class="text-sm font-semibold">Midtrans</span>
+                <span class="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">QRIS</span>
+                <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">GoPay</span>
+                <span class="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded">VA</span>
+            </div>
+        </div>
+    </section>
+
     <section class="max-w-6xl mx-auto px-4 pb-8">
         <div class="flex gap-2 justify-center mb-8 flex-wrap" id="gameTabs" role="tablist" aria-label="Pilih game">
             <button data-game="free_fire" class="game-tab px-5 py-2 rounded-full bg-primary text-white font-medium transition flex items-center gap-2 focus-ring" role="tab" aria-selected="true" aria-controls="productGrid" id="tab-free_fire">
@@ -64,6 +94,57 @@
                 <h3 class="font-semibold mb-2">Top Up Otomatis</h3>
                 <p class="text-white/60 text-sm">Setelah pembayaran berhasil, top up akan diproses otomatis.</p>
             </div>
+        </div>
+    </section>
+
+    <section class="max-w-3xl mx-auto px-4 py-12">
+        <h2 class="text-2xl font-bold text-center mb-8">Pertanyaan Umum</h2>
+        <div class="space-y-3" id="faqAccordion">
+            <details class="bg-white/5 rounded-xl border border-white/10 group">
+                <summary class="flex items-center justify-between p-4 cursor-pointer list-none font-medium focus-ring">
+                    <span>Berapa lama proses top up?</span>
+                    <span class="transition-transform group-open:rotate-180" aria-hidden="true">&#9662;</span>
+                </summary>
+                <div class="px-4 pb-4 text-sm text-white/70">
+                    Biasanya 1-3 menit setelah pembayaran berhasil. Proses otomatis 24 jam tanpa perlu tunggu admin online.
+                </div>
+            </details>
+            <details class="bg-white/5 rounded-xl border border-white/10 group">
+                <summary class="flex items-center justify-between p-4 cursor-pointer list-none font-medium focus-ring">
+                    <span>Metode pembayaran apa saja yang tersedia?</span>
+                    <span class="transition-transform group-open:rotate-180" aria-hidden="true">&#9662;</span>
+                </summary>
+                <div class="px-4 pb-4 text-sm text-white/70">
+                    Kami menerima pembayaran via QRIS (semua e-wallet & bank), GoPay, Virtual Account (BCA, BNI, BRI, Mandiri), serta kartu kredit/debit melalui Midtrans.
+                </div>
+            </details>
+            <details class="bg-white/5 rounded-xl border border-white/10 group">
+                <summary class="flex items-center justify-between p-4 cursor-pointer list-none font-medium focus-ring">
+                    <span>Bagaimana cara cek status order?</span>
+                    <span class="transition-transform group-open:rotate-180" aria-hidden="true">&#9662;</span>
+                </summary>
+                <div class="px-4 pb-4 text-sm text-white/70">
+                    Masukkan ID Order atau nomor WhatsApp di halaman "Cek Order". Status diperbarui real-time dan auto-refresh setiap 10 detik.
+                </div>
+            </details>
+            <details class="bg-white/5 rounded-xl border border-white/10 group">
+                <summary class="flex items-center justify-between p-4 cursor-pointer list-none font-medium focus-ring">
+                    <span>Apakah aman bertransaksi di sini?</span>
+                    <span class="transition-transform group-open:rotate-180" aria-hidden="true">&#9662;</span>
+                </summary>
+                <div class="px-4 pb-4 text-sm text-white/70">
+                    Pembayaran diproses oleh Midtrans (PCI DSS compliant). Data transaksi dienkripsi dan kami tidak menyimpan informasi kartu. Setiap order memiliki ID unik dan audit trail.
+                </div>
+            </details>
+            <details class="bg-white/5 rounded-xl border border-white/10 group">
+                <summary class="flex items-center justify-between p-4 cursor-pointer list-none font-medium focus-ring">
+                    <span>Apa yang terjadi jika top up gagal?</span>
+                    <span class="transition-transform group-open:rotate-180" aria-hidden="true">&#9662;</span>
+                </summary>
+                <div class="px-4 pb-4 text-sm text-white/70">
+                    Jika transaksi gagal setelah pembayaran, sistem akan otomatis retry. Kamu juga bisa hubungi admin via WhatsApp untuk pengecekan manual atau refund.
+                </div>
+            </details>
         </div>
     </section>
 

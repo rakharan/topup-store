@@ -546,6 +546,15 @@ func (r *PGOrderRepository) IncrementRetryCount(ctx context.Context, id string) 
 	return err
 }
 
+func (r *PGOrderRepository) CountSuccessOrders(ctx context.Context) (int, error) {
+	var count int
+	err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM orders WHERE status = 'success'`).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func nullIfEmpty(s string) any {
 	if s == "" {
 		return nil
