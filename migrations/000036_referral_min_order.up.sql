@@ -1,0 +1,1 @@
+ALTER TABLE referral_codes ADD COLUMN IF NOT EXISTS min_order_idr INT NOT NULL DEFAULT 0;

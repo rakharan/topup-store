@@ -397,6 +397,7 @@ func TestOrderRepository_AwardsReferralPointsOnSuccess(t *testing.T) {
 			OwnerPhone:   "628111111111",
 			DiscountIDR:  500,
 			RewardPoints: 700,
+			MinOrderIDR:  15000,
 			IsActive:     true,
 		}
 		if err := refRepo.Create(ctx, referral); err != nil {

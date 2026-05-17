@@ -94,6 +94,7 @@ type ReferralCode struct {
 	OwnerPhone   string    `json:"owner_phone"`
 	DiscountIDR  int       `json:"discount_idr"`
 	RewardPoints int       `json:"reward_points"`
+	MinOrderIDR  int       `json:"min_order_idr"`
 	MaxUses      int       `json:"max_uses"`
 	UsedCount    int       `json:"used_count"`
 	IsActive     bool      `json:"is_active"`

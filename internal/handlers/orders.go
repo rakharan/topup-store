@@ -380,6 +380,9 @@ func (h *OrderHandler) calculateReferralDiscount(ctx context.Context, code strin
 	if referral.MaxUses > 0 && referral.UsedCount >= referral.MaxUses {
 		return 0, "", fmt.Errorf("referral code usage limit reached")
 	}
+	if subtotal < referral.MinOrderIDR {
+		return 0, "", fmt.Errorf("minimum order for referral code is Rp %s", formatIDR(referral.MinOrderIDR))
+	}
 	discount := referral.DiscountIDR
 	if discount <= 0 {
 		return 0, "", fmt.Errorf("referral code discount is invalid")

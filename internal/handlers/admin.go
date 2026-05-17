@@ -851,6 +851,7 @@ func (h *AdminHandler) CreateReferralCode(w http.ResponseWriter, r *http.Request
 		OwnerPhone   string `json:"owner_phone"`
 		DiscountIDR  int    `json:"discount_idr"`
 		RewardPoints int    `json:"reward_points"`
+		MinOrderIDR  int    `json:"min_order_idr"`
 		MaxUses      int    `json:"max_uses"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -871,6 +872,10 @@ func (h *AdminHandler) CreateReferralCode(w http.ResponseWriter, r *http.Request
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("reward_points", "reward points cannot be negative"), middleware.GetRequestID(r.Context()))
 		return
 	}
+	if req.MinOrderIDR < 0 {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("min_order_idr", "minimum order cannot be negative"), middleware.GetRequestID(r.Context()))
+		return
+	}
 	if req.MaxUses <= 0 {
 		req.MaxUses = 0
 	}
@@ -879,6 +884,7 @@ func (h *AdminHandler) CreateReferralCode(w http.ResponseWriter, r *http.Request
 		OwnerPhone:   req.OwnerPhone,
 		DiscountIDR:  req.DiscountIDR,
 		RewardPoints: req.RewardPoints,
+		MinOrderIDR:  req.MinOrderIDR,
 		MaxUses:      req.MaxUses,
 		IsActive:     true,
 	}

@@ -407,11 +407,12 @@
             </div>
             <div class="bg-white/5 border border-white/10 rounded-xl p-5 mb-6">
                 <h3 class="font-semibold mb-4">Referral Codes</h3>
-                <form id="referralForm" class="grid grid-cols-1 md:grid-cols-6 gap-3">
+                <form id="referralForm" class="grid grid-cols-1 md:grid-cols-7 gap-3">
                     <input type="text" id="referralCode" placeholder="Code" maxlength="32" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white uppercase focus:border-primary focus:outline-none focus-ring">
                     <input type="text" id="referralOwnerPhone" placeholder="Owner phone" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     <input type="number" id="referralDiscount" placeholder="Discount IDR" min="1" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     <input type="number" id="referralRewardPoints" placeholder="Reward points" min="0" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                    <input type="number" id="referralMinOrder" placeholder="Min order IDR" min="0" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     <input type="number" id="referralMaxUses" placeholder="Max uses (0 unlimited)" min="0" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     <button type="submit" class="bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">Create Code</button>
                 </form>
@@ -424,13 +425,14 @@
                             <th scope="col" class="pb-3 pr-4">Owner</th>
                             <th scope="col" class="pb-3 pr-4">Discount</th>
                             <th scope="col" class="pb-3 pr-4">Reward</th>
+                            <th scope="col" class="pb-3 pr-4">Min Order</th>
                             <th scope="col" class="pb-3 pr-4">Used</th>
                             <th scope="col" class="pb-3 pr-4">Created</th>
                             <th scope="col" class="pb-3">Action</th>
                         </tr>
                     </thead>
                     <tbody id="referralCodesBody">
-                        <tr><td colspan="7" class="py-8 text-center text-white/40">Open Growth tab to load referral codes.</td></tr>
+                        <tr><td colspan="8" class="py-8 text-center text-white/40">Open Growth tab to load referral codes.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -962,7 +964,7 @@
     async function loadReferralCodes() {
         const tbody = document.getElementById('referralCodesBody');
         if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-white/40">Loading referral codes...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-white/40">Loading referral codes...</td></tr>';
         try {
             const res = await fetchWithCSRF(ADMIN_PATH + '/referral-codes');
             const json = await res.json();
@@ -972,7 +974,7 @@
             }
             const codes = json.data || [];
             if (!codes.length) {
-                tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-white/40">No referral codes yet.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-white/40">No referral codes yet.</td></tr>';
                 return;
             }
             tbody.innerHTML = codes.map(c => {
@@ -982,6 +984,7 @@
                     <td class="py-3 pr-4">${escapeHtml(c.owner_phone || '-')}</td>
                     <td class="py-3 pr-4">Rp ${(c.discount_idr || 0).toLocaleString('id-ID')}</td>
                     <td class="py-3 pr-4">${(c.reward_points || 0).toLocaleString('id-ID')} pts</td>
+                    <td class="py-3 pr-4">Rp ${(c.min_order_idr || 0).toLocaleString('id-ID')}</td>
                     <td class="py-3 pr-4">${c.used_count || 0} / ${limit}</td>
                     <td class="py-3 pr-4 text-white/50">${formatDate(c.created_at)}</td>
                     <td class="py-3"><button onclick="deleteReferralCode('${escapeHtml(c.id)}')" class="text-red-400 hover:text-red-300 text-sm focus-ring">Delete</button></td>
@@ -998,6 +1001,7 @@
         const ownerPhone = document.getElementById('referralOwnerPhone').value.trim();
         const discount = parseInt(document.getElementById('referralDiscount').value || '0', 10);
         const rewardPoints = parseInt(document.getElementById('referralRewardPoints').value || '0', 10);
+        const minOrder = parseInt(document.getElementById('referralMinOrder').value || '0', 10);
         const maxUses = parseInt(document.getElementById('referralMaxUses').value || '0', 10);
         if (!code || discount <= 0) {
             showToast('Referral code and discount are required', 'warning');
@@ -1006,7 +1010,7 @@
         try {
             const res = await fetchWithCSRF(ADMIN_PATH + '/referral-codes', {
                 method: 'POST',
-                body: JSON.stringify({ code, owner_phone: ownerPhone, discount_idr: discount, reward_points: rewardPoints, max_uses: maxUses }),
+                body: JSON.stringify({ code, owner_phone: ownerPhone, discount_idr: discount, reward_points: rewardPoints, min_order_idr: minOrder, max_uses: maxUses }),
             });
             const json = await res.json();
             if (res.ok) {

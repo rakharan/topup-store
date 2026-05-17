@@ -19,24 +19,24 @@ func NewReferralCodeRepository(pool *pgxpool.Pool) *PGReferralCodeRepository {
 
 func (r *PGReferralCodeRepository) Create(ctx context.Context, code *models.ReferralCode) error {
 	query := `
-		INSERT INTO referral_codes (code, owner_phone, discount_idr, reward_points, max_uses, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO referral_codes (code, owner_phone, discount_idr, reward_points, min_order_idr, max_uses, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at
 	`
 	return r.pool.QueryRow(ctx, query,
-		code.Code, code.OwnerPhone, code.DiscountIDR, code.RewardPoints, code.MaxUses, code.IsActive,
+		code.Code, code.OwnerPhone, code.DiscountIDR, code.RewardPoints, code.MinOrderIDR, code.MaxUses, code.IsActive,
 	).Scan(&code.ID, &code.CreatedAt)
 }
 
 func (r *PGReferralCodeRepository) GetByCode(ctx context.Context, code string) (*models.ReferralCode, error) {
 	var rc models.ReferralCode
 	query := `
-		SELECT id, code, owner_phone, discount_idr, reward_points, max_uses, used_count, is_active, created_at
+		SELECT id, code, owner_phone, discount_idr, reward_points, min_order_idr, max_uses, used_count, is_active, created_at
 		FROM referral_codes
 		WHERE code = $1 AND is_active = true
 	`
 	err := r.pool.QueryRow(ctx, query, code).Scan(
-		&rc.ID, &rc.Code, &rc.OwnerPhone, &rc.DiscountIDR, &rc.RewardPoints, &rc.MaxUses, &rc.UsedCount, &rc.IsActive, &rc.CreatedAt,
+		&rc.ID, &rc.Code, &rc.OwnerPhone, &rc.DiscountIDR, &rc.RewardPoints, &rc.MinOrderIDR, &rc.MaxUses, &rc.UsedCount, &rc.IsActive, &rc.CreatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -49,7 +49,7 @@ func (r *PGReferralCodeRepository) GetByCode(ctx context.Context, code string) (
 
 func (r *PGReferralCodeRepository) List(ctx context.Context) ([]models.ReferralCode, error) {
 	query := `
-		SELECT id, code, owner_phone, discount_idr, reward_points, max_uses, used_count, is_active, created_at
+		SELECT id, code, owner_phone, discount_idr, reward_points, min_order_idr, max_uses, used_count, is_active, created_at
 		FROM referral_codes
 		ORDER BY created_at DESC
 	`
@@ -62,7 +62,7 @@ func (r *PGReferralCodeRepository) List(ctx context.Context) ([]models.ReferralC
 	var codes []models.ReferralCode
 	for rows.Next() {
 		var rc models.ReferralCode
-		if err := rows.Scan(&rc.ID, &rc.Code, &rc.OwnerPhone, &rc.DiscountIDR, &rc.RewardPoints, &rc.MaxUses, &rc.UsedCount, &rc.IsActive, &rc.CreatedAt); err != nil {
+		if err := rows.Scan(&rc.ID, &rc.Code, &rc.OwnerPhone, &rc.DiscountIDR, &rc.RewardPoints, &rc.MinOrderIDR, &rc.MaxUses, &rc.UsedCount, &rc.IsActive, &rc.CreatedAt); err != nil {
 			return nil, err
 		}
 		codes = append(codes, rc)
