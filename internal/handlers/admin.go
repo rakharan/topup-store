@@ -847,9 +847,11 @@ func (h *AdminHandler) CreateReferralCode(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var req struct {
-		Code        string `json:"code"`
-		DiscountIDR int    `json:"discount_idr"`
-		MaxUses     int    `json:"max_uses"`
+		Code         string `json:"code"`
+		OwnerPhone   string `json:"owner_phone"`
+		DiscountIDR  int    `json:"discount_idr"`
+		RewardPoints int    `json:"reward_points"`
+		MaxUses      int    `json:"max_uses"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("body", "invalid JSON"), middleware.GetRequestID(r.Context()))
@@ -864,14 +866,21 @@ func (h *AdminHandler) CreateReferralCode(w http.ResponseWriter, r *http.Request
 		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("discount_idr", "discount must be positive"), middleware.GetRequestID(r.Context()))
 		return
 	}
+	req.OwnerPhone = strings.TrimSpace(req.OwnerPhone)
+	if req.RewardPoints < 0 {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("reward_points", "reward points cannot be negative"), middleware.GetRequestID(r.Context()))
+		return
+	}
 	if req.MaxUses <= 0 {
 		req.MaxUses = 0
 	}
 	rc := &models.ReferralCode{
-		Code:        req.Code,
-		DiscountIDR: req.DiscountIDR,
-		MaxUses:     req.MaxUses,
-		IsActive:    true,
+		Code:         req.Code,
+		OwnerPhone:   req.OwnerPhone,
+		DiscountIDR:  req.DiscountIDR,
+		RewardPoints: req.RewardPoints,
+		MaxUses:      req.MaxUses,
+		IsActive:     true,
 	}
 	if err := h.referralCodeRepo.Create(r.Context(), rc); err != nil {
 		h.logger.Error("create referral code", slog.String("error", err.Error()))
@@ -899,4 +908,58 @@ func (h *AdminHandler) DeleteReferralCode(w http.ResponseWriter, r *http.Request
 	}
 	h.logAudit(r.Context(), r, "delete_referral_code", "referral_code", id, "", "")
 	apperrors.WriteSuccess(w, http.StatusOK, map[string]string{"status": "ok"}, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) ListReferralPointBalances(w http.ResponseWriter, r *http.Request) {
+	if h.referralCodeRepo == nil {
+		apperrors.WriteError(w, http.StatusServiceUnavailable, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	balances, err := h.referralCodeRepo.ListPointBalances(r.Context())
+	if err != nil {
+		h.logger.Error("list referral point balances", slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	apperrors.WriteSuccess(w, http.StatusOK, balances, middleware.GetRequestID(r.Context()))
+}
+
+func (h *AdminHandler) RedeemReferralPoints(w http.ResponseWriter, r *http.Request) {
+	if h.referralCodeRepo == nil {
+		apperrors.WriteError(w, http.StatusServiceUnavailable, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+	var req struct {
+		OwnerPhone string `json:"owner_phone"`
+		Points     int    `json:"points"`
+		CouponCode string `json:"coupon_code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("body", "invalid JSON"), middleware.GetRequestID(r.Context()))
+		return
+	}
+	req.OwnerPhone = strings.TrimSpace(req.OwnerPhone)
+	req.CouponCode = strings.ToUpper(strings.TrimSpace(req.CouponCode))
+	if req.OwnerPhone == "" {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("owner_phone", "owner phone is required"), middleware.GetRequestID(r.Context()))
+		return
+	}
+	if req.Points <= 0 {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("points", "points must be positive"), middleware.GetRequestID(r.Context()))
+		return
+	}
+	if req.CouponCode == "" {
+		token := strings.ReplaceAll(uuid.NewString(), "-", "")
+		req.CouponCode = "REF" + strings.ToUpper(token[:8])
+	}
+	if err := h.referralCodeRepo.RedeemPoints(r.Context(), req.OwnerPhone, req.CouponCode, req.Points); err != nil {
+		h.logger.Error("redeem referral points", slog.String("error", err.Error()), slog.String("owner_phone", req.OwnerPhone))
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("points", err.Error()), middleware.GetRequestID(r.Context()))
+		return
+	}
+	h.logAudit(r.Context(), r, "redeem_referral_points", "referral_points", req.OwnerPhone, "", req.CouponCode)
+	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
+		"coupon_code": req.CouponCode,
+		"points":      req.Points,
+	}, middleware.GetRequestID(r.Context()))
 }

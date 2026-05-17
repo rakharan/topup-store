@@ -112,6 +112,11 @@ func (r *PGOrderRepository) GetByOrderNumber(ctx context.Context, orderNumber st
 
 func (r *PGOrderRepository) UpdateStatus(ctx context.Context, id, status string) error {
 	_, err := r.pool.Exec(ctx, `UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`, status, id)
+	if err == nil && status == "success" {
+		if awardErr := r.awardReferralPoints(ctx, id); awardErr != nil {
+			return awardErr
+		}
+	}
 	return err
 }
 
@@ -122,7 +127,27 @@ func (r *PGOrderRepository) UpdateStatusIf(ctx context.Context, id, newStatus, e
 	if err != nil {
 		return false, err
 	}
-	return result.RowsAffected() > 0, nil
+	updated := result.RowsAffected() > 0
+	if updated && newStatus == "success" {
+		if awardErr := r.awardReferralPoints(ctx, id); awardErr != nil {
+			return false, awardErr
+		}
+	}
+	return updated, nil
+}
+
+func (r *PGOrderRepository) awardReferralPoints(ctx context.Context, orderID string) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO referral_point_ledger (owner_phone, code_id, order_id, event_type, points, note)
+		SELECT rc.owner_phone, rc.id, orf.order_id, 'earn', rc.reward_points, 'referral reward'
+		FROM order_referrals orf
+		JOIN referral_codes rc ON rc.id = orf.code_id
+		WHERE orf.order_id = $1
+		  AND rc.owner_phone <> ''
+		  AND rc.reward_points > 0
+		ON CONFLICT (order_id) DO NOTHING
+	`, orderID)
+	return err
 }
 
 func (r *PGOrderRepository) UpdateSerialNumber(ctx context.Context, id, sn string) error {

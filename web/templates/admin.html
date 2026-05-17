@@ -407,26 +407,49 @@
             </div>
             <div class="bg-white/5 border border-white/10 rounded-xl p-5 mb-6">
                 <h3 class="font-semibold mb-4">Referral Codes</h3>
-                <form id="referralForm" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <form id="referralForm" class="grid grid-cols-1 md:grid-cols-6 gap-3">
                     <input type="text" id="referralCode" placeholder="Code" maxlength="32" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white uppercase focus:border-primary focus:outline-none focus-ring">
+                    <input type="text" id="referralOwnerPhone" placeholder="Owner phone" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     <input type="number" id="referralDiscount" placeholder="Discount IDR" min="1" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                    <input type="number" id="referralRewardPoints" placeholder="Reward points" min="0" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     <input type="number" id="referralMaxUses" placeholder="Max uses (0 unlimited)" min="0" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     <button type="submit" class="bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm transition focus-ring">Create Code</button>
                 </form>
             </div>
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto mb-8">
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-white/10 text-left text-white/70">
                             <th scope="col" class="pb-3 pr-4">Code</th>
+                            <th scope="col" class="pb-3 pr-4">Owner</th>
                             <th scope="col" class="pb-3 pr-4">Discount</th>
+                            <th scope="col" class="pb-3 pr-4">Reward</th>
                             <th scope="col" class="pb-3 pr-4">Used</th>
                             <th scope="col" class="pb-3 pr-4">Created</th>
                             <th scope="col" class="pb-3">Action</th>
                         </tr>
                     </thead>
                     <tbody id="referralCodesBody">
-                        <tr><td colspan="5" class="py-8 text-center text-white/40">Open Growth tab to load referral codes.</td></tr>
+                        <tr><td colspan="7" class="py-8 text-center text-white/40">Open Growth tab to load referral codes.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold">Referral Point Balances</h3>
+                <button onclick="loadReferralPointBalances()" class="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-sm transition focus-ring">Refresh Points</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-white/10 text-left text-white/70">
+                            <th scope="col" class="pb-3 pr-4">Phone</th>
+                            <th scope="col" class="pb-3 pr-4">Points</th>
+                            <th scope="col" class="pb-3 pr-4">Last Earned</th>
+                            <th scope="col" class="pb-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="referralBalancesBody">
+                        <tr><td colspan="4" class="py-8 text-center text-white/40">Open Growth tab to load balances.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -928,7 +951,10 @@
         if (tab === 'products') loadProducts();
         if (tab === 'analytics') loadAnalytics(30);
         if (tab === 'webhooks') loadWebhooks();
-        if (tab === 'growth') loadReferralCodes();
+        if (tab === 'growth') {
+            loadReferralCodes();
+            loadReferralPointBalances();
+        }
     }
 
     let products = [];
@@ -936,7 +962,7 @@
     async function loadReferralCodes() {
         const tbody = document.getElementById('referralCodesBody');
         if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-white/40">Loading referral codes...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-white/40">Loading referral codes...</td></tr>';
         try {
             const res = await fetchWithCSRF(ADMIN_PATH + '/referral-codes');
             const json = await res.json();
@@ -946,14 +972,16 @@
             }
             const codes = json.data || [];
             if (!codes.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-white/40">No referral codes yet.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-white/40">No referral codes yet.</td></tr>';
                 return;
             }
             tbody.innerHTML = codes.map(c => {
                 const limit = c.max_uses > 0 ? c.max_uses : 'Unlimited';
                 return `<tr class="border-b border-white/5 hover:bg-white/5">
                     <td class="py-3 pr-4 font-mono">${escapeHtml(c.code)}</td>
+                    <td class="py-3 pr-4">${escapeHtml(c.owner_phone || '-')}</td>
                     <td class="py-3 pr-4">Rp ${(c.discount_idr || 0).toLocaleString('id-ID')}</td>
+                    <td class="py-3 pr-4">${(c.reward_points || 0).toLocaleString('id-ID')} pts</td>
                     <td class="py-3 pr-4">${c.used_count || 0} / ${limit}</td>
                     <td class="py-3 pr-4 text-white/50">${formatDate(c.created_at)}</td>
                     <td class="py-3"><button onclick="deleteReferralCode('${escapeHtml(c.id)}')" class="text-red-400 hover:text-red-300 text-sm focus-ring">Delete</button></td>
@@ -967,7 +995,9 @@
     document.getElementById('referralForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const code = document.getElementById('referralCode').value.trim().toUpperCase();
+        const ownerPhone = document.getElementById('referralOwnerPhone').value.trim();
         const discount = parseInt(document.getElementById('referralDiscount').value || '0', 10);
+        const rewardPoints = parseInt(document.getElementById('referralRewardPoints').value || '0', 10);
         const maxUses = parseInt(document.getElementById('referralMaxUses').value || '0', 10);
         if (!code || discount <= 0) {
             showToast('Referral code and discount are required', 'warning');
@@ -976,13 +1006,14 @@
         try {
             const res = await fetchWithCSRF(ADMIN_PATH + '/referral-codes', {
                 method: 'POST',
-                body: JSON.stringify({ code, discount_idr: discount, max_uses: maxUses }),
+                body: JSON.stringify({ code, owner_phone: ownerPhone, discount_idr: discount, reward_points: rewardPoints, max_uses: maxUses }),
             });
             const json = await res.json();
             if (res.ok) {
                 document.getElementById('referralForm').reset();
                 showToast('Referral code created', 'success');
                 loadReferralCodes();
+                loadReferralPointBalances();
             } else {
                 showToast(json.error?.message || 'Failed to create referral code', 'error');
             }
@@ -990,6 +1021,59 @@
             showToast('Failed to create referral code', 'error');
         }
     });
+
+    async function loadReferralPointBalances() {
+        const tbody = document.getElementById('referralBalancesBody');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-white/40">Loading referral balances...</td></tr>';
+        try {
+            const res = await fetchWithCSRF(ADMIN_PATH + '/referral-points');
+            const json = await res.json();
+            if (!res.ok) {
+                showToast(json.error?.message || 'Failed to load referral balances', 'error');
+                return;
+            }
+            const balances = json.data || [];
+            if (!balances.length) {
+                tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-white/40">No referral points yet.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = balances.map(b => `<tr class="border-b border-white/5 hover:bg-white/5">
+                <td class="py-3 pr-4 font-mono">${escapeHtml(b.owner_phone)}</td>
+                <td class="py-3 pr-4 text-green-400">${(b.points || 0).toLocaleString('id-ID')} pts</td>
+                <td class="py-3 pr-4 text-white/50">${b.last_earned ? formatDate(b.last_earned) : '-'}</td>
+                <td class="py-3"><button onclick="redeemReferralPoints('${escapeHtml(b.owner_phone)}', ${b.points || 0})" class="text-primary hover:text-orange-400 text-sm focus-ring">Redeem</button></td>
+            </tr>`).join('');
+        } catch (e) {
+            showToast('Failed to load referral balances', 'error');
+        }
+    }
+
+    async function redeemReferralPoints(ownerPhone, maxPoints) {
+        const rawPoints = prompt(`Redeem how many points for ${ownerPhone}?`, String(maxPoints));
+        if (rawPoints === null) return;
+        const points = parseInt(rawPoints, 10);
+        if (!points || points <= 0 || points > maxPoints) {
+            showToast('Invalid point amount', 'warning');
+            return;
+        }
+        const couponCode = (prompt('Coupon code to create (blank for auto)', '') || '').trim().toUpperCase();
+        try {
+            const res = await fetchWithCSRF(ADMIN_PATH + '/referral-points/redeem', {
+                method: 'POST',
+                body: JSON.stringify({ owner_phone: ownerPhone, points, coupon_code: couponCode }),
+            });
+            const json = await res.json();
+            if (res.ok) {
+                showToast(`Created coupon ${json.data?.coupon_code || ''}`, 'success');
+                loadReferralPointBalances();
+            } else {
+                showToast(json.error?.message || 'Failed to redeem points', 'error');
+            }
+        } catch (e) {
+            showToast('Failed to redeem points', 'error');
+        }
+    }
 
     async function deleteReferralCode(id) {
         const ok = await showConfirmModal({

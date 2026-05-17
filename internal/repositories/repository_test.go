@@ -129,6 +129,10 @@ func webhookRepo() *PGWebhookRepository {
 func cleanTables(t *testing.T, ctx context.Context) {
 	t.Helper()
 	tables := []string{
+		"referral_point_ledger",
+		"order_referrals",
+		"referral_codes",
+		"coupons",
 		"order_status_history",
 		"order_qris",
 		"orders",
@@ -378,6 +382,62 @@ func TestOrderRepository_UpdateStatusIf(t *testing.T) {
 		}
 		if ok {
 			t.Error("expected update to fail")
+		}
+	})
+}
+
+func TestOrderRepository_AwardsReferralPointsOnSuccess(t *testing.T) {
+	withCleanTables(t, func(ctx context.Context) {
+		repo := orderRepo()
+		refRepo := NewReferralCodeRepository(testPool)
+
+		productID := createTestProduct(t, ctx, "mobile_legends", 50)
+		referral := &models.ReferralCode{
+			Code:         "REFTEST",
+			OwnerPhone:   "628111111111",
+			DiscountIDR:  500,
+			RewardPoints: 700,
+			IsActive:     true,
+		}
+		if err := refRepo.Create(ctx, referral); err != nil {
+			t.Fatalf("create referral code: %v", err)
+		}
+
+		order := &models.Order{
+			ID:          uuid.New().String(),
+			OrderNumber: "FT-20240101-0099",
+			ProductID:   productID,
+			UserPhone:   "628222222222",
+			GameUID:     "12345678",
+			GameServer:  "1234",
+			AmountIDR:   5000,
+			Channel:     "web",
+		}
+		if err := repo.Create(ctx, order); err != nil {
+			t.Fatalf("create order: %v", err)
+		}
+		if err := refRepo.ApplyToOrder(ctx, order.ID, referral.ID, 500); err != nil {
+			t.Fatalf("apply referral to order: %v", err)
+		}
+		if err := repo.UpdateStatus(ctx, order.ID, "success"); err != nil {
+			t.Fatalf("mark success: %v", err)
+		}
+		if err := repo.UpdateStatus(ctx, order.ID, "success"); err != nil {
+			t.Fatalf("mark success twice: %v", err)
+		}
+
+		balances, err := refRepo.ListPointBalances(ctx)
+		if err != nil {
+			t.Fatalf("list balances: %v", err)
+		}
+		if len(balances) != 1 {
+			t.Fatalf("balances len = %d; want 1", len(balances))
+		}
+		if balances[0].OwnerPhone != referral.OwnerPhone {
+			t.Fatalf("owner phone = %s; want %s", balances[0].OwnerPhone, referral.OwnerPhone)
+		}
+		if balances[0].Points != 700 {
+			t.Fatalf("points = %d; want 700", balances[0].Points)
 		}
 	})
 }

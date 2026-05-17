@@ -89,4 +89,6 @@ type ReferralCodeRepository interface {
 	Delete(ctx context.Context, id string) error
 	IncrementUsage(ctx context.Context, id string) error
 	ApplyToOrder(ctx context.Context, orderID, codeID string, discount int) error
+	ListPointBalances(ctx context.Context) ([]models.ReferralPointBalance, error)
+	RedeemPoints(ctx context.Context, ownerPhone, couponCode string, points int) error
 }

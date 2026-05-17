@@ -89,13 +89,15 @@ type WebhookLog struct {
 }
 
 type ReferralCode struct {
-	ID          string    `json:"id"`
-	Code        string    `json:"code"`
-	DiscountIDR int       `json:"discount_idr"`
-	MaxUses     int       `json:"max_uses"`
-	UsedCount   int       `json:"used_count"`
-	IsActive    bool      `json:"is_active"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID           string    `json:"id"`
+	Code         string    `json:"code"`
+	OwnerPhone   string    `json:"owner_phone"`
+	DiscountIDR  int       `json:"discount_idr"`
+	RewardPoints int       `json:"reward_points"`
+	MaxUses      int       `json:"max_uses"`
+	UsedCount    int       `json:"used_count"`
+	IsActive     bool      `json:"is_active"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type OrderReferral struct {
@@ -104,4 +106,10 @@ type OrderReferral struct {
 	CodeID    string    `json:"code_id"`
 	Discount  int       `json:"discount_idr"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type ReferralPointBalance struct {
+	OwnerPhone string     `json:"owner_phone"`
+	Points     int        `json:"points"`
+	LastEarned *time.Time `json:"last_earned,omitempty"`
 }

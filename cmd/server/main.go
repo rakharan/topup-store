@@ -246,6 +246,13 @@ func main() {
 		r.Post("/", admin.CreateReferralCode)
 		r.Delete("/{id}", admin.DeleteReferralCode)
 	})
+	r.Route(cfg.AdminPath+"/referral-points", func(r chi.Router) {
+		r.Use(middleware.AdminAuth(cfg.AdminPassword))
+		r.Use(adminRateLimiter.Middleware)
+		r.Use(csrfMW)
+		r.Get("/", admin.ListReferralPointBalances)
+		r.Post("/redeem", admin.RedeemReferralPoints)
+	})
 
 	fs := http.FileServer(http.Dir("web/static"))
 	r.Handle("/static/*", http.StripPrefix("/static/", newStaticFileHandler(fs)))
