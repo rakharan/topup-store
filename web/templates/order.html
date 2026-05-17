@@ -178,11 +178,20 @@
     }
 
     function showFieldValid(fieldId) {
+        const errorEl = document.getElementById(fieldId + 'Error');
         const inputEl = document.getElementById(fieldId);
+        if (errorEl) {
+            errorEl.textContent = '';
+            errorEl.classList.add('hidden');
+        }
         if (inputEl && inputEl.value.trim()) {
             inputEl.classList.remove('border-red-500', 'border-white/10');
             inputEl.classList.add('border-green-500');
             inputEl.removeAttribute('aria-invalid');
+            const hintId = inputEl.getAttribute('aria-describedby');
+            if (hintId) {
+                inputEl.setAttribute('aria-describedby', hintId.replace(fieldId + 'Error', '').trim());
+            }
         }
     }
 
