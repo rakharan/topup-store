@@ -304,6 +304,9 @@ func (s *TopupService) getValidationProduct(ctx context.Context, game string) (*
 }
 
 func (s *TopupService) buildCustomerNo(order *models.Order, product *models.Product) string {
+	if product.Game == constants.GamePulsa {
+		return normalizePhoneForDigiflazz(order.GameUID)
+	}
 	if order.GameServer == "" {
 		return order.GameUID
 	}
@@ -326,6 +329,15 @@ func (s *TopupService) buildCustomerNo(order *models.Order, product *models.Prod
 		return order.GameUID + order.GameServer
 	}
 	return order.GameUID
+}
+
+func normalizePhoneForDigiflazz(phone string) string {
+	p := strings.TrimSpace(phone)
+	p = strings.TrimPrefix(p, "+")
+	if strings.HasPrefix(p, "62") {
+		return "0" + p[2:]
+	}
+	return p
 }
 
 func (s *TopupService) generateSign(refID string) string {
@@ -662,6 +674,9 @@ func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType 
 		if !exists {
 			game := inferGame(p.SKU, p.Name, p.Brand)
 			if game == "" {
+				game = inferPulsaGame(p.Category, p.Brand, p.Name)
+			}
+			if game == "" {
 				s.logger.Debug("sync: skipping unknown game", slog.String("sku", p.SKU), slog.String("name", p.Name), slog.String("brand", p.Brand))
 				skipped++
 				continue
@@ -669,7 +684,10 @@ func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType 
 
 			productType := detectProductType(p.Name)
 			itemQty := extractItemQtyFromName(p.Name)
-			if itemQty == 0 && productType != "diamond" {
+			if game == constants.GamePulsa {
+				productType = constants.ProductTypePulsa
+				itemQty = 1
+			} else if itemQty == 0 && productType != "diamond" {
 				itemQty = 1
 			}
 
@@ -802,6 +820,21 @@ func inferGame(sku, name, brand string) string {
 		return constants.GameHonkaiImpact3
 	}
 	return ""
+}
+
+var pulsaCategories = map[string]bool{
+	"pulsa":            true,
+	"data":             true,
+	"masa aktif":       true,
+	"aktivasi perdana": true,
+}
+
+func inferPulsaGame(category, brand, name string) string {
+	cat := strings.ToLower(strings.TrimSpace(category))
+	if !pulsaCategories[cat] {
+		return ""
+	}
+	return constants.GamePulsa
 }
 
 var itemQuantityRegex = regexp.MustCompile(`(\d+)\s*(dm|diamonds?|uc|genesis\s*crystals?|crystals?|oneiric\s*shards?|shards?|monochromes?|polychromes?|lunites?|b-?chips?|chips?|stellar\s*jades?|jades?|d$)`)

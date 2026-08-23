@@ -37,6 +37,7 @@
                     <option value="honkai_star_rail">Honkai: Star Rail</option>
                     <option value="zenless_zone_zero">Zenless Zone Zero</option>
                     <option value="honkai_impact_3">Honkai Impact 3</option>
+                    <option value="pulsa">Pulsa</option>
                 </select>
                 <span id="gameError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
             </div>
@@ -62,6 +63,10 @@
                         <span class="text-cyan-400 font-bold min-w-[16px]">*</span>
                         <div><span class="text-white/70">HoYo games:</span> Isi UID dan Server di kolom terpisah. Sistem mengirim format UID|Server.</div>
                     </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-green-400 font-bold min-w-[16px]">📱</span>
+                        <div><span class="text-white/70">Pulsa:</span> Masukkan nomor HP tujuan (format 08xxx atau 628xxx).</div>
+                    </div>
                 </div>
             </div>
             <div>
@@ -72,7 +77,7 @@
                 <span id="productError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
             </div>
             <div id="uidGroup">
-                <label class="block text-sm font-medium text-white/70 mb-1" for="gameUid">Game UID</label>
+                <label class="block text-sm font-medium text-white/70 mb-1" for="gameUid" id="gameUidLabel">Game UID</label>
                 <input type="text" id="gameUid" name="game_uid" placeholder="Masukkan UID" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" required aria-describedby="uidHint" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 focus-ring">
                 <span id="gameUidError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
                 <p class="text-xs text-white/40 mt-1" id="uidHint">Pilih game terlebih dahulu</p>
@@ -154,8 +159,29 @@
     const confirmModal = document.getElementById("confirmModal");
     const serverRequiredGames = new Set(["mobile_legends", "genshin_impact", "honkai_star_rail", "zenless_zone_zero", "honkai_impact_3"]);
     const hoyoGames = new Set(["genshin_impact", "honkai_star_rail", "zenless_zone_zero", "honkai_impact_3"]);
+    const phoneGames = new Set(["pulsa"]);
     let selectedProduct = null;
     let pollInterval = null;
+
+    function isPhoneGame(game) { return phoneGames.has(game); }
+
+    function applyGameUidFieldMode(game) {
+        const label = document.getElementById("gameUidLabel");
+        const input = document.getElementById("gameUid");
+        if (isPhoneGame(game)) {
+            if (label) label.textContent = "Nomor HP Tujuan";
+            input.setAttribute("placeholder", "08xxxxxxxxxx");
+            input.setAttribute("inputmode", "tel");
+            input.removeAttribute("pattern");
+            input.setAttribute("autocomplete", "tel");
+        } else {
+            if (label) label.textContent = "Game UID";
+            input.setAttribute("placeholder", "Masukkan UID");
+            input.setAttribute("inputmode", "numeric");
+            input.setAttribute("pattern", "[0-9]*");
+            input.setAttribute("autocomplete", "off");
+        }
+    }
 
     function showFieldError(fieldId, message) {
         const errorEl = document.getElementById(fieldId + 'Error');
@@ -217,8 +243,18 @@
         const uid = document.getElementById("gameUid").value.trim();
         const game = gameSelect.value;
         if (!uid) {
-            showFieldError('gameUid', 'UID wajib diisi');
+            showFieldError('gameUid', isPhoneGame(game) ? 'Nomor HP wajib diisi' : 'UID wajib diisi');
             return false;
+        }
+        if (isPhoneGame(game)) {
+            let p = uid.replace(/[+\s]/g, '');
+            if (p.startsWith('62')) { p = '0' + p.substring(2); document.getElementById("gameUid").value = p; }
+            if (!/^0\d{8,13}$/.test(p)) {
+                showFieldError('gameUid', 'Format nomor HP: 08xxx (10-15 digit)');
+                return false;
+            }
+            showFieldValid('gameUid');
+            return true;
         }
         if (!/^\d+$/.test(uid)) {
             showFieldError('gameUid', 'UID harus berupa angka');
@@ -305,7 +341,9 @@
         const gameValid = !!gameSelect.value;
         const productValid = !!productSelect.value && productSelect.options[productSelect.selectedIndex]?.dataset.stock !== '0';
         const uid = document.getElementById("gameUid").value.trim();
-        const uidValid = /^\d{4,}$/.test(uid);
+        const uidValid = isPhoneGame(gameSelect.value)
+            ? /^0\d{8,13}$/.test(uid.replace(/[+\s]/g, '').replace(/^62/, '0'))
+            : /^\d{4,}$/.test(uid);
         const server = document.getElementById("gameServer").value.trim();
         const serverValid = serverGroup.classList.contains('hidden') || (
             gameSelect.value === "mobile_legends" ? /^\d+$/.test(server) :
@@ -425,8 +463,11 @@
         } else {
             serverGroup.classList.add("hidden");
             document.getElementById("gameServer").value = "";
-            document.getElementById("uidHint").textContent = "Angka saja, tanpa spasi atau karakter lain";
+            document.getElementById("uidHint").textContent = isPhoneGame(game)
+                ? "Nomor HP tujuan (contoh: 089xxxxxxxx)"
+                : "Angka saja, tanpa spasi atau karakter lain";
         }
+        applyGameUidFieldMode(game);
         if (game) {
             uidGuide.classList.remove("hidden");
         } else {

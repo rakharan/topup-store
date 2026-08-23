@@ -94,7 +94,7 @@ func SetupTestServer(t testing.TB) *TestServer {
 	referralCodeRepo := repositories.NewReferralCodeRepository(pool)
 	orders := handlers.NewOrderHandler(paymentSvc, topupSvc, notifySvc, blockedIdentityRepo, referralCodeRepo, pool, ctx, logger)
 	products := handlers.NewProductHandler(topupSvc, cacheStore, logger)
-	_ = handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, blockedIdentityRepo, referralCodeRepo, nil, cacheStore, webhookRetrySvc, "test-admin-pass", logger)
+	_ = handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, blockedIdentityRepo, referralCodeRepo, nil, cacheStore, webhookRetrySvc, "test-admin-pass", pool, logger)
 	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, webhookRepo, "", "", "", "", ctx, logger)
 	pages := handlers.NewPageHandler(orderRepo, topupSvc, paymentSvc, notifySvc, "", "test-admin-pass", "/admin", "", false, false, "", "info", logger)
 

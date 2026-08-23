@@ -40,6 +40,7 @@ type OrderRepository interface {
 
 type ProductRepository interface {
 	GetByID(ctx context.Context, id string) (*models.Product, error)
+	GetBySKU(ctx context.Context, sku string) (*models.Product, error)
 	GetByGameAndDiamonds(ctx context.Context, game string, itemQty int) (*models.Product, error)
 	ListByGame(ctx context.Context, game string) ([]models.Product, error)
 	ListAll(ctx context.Context) ([]models.Product, error)

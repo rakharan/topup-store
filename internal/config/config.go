@@ -57,7 +57,7 @@ func Load() (*Config, error) {
 		DigiflazzAPIKey:              getEnv("DIGIFLAZZ_API_KEY", ""),
 		DigiflazzWebhookSecret:       getEnv("DIGIFLAZZ_WEBHOOK_SECRET", ""),
 		DigiflazzAPIURL:              getEnv("DIGIFLAZZ_API_URL", "https://api.digiflazz.com/v1/transaction"),
-		DigiflazzTesting:             getEnv("DIGIFLAZZ_TESTING", "true") == "true",
+		DigiflazzTesting:             getEnv("DIGIFLAZZ_TESTING", "false") == "true",
 		DigiflazzLowBalanceThreshold: getEnvInt("DIGIFLAZZ_LOW_BALANCE_THRESHOLD", 50000),
 		WhatsappNumber:               getEnv("WHATSAPP_NUMBER", ""),
 		FonnteToken:                  getEnv("FONNTE_TOKEN", ""),

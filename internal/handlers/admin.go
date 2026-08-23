@@ -8,11 +8,13 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/topup-store/internal/apperrors"
 	"github.com/topup-store/internal/cache"
 	"github.com/topup-store/internal/constants"
@@ -35,10 +37,11 @@ type AdminHandler struct {
 	cache               *cache.Cache
 	retrySvc            *services.WebhookRetryService
 	adminPass           string
+	pool                *pgxpool.Pool
 	logger              *slog.Logger
 }
 
-func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, productRepo repositories.ProductRepository, webhookRepo repositories.WebhookRepository, orderRepo repositories.OrderRepository, blockedIdentityRepo repositories.BlockedIdentityRepository, referralCodeRepo repositories.ReferralCodeRepository, auditRepo repositories.AuditLogRepository, cache *cache.Cache, retrySvc *services.WebhookRetryService, adminPass string, logger *slog.Logger) *AdminHandler {
+func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc services.TopupServiceInterface, notifySvc services.NotifyServiceInterface, productRepo repositories.ProductRepository, webhookRepo repositories.WebhookRepository, orderRepo repositories.OrderRepository, blockedIdentityRepo repositories.BlockedIdentityRepository, referralCodeRepo repositories.ReferralCodeRepository, auditRepo repositories.AuditLogRepository, cache *cache.Cache, retrySvc *services.WebhookRetryService, adminPass string, pool *pgxpool.Pool, logger *slog.Logger) *AdminHandler {
 	return &AdminHandler{
 		paymentSvc:          paymentSvc,
 		topupSvc:            topupSvc,
@@ -52,6 +55,7 @@ func NewAdminHandler(paymentSvc services.PaymentServiceInterface, topupSvc servi
 		cache:               cache,
 		retrySvc:            retrySvc,
 		adminPass:           adminPass,
+		pool:                pool,
 		logger:              logger,
 	}
 }
@@ -243,7 +247,7 @@ func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		req.ProductType = "diamond"
 	}
 	if !validProductType(req.ProductType) {
-		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product_type", "must be diamond, subscription, other, or validation"), middleware.GetRequestID(r.Context()))
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product_type", "must be diamond, subscription, other, validation, or pulsa"), middleware.GetRequestID(r.Context()))
 		return
 	}
 	if !validCustomerNoFormat(req.CustomerNoFormat) {
@@ -333,7 +337,7 @@ func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		req.ProductType = "diamond"
 	}
 	if !validProductType(req.ProductType) {
-		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product_type", "must be diamond, subscription, other, or validation"), middleware.GetRequestID(r.Context()))
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("product_type", "must be diamond, subscription, other, validation, or pulsa"), middleware.GetRequestID(r.Context()))
 		return
 	}
 	if !validCustomerNoFormat(req.CustomerNoFormat) {
@@ -740,7 +744,7 @@ func validCustomerNoFormat(format string) bool {
 
 func validProductType(productType string) bool {
 	switch productType {
-	case constants.ProductTypeDiamond, constants.ProductTypeSubscription, constants.ProductTypeOther, constants.ProductTypeValidation:
+	case constants.ProductTypeDiamond, constants.ProductTypeSubscription, constants.ProductTypeOther, constants.ProductTypeValidation, constants.ProductTypePulsa:
 		return true
 	default:
 		return false
@@ -967,5 +971,142 @@ func (h *AdminHandler) RedeemReferralPoints(w http.ResponseWriter, r *http.Reque
 	apperrors.WriteSuccess(w, http.StatusOK, map[string]any{
 		"coupon_code": req.CouponCode,
 		"points":      req.Points,
+	}, middleware.GetRequestID(r.Context()))
+}
+
+var reDirectTopupPhone = regexp.MustCompile(`^(0|62)\d{8,13}$`)
+
+func (h *AdminHandler) DirectTopup(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		SKU        string `json:"sku"`
+		CustomerNo string `json:"customer_no"`
+		GameServer string `json:"game_server"`
+		BuyerPhone string `json:"buyer_phone"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		io.Copy(io.Discard, r.Body)
+		r.Body.Close()
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.ErrInvalidInput, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	if req.SKU == "" {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("sku", "sku is required"), middleware.GetRequestID(r.Context()))
+		return
+	}
+	if !reDirectTopupPhone.MatchString(req.CustomerNo) {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("customer_no", "must be valid Indonesian phone (08xxx or 628xxx, 10-15 digits)"), middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	buyerPhone := req.BuyerPhone
+	if buyerPhone == "" {
+		buyerPhone = req.CustomerNo
+	}
+
+	product, err := h.productRepo.GetBySKU(r.Context(), req.SKU)
+	if err != nil {
+		h.logger.Warn("admin direct topup: product not found", slog.String("sku", req.SKU), slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("sku", "product not found for sku: "+req.SKU), middleware.GetRequestID(r.Context()))
+		return
+	}
+	if !product.IsActive {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("sku", "product is not active"), middleware.GetRequestID(r.Context()))
+		return
+	}
+	if product.Stock == 0 {
+		apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("sku", "product is out of stock"), middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	orderID := uuid.New().String()
+	var orderNumber string
+	if h.pool != nil {
+		orderNumber, err = services.GenerateOrderNumber(r.Context(), h.pool)
+		if err != nil {
+			h.logger.Error("admin direct topup: generate order number", slog.String("error", err.Error()))
+			apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+			return
+		}
+	} else {
+		orderNumber = "AD-" + orderID[:8]
+	}
+
+	customerNo := req.CustomerNo
+	if strings.HasPrefix(customerNo, "62") {
+		customerNo = "0" + customerNo[2:]
+	}
+
+	stockReserved := false
+	if product.Stock > 0 {
+		ok, stockErr := h.topupSvc.DecrementProductStock(r.Context(), product.ID)
+		if stockErr != nil {
+			h.logger.Error("admin direct topup: decrement stock", slog.String("product_id", product.ID), slog.String("error", stockErr.Error()))
+			apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+			return
+		}
+		if !ok {
+			apperrors.WriteError(w, http.StatusBadRequest, apperrors.FieldError("sku", "product is out of stock"), middleware.GetRequestID(r.Context()))
+			return
+		}
+		stockReserved = true
+	}
+
+	order := &models.Order{
+		ID:             orderID,
+		OrderNumber:    orderNumber,
+		ProductID:      product.ID,
+		UserPhone:      buyerPhone,
+		GameUID:        customerNo,
+		GameServer:     req.GameServer,
+		AmountIDR:      product.PriceIDR,
+		Status:         constants.StatusPending,
+		Channel:        "admin_direct",
+		DigiflazzRefID: orderID,
+		StockReserved:  stockReserved,
+	}
+
+	if err := h.paymentSvc.CreateOrder(r.Context(), order); err != nil {
+		h.logger.Error("admin direct topup: create order", slog.String("error", err.Error()))
+		if stockReserved {
+			_ = h.topupSvc.IncrementProductStock(r.Context(), product.ID)
+		}
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	if err := h.paymentSvc.UpdateOrderStatus(r.Context(), order.ID, constants.StatusPaid); err != nil {
+		h.logger.Error("admin direct topup: mark paid", slog.String("order_id", order.ID), slog.String("error", err.Error()))
+		apperrors.WriteError(w, http.StatusInternalServerError, apperrors.ErrInternal, middleware.GetRequestID(r.Context()))
+		return
+	}
+
+	h.logAudit(r.Context(), r, "direct_topup", "order", order.ID, "", constants.StatusPaid)
+
+	orderCopy := *order
+	productCopy := *product
+	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				h.logger.Error("admin direct topup panicked", slog.String("order_id", orderCopy.ID), slog.Any("panic", rec))
+			}
+		}()
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		if err := h.topupSvc.ProcessOrder(ctx, orderCopy.ID); err != nil {
+			h.logger.Error("admin direct topup: topup failed", slog.String("order_id", orderCopy.ID), slog.String("error", err.Error()))
+			return
+		}
+		h.logger.Info("admin direct topup: completed", slog.String("order_id", orderCopy.ID), slog.String("sku", productCopy.SKU))
+	}()
+
+	apperrors.WriteSuccess(w, http.StatusAccepted, map[string]string{
+		"status":       "ok",
+		"message":      "direct topup started (skipped Midtrans payment)",
+		"order_id":     order.ID,
+		"order_number": orderNumber,
+		"ref_id":       orderID,
+		"sku":          product.SKU,
+		"customer_no":  customerNo,
 	}, middleware.GetRequestID(r.Context()))
 }

@@ -129,7 +129,7 @@ func main() {
 	products := handlers.NewProductHandler(topupSvc, cacheStore, logger)
 	webhook := handlers.NewWebhookHandler(paymentSvc, topupSvc, notifySvc, webhookRepo, cfg.MidtransServerKey, cfg.DigiflazzUsername, cfg.DigiflazzAPIKey, cfg.DigiflazzWebhookSecret, rootCtx, logger)
 	auditRepo := repositories.NewAuditLogRepository(pool)
-	admin := handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, blockedIdentityRepo, referralCodeRepo, auditRepo, cacheStore, retrySvc, cfg.AdminPassword, logger)
+	admin := handlers.NewAdminHandler(paymentSvc, topupSvc, notifySvc, productRepo, webhookRepo, orderRepo, blockedIdentityRepo, referralCodeRepo, auditRepo, cacheStore, retrySvc, cfg.AdminPassword, pool, logger)
 	csrfStore := middleware.NewCSRFStore(pool)
 	csrfMW := middleware.CSRFMiddleware(csrfStore)
 
@@ -205,6 +205,7 @@ func main() {
 	}
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post(cfg.AdminPath+"/process-order", admin.ProcessOrder)
 	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post(cfg.AdminPath+"/retry-order", admin.RetryOrder)
+	r.With(middleware.AdminAuth(cfg.AdminPassword), adminRateLimiter.Middleware, csrfMW).Post(cfg.AdminPath+"/direct-topup", admin.DirectTopup)
 
 	r.Route(cfg.AdminPath+"/products", func(r chi.Router) {
 		r.Use(middleware.AdminAuth(cfg.AdminPassword))

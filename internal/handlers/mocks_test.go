@@ -227,6 +227,10 @@ func (m *mockProductRepo) GetByID(ctx context.Context, id string) (*models.Produ
 	return m.getByIDResult, m.getByIDErr
 }
 
+func (m *mockProductRepo) GetBySKU(ctx context.Context, sku string) (*models.Product, error) {
+	return nil, nil
+}
+
 func (m *mockProductRepo) GetByGameAndDiamonds(ctx context.Context, game string, itemQty int) (*models.Product, error) {
 	return nil, nil
 }

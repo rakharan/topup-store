@@ -26,6 +26,7 @@
             <button id="tabAnalytics" onclick="switchTab('analytics')" class="tab-btn px-4 py-2 text-white/70 hover:text-white transition focus-ring">Analytics</button>
             <button id="tabWebhooks" onclick="switchTab('webhooks')" class="tab-btn px-4 py-2 text-white/70 hover:text-white transition focus-ring">Webhooks</button>
             <button id="tabGrowth" onclick="switchTab('growth')" class="tab-btn px-4 py-2 text-white/70 hover:text-white transition focus-ring">Growth</button>
+            <button id="tabDirect" onclick="switchTab('direct')" class="tab-btn px-4 py-2 text-white/70 hover:text-white transition focus-ring">Direct Topup</button>
         </div>
 
         <div id="ordersTab">
@@ -194,6 +195,7 @@
                     <option value="subscription">Subscription</option>
                     <option value="other">Other</option>
                     <option value="validation">Validation/Internal</option>
+                    <option value="pulsa">Pulsa</option>
                 </select>
                 <select id="productActiveFilter" class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     <option value="">Semua Status</option>
@@ -232,6 +234,7 @@
                             <option value="honkai_star_rail">Honkai: Star Rail</option>
                             <option value="zenless_zone_zero">Zenless Zone Zero</option>
                             <option value="honkai_impact_3">Honkai Impact 3</option>
+                            <option value="pulsa">Pulsa</option>
                         </select>
                     </div>
                     <div>
@@ -281,6 +284,7 @@
                             <option value="subscription">Subscription</option>
                             <option value="other">Other</option>
                             <option value="validation">Validation/Internal</option>
+                            <option value="pulsa">Pulsa</option>
                         </select>
                     </div>
                     <div>
@@ -499,6 +503,50 @@
             </div>
         </div>
 
+        <div id="directTab" class="hidden">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold">Direct Topup (No Payment)</h2>
+            </div>
+            <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-6 text-sm text-red-300">
+                <strong>&#9888; Warning:</strong> This skips Midtrans payment entirely. Each submission triggers a real Digiflazz transaction and deducts your Digiflazz balance immediately. Use for cash customers or self-topup only.
+            </div>
+            <form id="directTopupForm" class="space-y-5 max-w-lg">
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1" for="directSku">Product (SKU)</label>
+                    <select id="directSku" required class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring">
+                        <option value="">Pilih produk...</option>
+                    </select>
+                    <p class="text-xs text-white/40 mt-1">Hanya produk aktif. Filter game di bawah untuk mempersempit.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1" for="directGameFilter">Filter by Game</label>
+                    <select id="directGameFilter" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none focus-ring" onchange="populateDirectProducts()">
+                        <option value="">Semua</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1" for="directCustomerNo">Nomor Tujuan / Customer No</label>
+                    <input type="text" id="directCustomerNo" required inputmode="tel" placeholder="08xxxxxxxxxx atau 628xxx" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-white/30 focus:border-primary focus:outline-none focus-ring" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                    <p class="text-xs text-white/40 mt-1">Untuk pulsa: nomor HP tujuan (format 08xxx). Untuk game: Game UID.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1" for="directGameServer">Game Server (opsional)</label>
+                    <input type="text" id="directGameServer" placeholder="Kosongkan untuk pulsa/free fire" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-white/30 focus:border-primary focus:outline-none focus-ring">
+                    <p class="text-xs text-white/40 mt-1">Wajib untuk Mobile Legends (Server ID), HoYo games (server code).</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1" for="directBuyerPhone">Buyer WhatsApp (opsional)</label>
+                    <input type="text" id="directBuyerPhone" inputmode="tel" placeholder="08xxxxxxxxxx (default: sama dengan nomor tujuan)" class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-white/30 focus:border-primary focus:outline-none focus-ring" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                    <p class="text-xs text-white/40 mt-1">Nomor untuk notifikasi status order. Default = nomor tujuan.</p>
+                </div>
+                <div id="directResult" class="hidden bg-white/5 border border-white/10 rounded-lg p-4 text-sm"></div>
+                <button type="submit" id="directSubmitBtn" class="w-full bg-red-600 hover:bg-red-700 disabled:bg-white/20 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 focus-ring">
+                    <svg id="directSpinner" class="hidden animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    <span id="directSubmitText">Kirim Topup Sekarang</span>
+                </button>
+            </form>
+        </div>
+
         <div id="payloadModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center modal-backdrop" onclick="if(event.target===this)closePayloadModal()">
             <div class="bg-dark border border-white/10 rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
                 <div class="flex items-center justify-between mb-4">
@@ -642,10 +690,12 @@
 
     const pipeCustomerNoGames = new Set(['genshin_impact', 'honkai_star_rail', 'zenless_zone_zero', 'honkai_impact_3']);
     const customerNoFormatLabels = { uid: 'UID', uid_server_pipe: 'UID|Server', uid_server_concat: 'UIDServer', uid_server_space: 'UID Server' };
+    const gameLabels = { free_fire: 'Free Fire', mobile_legends: 'Mobile Legends', pubg_mobile: 'PUBG Mobile', genshin_impact: 'Genshin Impact', honkai_star_rail: 'Honkai: Star Rail', zenless_zone_zero: 'Zenless Zone Zero', honkai_impact_3: 'Honkai Impact 3', pulsa: 'Pulsa' };
 
     function defaultCustomerNoFormat(game) {
         if (pipeCustomerNoGames.has(game)) return 'uid_server_pipe';
         if (game === 'mobile_legends') return 'uid_server_concat';
+        if (game === 'pulsa') return '';
         return 'uid';
     }
 
@@ -942,7 +992,8 @@
         document.getElementById('analyticsTab').classList.toggle('hidden', tab !== 'analytics');
         document.getElementById('webhooksTab').classList.toggle('hidden', tab !== 'webhooks');
         document.getElementById('growthTab').classList.toggle('hidden', tab !== 'growth');
-        ['Orders', 'Products', 'Analytics', 'Webhooks', 'Growth'].forEach(t => {
+        document.getElementById('directTab').classList.toggle('hidden', tab !== 'direct');
+        ['Orders', 'Products', 'Analytics', 'Webhooks', 'Growth', 'Direct'].forEach(t => {
             const btn = document.getElementById('tab' + t);
             const isActive = t.toLowerCase() === tab;
             btn.classList.toggle('text-primary', isActive);
@@ -957,6 +1008,7 @@
             loadReferralCodes();
             loadReferralPointBalances();
         }
+        if (tab === 'direct') loadDirectProducts();
     }
 
     let products = [];
@@ -1115,6 +1167,99 @@
         }
     }
 
+    async function loadDirectProducts() {
+        if (!products.length) {
+            try {
+                const res = await fetchWithCSRF(ADMIN_PATH + '/products');
+                const json = await res.json();
+                if (res.ok) products = json.data || [];
+            } catch (e) {
+                showToast('Failed to load products for direct topup', 'error');
+                return;
+            }
+        }
+        const gameFilter = document.getElementById('directGameFilter');
+        const games = [...new Set(products.filter(p => p.is_active).map(p => p.game))].sort();
+        const currentVal = gameFilter.value;
+        gameFilter.innerHTML = '<option value="">Semua</option>' + games.map(g => `<option value="${escapeHtml(g)}" ${g === currentVal ? 'selected' : ''}>${escapeHtml(gameLabels[g] || g)}</option>`).join('');
+        populateDirectProducts();
+    }
+
+    function populateDirectProducts() {
+        const gameFilter = document.getElementById('directGameFilter').value;
+        const skuSelect = document.getElementById('directSku');
+        const filtered = products.filter(p => p.is_active && (!gameFilter || p.game === gameFilter));
+        filtered.sort((a, b) => a.game === b.game ? a.price_idr - b.price_idr : a.game.localeCompare(b.game));
+        skuSelect.innerHTML = '<option value="">Pilih produk...</option>' + filtered.map(p => {
+            const stockLabel = p.stock === 0 ? ' (Stok Habis)' : (p.stock > 0 ? ` (Stok: ${p.stock})` : '');
+            const label = `[${escapeHtml(gameLabels[p.game] || p.game)}] ${escapeHtml(p.name)} - Rp ${p.price_idr.toLocaleString('id-ID')}${stockLabel}`;
+            return `<option value="${escapeHtml(p.sku)}" ${p.stock === 0 ? 'disabled' : ''}>${label}</option>`;
+        }).join('');
+    }
+
+    async function submitDirectTopup(e) {
+        e.preventDefault();
+        const result = document.getElementById('directResult');
+        const submitBtn = document.getElementById('directSubmitBtn');
+        const submitText = document.getElementById('directSubmitText');
+        const spinner = document.getElementById('directSpinner');
+        const sku = document.getElementById('directSku').value;
+        const customerNo = document.getElementById('directCustomerNo').value.trim();
+        const gameServer = document.getElementById('directGameServer').value.trim();
+        const buyerPhone = document.getElementById('directBuyerPhone').value.trim();
+
+        if (!sku) { showToast('Pilih produk dulu', 'error'); return; }
+        if (!customerNo) { showToast('Nomor tujuan wajib', 'error'); return; }
+
+        result.classList.add('hidden');
+        submitBtn.disabled = true;
+        submitText.textContent = 'Memproses...';
+        spinner.classList.remove('hidden');
+
+        try {
+            const res = await fetchWithCSRF(ADMIN_PATH + '/direct-topup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sku, customer_no: customerNo, game_server: gameServer, buyer_phone: buyerPhone })
+            });
+            const json = await res.json();
+            result.classList.remove('hidden');
+            if (res.ok && json.success) {
+                const d = json.data || {};
+                result.className = 'bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-sm';
+                result.innerHTML = `
+                    <div class="flex items-center gap-2 mb-2"><span class="text-green-400 text-2xl">&#10003;</span><strong class="text-green-300">Topup dimulai</strong></div>
+                    <div class="space-y-1 text-white/80 font-mono text-xs">
+                        <div>order_id: ${escapeHtml(d.order_id || '-')}</div>
+                        <div>order_number: ${escapeHtml(d.order_number || '-')}</div>
+                        <div>ref_id: ${escapeHtml(d.ref_id || '-')}</div>
+                        <div>sku: ${escapeHtml(d.sku || '-')}</div>
+                        <div>customer_no: ${escapeHtml(d.customer_no || '-')}</div>
+                    </div>
+                    <p class="text-white/60 text-xs mt-2">Cek status di tab Orders. Webhook dari Digiflazz akan update otomatis.</p>
+                `;
+                showToast('Direct topup started', 'success');
+                document.getElementById('directTopupForm').reset();
+                populateDirectProducts();
+            } else {
+                result.className = 'bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-sm';
+                result.innerHTML = `<div class="text-red-300 mb-1"><strong>Gagal:</strong> ${escapeHtml(json.error?.message || json.error || 'unknown error')}</div>`;
+                showToast('Direct topup failed', 'error');
+            }
+        } catch (e) {
+            result.classList.remove('hidden');
+            result.className = 'bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-sm';
+            result.innerHTML = `<div class="text-red-300">Network error: ${escapeHtml(e.message)}</div>`;
+            showToast('Network error', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitText.textContent = 'Kirim Topup Sekarang';
+            spinner.classList.add('hidden');
+        }
+    }
+
+    document.getElementById('directTopupForm')?.addEventListener('submit', submitDirectTopup);
+
     function filterAndRenderProducts() {
         const search = document.getElementById('productSearch')?.value.trim().toLowerCase() || '';
         const gameFilter = document.getElementById('productGameFilter')?.value || '';
@@ -1137,8 +1282,8 @@
             return;
         }
         const gameLabels = { free_fire: 'FF', mobile_legends: 'ML', pubg_mobile: 'PUBG', genshin_impact: 'Genshin', honkai_star_rail: 'HSR', zenless_zone_zero: 'ZZZ', honkai_impact_3: 'HI3' };
-        const typeLabels = { diamond: 'Currency/Item', subscription: 'Subscription', other: 'Other', validation: 'Validation/Internal' };
-        const typeColors = { diamond: 'bg-green-500/20 text-green-400', subscription: 'bg-blue-500/20 text-blue-400', other: 'bg-gray-500/20 text-gray-400', validation: 'bg-purple-500/20 text-purple-400' };
+        const typeLabels = { diamond: 'Currency/Item', subscription: 'Subscription', other: 'Other', validation: 'Validation/Internal', pulsa: 'Pulsa' };
+        const typeColors = { diamond: 'bg-green-500/20 text-green-400', subscription: 'bg-blue-500/20 text-blue-400', other: 'bg-gray-500/20 text-gray-400', validation: 'bg-purple-500/20 text-purple-400', pulsa: 'bg-orange-500/20 text-orange-400' };
         tbody.innerHTML = filtered.map(p => {
             const profit = calcNetProfit(p.price_idr, p.cost_price_idr);
             const profitClass = profit <= 0 ? 'text-red-400' : 'text-green-400';

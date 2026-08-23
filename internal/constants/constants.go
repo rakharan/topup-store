@@ -18,6 +18,7 @@ const (
 	GameHonkaiStarRail  = "honkai_star_rail"
 	GameZenlessZoneZero = "zenless_zone_zero"
 	GameHonkaiImpact3   = "honkai_impact_3"
+	GamePulsa           = "pulsa"
 )
 
 const (
@@ -30,6 +31,7 @@ const (
 	ProductTypeSubscription = "subscription"
 	ProductTypeOther        = "other"
 	ProductTypeValidation   = "validation"
+	ProductTypePulsa        = "pulsa"
 )
 
 const (
@@ -44,6 +46,7 @@ var ValidGames = map[string]bool{
 	GameHonkaiStarRail:  true,
 	GameZenlessZoneZero: true,
 	GameHonkaiImpact3:   true,
+	GamePulsa:           true,
 }
 
 var GameLabels = map[string]string{
@@ -54,6 +57,7 @@ var GameLabels = map[string]string{
 	GameHonkaiStarRail:  "Honkai: Star Rail",
 	GameZenlessZoneZero: "Zenless Zone Zero",
 	GameHonkaiImpact3:   "Honkai Impact 3",
+	GamePulsa:           "Pulsa",
 }
 
 var ServerRequiredGames = map[string]bool{

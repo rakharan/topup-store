@@ -103,8 +103,8 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.MidtransIsProd != false {
 		t.Fatal("expected default MidtransIsProd false")
 	}
-	if cfg.DigiflazzTesting != true {
-		t.Fatal("expected default DigiflazzTesting true")
+	if cfg.DigiflazzTesting != false {
+		t.Fatal("expected default DigiflazzTesting false")
 	}
 	if cfg.DigiflazzAPIURL != "https://api.digiflazz.com/v1/transaction" {
 		t.Fatalf("expected default DigiflazzAPIURL, got %s", cfg.DigiflazzAPIURL)

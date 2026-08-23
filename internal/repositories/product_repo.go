@@ -20,8 +20,20 @@ func (r *PGProductRepository) GetByID(ctx context.Context, id string) (*models.P
 	var p models.Product
 	err := r.pool.QueryRow(ctx, `
 		SELECT id, game, name, description, price_idr, cost_price_idr, item_qty, product_type, sku, customer_no_format, competitor_price_idr, benchmark_note, is_active, stock, created_at, updated_at, deleted_at
-		FROM products WHERE id = $1
+		FROM products WHERE id = $1 AND deleted_at IS NULL
 	`, id).Scan(&p.ID, &p.Game, &p.Name, &p.Description, &p.PriceIDR, &p.CostPriceIDR, &p.ItemQty, &p.ProductType, &p.SKU, &p.CustomerNoFormat, &p.CompetitorPrice, &p.BenchmarkNote, &p.IsActive, &p.Stock, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (r *PGProductRepository) GetBySKU(ctx context.Context, sku string) (*models.Product, error) {
+	var p models.Product
+	err := r.pool.QueryRow(ctx, `
+		SELECT id, game, name, description, price_idr, cost_price_idr, item_qty, product_type, sku, customer_no_format, competitor_price_idr, benchmark_note, is_active, stock, created_at, updated_at, deleted_at
+		FROM products WHERE sku = $1 AND deleted_at IS NULL
+	`, sku).Scan(&p.ID, &p.Game, &p.Name, &p.Description, &p.PriceIDR, &p.CostPriceIDR, &p.ItemQty, &p.ProductType, &p.SKU, &p.CustomerNoFormat, &p.CompetitorPrice, &p.BenchmarkNote, &p.IsActive, &p.Stock, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt)
 	if err != nil {
 		return nil, err
 	}
