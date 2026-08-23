@@ -64,10 +64,7 @@ func (h *AdminHandler) logAudit(ctx context.Context, r *http.Request, action, en
 	if h.auditRepo == nil {
 		return
 	}
-	ip := r.Header.Get("X-Forwarded-For")
-	if ip == "" {
-		ip = r.RemoteAddr
-	}
+	ip := middleware.ExtractIP(r)
 	if err := h.auditRepo.Log(ctx, &repositories.AuditLogEntry{
 		Action:     action,
 		EntityType: entityType,

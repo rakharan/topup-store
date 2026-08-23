@@ -148,7 +148,7 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		ip := extractIP(r)
+		ip := ExtractIP(r)
 
 		if rl.allowedIPs[ip] {
 			next.ServeHTTP(w, r)
@@ -190,7 +190,7 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-func extractIP(r *http.Request) string {
+func ExtractIP(r *http.Request) string {
 	// Trust X-Real-Ip first (set by reverse proxies like Caddy, Nginx)
 	if realIP := r.Header.Get("X-Real-Ip"); realIP != "" {
 		if parsed := net.ParseIP(strings.TrimSpace(realIP)); parsed != nil {
