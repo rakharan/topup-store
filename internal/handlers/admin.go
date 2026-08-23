@@ -741,7 +741,7 @@ func validCustomerNoFormat(format string) bool {
 
 func validProductType(productType string) bool {
 	switch productType {
-	case constants.ProductTypeDiamond, constants.ProductTypeSubscription, constants.ProductTypeOther, constants.ProductTypeValidation, constants.ProductTypePulsa:
+	case constants.ProductTypeDiamond, constants.ProductTypeSubscription, constants.ProductTypeOther, constants.ProductTypeValidation, constants.ProductTypePulsa, constants.ProductTypeGopay:
 		return true
 	default:
 		return false
@@ -1056,7 +1056,7 @@ func (h *AdminHandler) DirectTopup(w http.ResponseWriter, r *http.Request) {
 		UserPhone:      buyerPhone,
 		GameUID:        customerNo,
 		GameServer:     req.GameServer,
-		AmountIDR:      product.PriceIDR,
+		AmountIDR:      product.CostPriceIDR,
 		Status:         constants.StatusPending,
 		Channel:        "admin_direct",
 		DigiflazzRefID: orderID,

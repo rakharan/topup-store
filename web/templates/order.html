@@ -38,6 +38,7 @@
                     <option value="zenless_zone_zero">Zenless Zone Zero</option>
                     <option value="honkai_impact_3">Honkai Impact 3</option>
                     <option value="pulsa">Pulsa</option>
+                    <option value="gopay">GoPay</option>
                 </select>
                 <span id="gameError" class="field-error hidden text-red-400 text-xs mt-1 block"></span>
             </div>
@@ -159,7 +160,7 @@
     const confirmModal = document.getElementById("confirmModal");
     const serverRequiredGames = new Set(["mobile_legends", "genshin_impact", "honkai_star_rail", "zenless_zone_zero", "honkai_impact_3"]);
     const hoyoGames = new Set(["genshin_impact", "honkai_star_rail", "zenless_zone_zero", "honkai_impact_3"]);
-    const phoneGames = new Set(["pulsa"]);
+    const phoneGames = new Set(["pulsa", "gopay"]);
     let selectedProduct = null;
     let pollInterval = null;
 

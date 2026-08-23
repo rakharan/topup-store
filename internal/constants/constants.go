@@ -19,6 +19,7 @@ const (
 	GameZenlessZoneZero = "zenless_zone_zero"
 	GameHonkaiImpact3   = "honkai_impact_3"
 	GamePulsa           = "pulsa"
+	GameGopay           = "gopay"
 )
 
 const (
@@ -32,6 +33,7 @@ const (
 	ProductTypeOther        = "other"
 	ProductTypeValidation   = "validation"
 	ProductTypePulsa        = "pulsa"
+	ProductTypeGopay        = "gopay"
 )
 
 const (
@@ -47,6 +49,7 @@ var ValidGames = map[string]bool{
 	GameZenlessZoneZero: true,
 	GameHonkaiImpact3:   true,
 	GamePulsa:           true,
+	GameGopay:           true,
 }
 
 var GameLabels = map[string]string{
@@ -58,6 +61,7 @@ var GameLabels = map[string]string{
 	GameZenlessZoneZero: "Zenless Zone Zero",
 	GameHonkaiImpact3:   "Honkai Impact 3",
 	GamePulsa:           "Pulsa",
+	GameGopay:           "GoPay",
 }
 
 var ServerRequiredGames = map[string]bool{

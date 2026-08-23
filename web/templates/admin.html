@@ -196,6 +196,7 @@
                     <option value="other">Other</option>
                     <option value="validation">Validation/Internal</option>
                     <option value="pulsa">Pulsa</option>
+                    <option value="gopay">GoPay</option>
                 </select>
                 <select id="productActiveFilter" class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none focus-ring">
                     <option value="">Semua Status</option>
@@ -235,6 +236,7 @@
                             <option value="zenless_zone_zero">Zenless Zone Zero</option>
                             <option value="honkai_impact_3">Honkai Impact 3</option>
                             <option value="pulsa">Pulsa</option>
+                    <option value="gopay">GoPay</option>
                         </select>
                     </div>
                     <div>
@@ -285,6 +287,7 @@
                             <option value="other">Other</option>
                             <option value="validation">Validation/Internal</option>
                             <option value="pulsa">Pulsa</option>
+                    <option value="gopay">GoPay</option>
                         </select>
                     </div>
                     <div>
@@ -690,7 +693,7 @@
 
     const pipeCustomerNoGames = new Set(['genshin_impact', 'honkai_star_rail', 'zenless_zone_zero', 'honkai_impact_3']);
     const customerNoFormatLabels = { uid: 'UID', uid_server_pipe: 'UID|Server', uid_server_concat: 'UIDServer', uid_server_space: 'UID Server' };
-    const gameLabels = { free_fire: 'Free Fire', mobile_legends: 'Mobile Legends', pubg_mobile: 'PUBG Mobile', genshin_impact: 'Genshin Impact', honkai_star_rail: 'Honkai: Star Rail', zenless_zone_zero: 'Zenless Zone Zero', honkai_impact_3: 'Honkai Impact 3', pulsa: 'Pulsa' };
+    const gameLabels = { free_fire: 'Free Fire', mobile_legends: 'Mobile Legends', pubg_mobile: 'PUBG Mobile', genshin_impact: 'Genshin Impact', honkai_star_rail: 'Honkai: Star Rail', zenless_zone_zero: 'Zenless Zone Zero', honkai_impact_3: 'Honkai Impact 3', pulsa: 'Pulsa', gopay: 'GoPay' };
 
     function defaultCustomerNoFormat(game) {
         if (pipeCustomerNoGames.has(game)) return 'uid_server_pipe';
@@ -1282,8 +1285,8 @@
             return;
         }
         const gameLabels = { free_fire: 'FF', mobile_legends: 'ML', pubg_mobile: 'PUBG', genshin_impact: 'Genshin', honkai_star_rail: 'HSR', zenless_zone_zero: 'ZZZ', honkai_impact_3: 'HI3' };
-        const typeLabels = { diamond: 'Currency/Item', subscription: 'Subscription', other: 'Other', validation: 'Validation/Internal', pulsa: 'Pulsa' };
-        const typeColors = { diamond: 'bg-green-500/20 text-green-400', subscription: 'bg-blue-500/20 text-blue-400', other: 'bg-gray-500/20 text-gray-400', validation: 'bg-purple-500/20 text-purple-400', pulsa: 'bg-orange-500/20 text-orange-400' };
+        const typeLabels = { diamond: 'Currency/Item', subscription: 'Subscription', other: 'Other', validation: 'Validation/Internal', pulsa: 'Pulsa', gopay: 'GoPay' };
+        const typeColors = { diamond: 'bg-green-500/20 text-green-400', subscription: 'bg-blue-500/20 text-blue-400', other: 'bg-gray-500/20 text-gray-400', validation: 'bg-purple-500/20 text-purple-400', pulsa: 'bg-orange-500/20 text-orange-400', gopay: 'bg-teal-500/20 text-teal-400' };
         tbody.innerHTML = filtered.map(p => {
             const profit = calcNetProfit(p.price_idr, p.cost_price_idr);
             const profitClass = profit <= 0 ? 'text-red-400' : 'text-green-400';

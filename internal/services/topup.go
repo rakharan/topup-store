@@ -304,7 +304,7 @@ func (s *TopupService) getValidationProduct(ctx context.Context, game string) (*
 }
 
 func (s *TopupService) buildCustomerNo(order *models.Order, product *models.Product) string {
-	if product.Game == constants.GamePulsa {
+	if product.Game == constants.GamePulsa || product.Game == constants.GameGopay {
 		return normalizePhoneForDigiflazz(order.GameUID)
 	}
 	if order.GameServer == "" {
@@ -672,11 +672,14 @@ func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType 
 		}
 
 		if !exists {
-			game := inferGame(p.SKU, p.Name, p.Brand)
-			if game == "" {
-				game = inferPulsaGame(p.Category, p.Brand, p.Name)
-			}
-			if game == "" {
+		game := inferGame(p.SKU, p.Name, p.Brand)
+		if game == "" {
+			game = inferPulsaGame(p.Category, p.Brand, p.Name)
+		}
+		if game == "" {
+			game = inferEwalletGame(p.Category, p.Brand, p.Name, p.SKU)
+		}
+		if game == "" {
 				s.logger.Debug("sync: skipping unknown game", slog.String("sku", p.SKU), slog.String("name", p.Name), slog.String("brand", p.Brand))
 				skipped++
 				continue
@@ -684,10 +687,13 @@ func (s *TopupService) SyncPricesWithAutoCreate(ctx context.Context, marginType 
 
 			productType := detectProductType(p.Name)
 			itemQty := extractItemQtyFromName(p.Name)
-			if game == constants.GamePulsa {
-				productType = constants.ProductTypePulsa
-				itemQty = 1
-			} else if itemQty == 0 && productType != "diamond" {
+		if game == constants.GamePulsa {
+			productType = constants.ProductTypePulsa
+			itemQty = 1
+		} else if game == constants.GameGopay {
+			productType = constants.ProductTypeGopay
+			itemQty = 1
+		} else if itemQty == 0 && productType != "diamond" {
 				itemQty = 1
 			}
 
@@ -835,6 +841,26 @@ func inferPulsaGame(category, brand, name string) string {
 		return ""
 	}
 	return constants.GamePulsa
+}
+
+var ewalletCategories = map[string]bool{
+	"e-wallet": true,
+	"e-money":  true,
+	"emoney":   true,
+	"ewallet":  true,
+	"gopay":    true,
+}
+
+func inferEwalletGame(category, brand, name, sku string) string {
+	cat := strings.ToLower(strings.TrimSpace(category))
+	if ewalletCategories[cat] {
+		return constants.GameGopay
+	}
+	haystack := strings.ToLower(category + " " + brand + " " + name + " " + sku)
+	if strings.Contains(haystack, "gopay") || strings.Contains(haystack, "gojek") {
+		return constants.GameGopay
+	}
+	return ""
 }
 
 var itemQuantityRegex = regexp.MustCompile(`(\d+)\s*(dm|diamonds?|uc|genesis\s*crystals?|crystals?|oneiric\s*shards?|shards?|monochromes?|polychromes?|lunites?|b-?chips?|chips?|stellar\s*jades?|jades?|d$)`)

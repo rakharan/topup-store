@@ -590,7 +590,7 @@ func validateOrderInput(req struct {
 				return &validationError{field: "game_server", message: "must be 2-32 letters, numbers, underscore, or dash"}
 			}
 		}
-	} else if req.Game == constants.GamePulsa {
+	} else if req.Game == constants.GamePulsa || req.Game == constants.GameGopay {
 		if !rePhone.MatchString(req.GameUID) {
 			return &validationError{field: "game_uid", message: "must be valid Indonesian phone (08xxx or 628xxx, 10-15 digits)"}
 		}
