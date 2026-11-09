@@ -27,7 +27,7 @@ Fullstack game top-up platform with QRIS payments, Digiflazz H2H integration, an
 ## Quick Start (Docker)
 
 ```bash
-git clone https://github.com/your-org/topup-store.git
+git clone https://github.com/rakharan/topup-store.git
 cd topup-store
 
 cp .env.example .env
