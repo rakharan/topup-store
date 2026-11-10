@@ -42,3 +42,8 @@ Thumbs.db
 # Build output
 dist/
 build/
+
+# Local backup artifacts and scripts
+/1
+/backup/
+/backup-droplet-db.sh
